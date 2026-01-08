@@ -347,6 +347,7 @@ function DraftItem({
           className="h-4 w-4 rounded border-gray-300"
         />
         <span className="font-medium flex-1">{transcription.filename}</span>
+        <span className="text-xs text-muted-foreground">{transcription.engine}/{transcription.model}</span>
         {fileSizeMB && <span className="text-sm text-muted-foreground">{fileSizeMB}</span>}
         <Button variant="ghost" size="sm" onClick={onDelete}>
           🗑️
@@ -380,6 +381,7 @@ function QueuedItem({ transcription }: { transcription: Transcription }) {
       <div className="flex items-center justify-between">
         <span className="font-medium">{transcription.filename}</span>
         <div className="flex items-center gap-2">
+          <span className="text-xs text-muted-foreground">{transcription.engine}/{transcription.model}</span>
           {fileSizeMB && <span className="text-sm text-muted-foreground">{fileSizeMB}</span>}
           <Badge variant="secondary">{STATUS_LABELS[transcription.status]}</Badge>
         </div>
@@ -398,7 +400,10 @@ function InProgressItem({ transcription }: { transcription: Transcription }) {
   return (
     <div className="border rounded-lg p-3 space-y-2">
       <div className="flex items-center justify-between">
-        <span className="font-medium">{transcription.filename}</span>
+        <div className="flex items-center gap-2">
+          <span className="font-medium">{transcription.filename}</span>
+          <span className="text-xs text-muted-foreground">{transcription.engine}/{transcription.model}</span>
+        </div>
         <Badge>{STATUS_LABELS[transcription.status]} {Math.round(transcription.progress)}%</Badge>
       </div>
       <Progress value={transcription.progress} className="h-2" />
@@ -425,16 +430,19 @@ function CompletedItem({ transcription }: { transcription: Transcription }) {
   return (
     <div className="border rounded-lg p-3 space-y-2">
       <div className="flex items-center justify-between">
-        {isCompleted ? (
-          <Link
-            href={`/transcription/${transcription.id}`}
-            className="font-medium hover:underline"
-          >
-            {transcription.filename}
-          </Link>
-        ) : (
-          <span className="font-medium">{transcription.filename}</span>
-        )}
+        <div className="flex items-center gap-2">
+          {isCompleted ? (
+            <Link
+              href={`/transcription/${transcription.id}`}
+              className="font-medium hover:underline"
+            >
+              {transcription.filename}
+            </Link>
+          ) : (
+            <span className="font-medium">{transcription.filename}</span>
+          )}
+          <span className="text-xs text-muted-foreground">{transcription.engine}/{transcription.model}</span>
+        </div>
         <Badge variant={isFailed ? "destructive" : "outline"}>
           {isFailed ? "Failed" : "Completed"}
         </Badge>
