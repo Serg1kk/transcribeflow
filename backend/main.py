@@ -5,6 +5,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from api.transcribe import router as transcribe_router
+from api.settings import router as settings_router
 from models import init_db
 from workers.queue_processor import queue_processor
 
@@ -45,3 +46,4 @@ async def health_check():
 
 
 app.include_router(transcribe_router)
+app.include_router(settings_router)
