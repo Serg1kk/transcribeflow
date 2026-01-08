@@ -27,6 +27,13 @@ class TranscriptionResponse(BaseModel):
     language: Optional[str]
     created_at: datetime
     progress: float
+    error_message: Optional[str] = None
+    file_size: Optional[int] = None  # File size in bytes
+    duration_seconds: Optional[float] = None  # Audio duration
+    # Timing breakdown
+    processing_time_seconds: Optional[float] = None  # Total processing time
+    transcription_time_seconds: Optional[float] = None  # ASR time only
+    diarization_time_seconds: Optional[float] = None  # Speaker ID time only
 
     class Config:
         from_attributes = True
@@ -60,15 +67,20 @@ async def upload_audio(
     with open(upload_path, "wb") as buffer:
         shutil.copyfileobj(file.file, buffer)
 
+    # Get file size
+    file_size = upload_path.stat().st_size
+
     # Create transcription record
     transcription = Transcription(
         filename=file.filename,
         original_path=str(upload_path),
+        file_size=file_size,
         engine=engine,
         model=model,
         language=language,
         min_speakers=min_speakers,
         max_speakers=max_speakers,
+        status=TranscriptionStatus.DRAFT,  # Default to DRAFT
     )
     db.add(transcription)
     db.commit()
@@ -83,6 +95,12 @@ async def upload_audio(
         language=transcription.language,
         created_at=transcription.created_at,
         progress=transcription.progress,
+        error_message=transcription.error_message,
+        file_size=transcription.file_size,
+        duration_seconds=transcription.duration_seconds,
+        processing_time_seconds=transcription.processing_time_seconds,
+        transcription_time_seconds=transcription.transcription_time_seconds,
+        diarization_time_seconds=transcription.diarization_time_seconds,
     )
 
 
@@ -108,6 +126,12 @@ async def list_queue(
             language=t.language,
             created_at=t.created_at,
             progress=t.progress,
+            error_message=t.error_message,
+            file_size=t.file_size,
+            duration_seconds=t.duration_seconds,
+            processing_time_seconds=t.processing_time_seconds,
+            transcription_time_seconds=t.transcription_time_seconds,
+            diarization_time_seconds=t.diarization_time_seconds,
         )
         for t in transcriptions
     ]
@@ -135,6 +159,12 @@ async def get_transcription(
         language=transcription.language,
         created_at=transcription.created_at,
         progress=transcription.progress,
+        error_message=transcription.error_message,
+        file_size=transcription.file_size,
+        duration_seconds=transcription.duration_seconds,
+        processing_time_seconds=transcription.processing_time_seconds,
+        transcription_time_seconds=transcription.transcription_time_seconds,
+        diarization_time_seconds=transcription.diarization_time_seconds,
     )
 
 
@@ -165,6 +195,33 @@ async def get_transcript_data(
 class SpeakerNamesUpdate(BaseModel):
     """Request model for updating speaker names."""
     speaker_names: dict
+
+
+@router.delete("/history/{filter_type}")
+async def delete_history(
+    filter_type: str,
+    db: Session = Depends(get_db),
+):
+    """Delete transcription history.
+
+    Args:
+        filter_type: 'all' to delete everything, 'failed' to delete only failed
+    """
+    if filter_type == "failed":
+        count = db.query(Transcription).filter(
+            Transcription.status == TranscriptionStatus.FAILED
+        ).count()
+        db.query(Transcription).filter(
+            Transcription.status == TranscriptionStatus.FAILED
+        ).delete()
+    elif filter_type == "all":
+        count = db.query(Transcription).count()
+        db.query(Transcription).delete()
+    else:
+        raise HTTPException(status_code=400, detail="filter_type must be 'all' or 'failed'")
+
+    db.commit()
+    return {"deleted": count}
 
 
 @router.put("/{transcription_id}/speakers")

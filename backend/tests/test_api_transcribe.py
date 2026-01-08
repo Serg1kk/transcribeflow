@@ -9,8 +9,7 @@ client = TestClient(app)
 
 
 def test_upload_audio_file():
-    """Test uploading an audio file creates a transcription task."""
-    # Create a fake audio file
+    """Test uploading an audio file creates a transcription task in DRAFT status."""
     fake_audio = BytesIO(b"fake audio content")
     fake_audio.name = "test_meeting.mp3"
 
@@ -27,7 +26,7 @@ def test_upload_audio_file():
     data = response.json()
     assert "id" in data
     assert data["filename"] == "test_meeting.mp3"
-    assert data["status"] == "queued"
+    assert data["status"] == "draft"  # Changed from "queued"
 
 
 def test_upload_invalid_file_type():
