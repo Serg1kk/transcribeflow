@@ -81,10 +81,10 @@ class SettingsUpdateRequest(BaseModel):
 # Feature status: implemented or TBD
 FEATURES = {
     "mlx_whisper": {"status": "implemented", "description": "Local Whisper on Apple Silicon"},
-    "assemblyai": {"status": "tbd", "description": "AssemblyAI cloud transcription"},
-    "openai_whisper": {"status": "tbd", "description": "OpenAI Whisper API"},
-    "deepgram": {"status": "tbd", "description": "Deepgram cloud transcription"},
-    "elevenlabs": {"status": "tbd", "description": "ElevenLabs text-to-speech"},
+    "assemblyai": {"status": "implemented", "description": "AssemblyAI cloud transcription"},
+    "deepgram": {"status": "implemented", "description": "Deepgram cloud transcription"},
+    "elevenlabs": {"status": "implemented", "description": "ElevenLabs Scribe transcription"},
+    "yandex": {"status": "implemented", "description": "Yandex SpeechKit transcription"},
     "diarization": {"status": "implemented", "description": "Speaker identification (Pyannote)"},
     "gemini_llm": {"status": "tbd", "description": "Google Gemini for post-processing"},
     "openrouter_llm": {"status": "tbd", "description": "OpenRouter for LLM access"},
