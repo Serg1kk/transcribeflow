@@ -3,7 +3,7 @@
 import shutil
 from datetime import datetime
 from pathlib import Path
-from typing import Optional
+from typing import List, Optional
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
@@ -72,6 +72,58 @@ async def upload_audio(
     db.add(transcription)
     db.commit()
     db.refresh(transcription)
+
+    return TranscriptionResponse(
+        id=transcription.id,
+        filename=transcription.filename,
+        status=transcription.status.value,
+        engine=transcription.engine,
+        model=transcription.model,
+        language=transcription.language,
+        created_at=transcription.created_at,
+        progress=transcription.progress,
+    )
+
+
+@router.get("/queue", response_model=List[TranscriptionResponse])
+async def list_queue(
+    db: Session = Depends(get_db),
+    limit: int = 50,
+):
+    """List all transcriptions in the queue."""
+    transcriptions = (
+        db.query(Transcription)
+        .order_by(Transcription.created_at.desc())
+        .limit(limit)
+        .all()
+    )
+    return [
+        TranscriptionResponse(
+            id=t.id,
+            filename=t.filename,
+            status=t.status.value,
+            engine=t.engine,
+            model=t.model,
+            language=t.language,
+            created_at=t.created_at,
+            progress=t.progress,
+        )
+        for t in transcriptions
+    ]
+
+
+@router.get("/{transcription_id}", response_model=TranscriptionResponse)
+async def get_transcription(
+    transcription_id: str,
+    db: Session = Depends(get_db),
+):
+    """Get a specific transcription by ID."""
+    transcription = db.query(Transcription).filter(
+        Transcription.id == transcription_id
+    ).first()
+
+    if not transcription:
+        raise HTTPException(status_code=404, detail="Transcription not found")
 
     return TranscriptionResponse(
         id=transcription.id,
