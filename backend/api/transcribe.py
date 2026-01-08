@@ -276,6 +276,31 @@ async def update_transcription(
     )
 
 
+@router.delete("/{transcription_id}")
+async def delete_transcription(
+    transcription_id: str,
+    db: Session = Depends(get_db),
+):
+    """Delete a single transcription."""
+    transcription = db.query(Transcription).filter(
+        Transcription.id == transcription_id
+    ).first()
+
+    if not transcription:
+        raise HTTPException(status_code=404, detail="Transcription not found")
+
+    # Only allow deleting DRAFT, FAILED, or COMPLETED status
+    if transcription.status not in [TranscriptionStatus.DRAFT, TranscriptionStatus.FAILED, TranscriptionStatus.COMPLETED]:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Cannot delete transcription in {transcription.status.value} status"
+        )
+
+    db.delete(transcription)
+    db.commit()
+    return {"status": "deleted"}
+
+
 @router.get("/{transcription_id}/transcript")
 async def get_transcript_data(
     transcription_id: str,

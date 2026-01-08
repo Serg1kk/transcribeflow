@@ -176,3 +176,22 @@ def test_start_all_transcriptions():
     data = response.json()
     assert data["started"] >= 3  # At least the 3 we just created
     assert data["failed"] == 0
+
+
+def test_delete_transcription():
+    """Test deleting a single transcription."""
+    # Upload a file
+    fake_audio = BytesIO(b"fake audio")
+    upload_response = client.post(
+        "/api/transcribe/upload",
+        files={"file": ("delete_test.mp3", fake_audio, "audio/mpeg")},
+    )
+    transcription_id = upload_response.json()["id"]
+
+    # Delete it
+    response = client.delete(f"/api/transcribe/{transcription_id}")
+    assert response.status_code == 200
+
+    # Verify it's gone
+    check = client.get(f"/api/transcribe/{transcription_id}")
+    assert check.status_code == 404
