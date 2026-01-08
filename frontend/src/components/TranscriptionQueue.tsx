@@ -14,6 +14,7 @@ import {
   startTranscriptions,
   startAllTranscriptions,
   deleteTranscription,
+  engineSupportsInitialPrompt,
 } from "@/lib/api";
 import Link from "next/link";
 
@@ -315,6 +316,8 @@ function DraftItem({
   const [isSaving, setIsSaving] = useState(false);
   const [saved, setSaved] = useState(false);
 
+  const supportsPrompt = engineSupportsInitialPrompt(transcription.engine);
+
   const handleSave = async () => {
     if (prompt === (transcription.initial_prompt || "")) return;
     setIsSaving(true);
@@ -349,17 +352,19 @@ function DraftItem({
           🗑️
         </Button>
       </div>
-      <div className="flex items-center gap-2 pl-7">
-        <Input
-          value={prompt}
-          onChange={(e) => setPrompt(e.target.value)}
-          onBlur={handleSave}
-          placeholder="Enter context for better transcription..."
-          className="h-8 text-sm"
-        />
-        {isSaving && <span className="text-xs text-muted-foreground">Saving...</span>}
-        {saved && <span className="text-xs text-green-600">Saved</span>}
-      </div>
+      {supportsPrompt && (
+        <div className="flex items-center gap-2 pl-7">
+          <Input
+            value={prompt}
+            onChange={(e) => setPrompt(e.target.value)}
+            onBlur={handleSave}
+            placeholder="Enter context for better transcription..."
+            className="h-8 text-sm"
+          />
+          {isSaving && <span className="text-xs text-muted-foreground">Saving...</span>}
+          {saved && <span className="text-xs text-green-600">Saved</span>}
+        </div>
+      )}
     </div>
   );
 }
