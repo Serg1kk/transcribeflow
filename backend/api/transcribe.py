@@ -180,6 +180,19 @@ async def start_transcriptions(
     return StartResponse(started=started, failed=failed)
 
 
+@router.post("/start-all", response_model=StartResponse)
+async def start_all_transcriptions(
+    db: Session = Depends(get_db),
+):
+    """Move ALL draft transcriptions to QUEUED status."""
+    result = db.query(Transcription).filter(
+        Transcription.status == TranscriptionStatus.DRAFT
+    ).update({Transcription.status: TranscriptionStatus.QUEUED})
+
+    db.commit()
+    return StartResponse(started=result, failed=0)
+
+
 @router.get("/{transcription_id}", response_model=TranscriptionResponse)
 async def get_transcription(
     transcription_id: str,

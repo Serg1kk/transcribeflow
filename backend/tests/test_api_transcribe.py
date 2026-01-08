@@ -153,3 +153,26 @@ def test_start_transcriptions():
     check2 = client.get(f"/api/transcribe/{id2}")
     assert check1.json()["status"] == "queued"
     assert check2.json()["status"] == "queued"
+
+
+def test_start_all_transcriptions():
+    """Test starting all draft transcriptions."""
+    # Upload files
+    for i in range(3):
+        fake_audio = BytesIO(b"fake audio")
+        client.post(
+            "/api/transcribe/upload",
+            files={"file": (f"start_all_test{i}.mp3", fake_audio, "audio/mpeg")},
+        )
+
+    # Count current drafts (may include from other tests)
+    queue = client.get("/api/transcribe/queue").json()
+    draft_count = len([t for t in queue if t["status"] == "draft"])
+
+    # Start all
+    response = client.post("/api/transcribe/start-all")
+
+    assert response.status_code == 200
+    data = response.json()
+    assert data["started"] >= 3  # At least the 3 we just created
+    assert data["failed"] == 0
