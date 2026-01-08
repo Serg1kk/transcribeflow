@@ -55,3 +55,61 @@ export async function getTranscription(id: string): Promise<Transcription> {
   if (!response.ok) throw new Error("Transcription not found");
   return response.json();
 }
+
+export interface TranscriptionDetail extends Transcription {
+  output_dir: string | null;
+  duration_seconds: number | null;
+  speakers_count: number | null;
+  language_detected: string | null;
+  speaker_names: Record<string, string> | null;
+}
+
+export interface TranscriptData {
+  metadata: {
+    id: string;
+    filename: string;
+    duration_seconds: number;
+    created_at: string;
+    engine: string;
+    model: string;
+    language: string;
+  };
+  speakers: Record<string, { name: string; color: string }>;
+  segments: Array<{
+    start: number;
+    end: number;
+    text: string;
+    speaker: string;
+    confidence: number;
+  }>;
+  stats: {
+    total_words: number;
+    speakers_count: number;
+    language_detected: string;
+    processing_time_seconds: number;
+  };
+}
+
+export async function getTranscriptionDetail(id: string): Promise<TranscriptionDetail> {
+  const response = await fetch(`${API_BASE}/api/transcribe/${id}`);
+  if (!response.ok) throw new Error("Transcription not found");
+  return response.json();
+}
+
+export async function getTranscriptData(id: string): Promise<TranscriptData> {
+  const response = await fetch(`${API_BASE}/api/transcribe/${id}/transcript`);
+  if (!response.ok) throw new Error("Transcript not found");
+  return response.json();
+}
+
+export async function updateSpeakerNames(
+  id: string,
+  speakerNames: Record<string, string>
+): Promise<void> {
+  const response = await fetch(`${API_BASE}/api/transcribe/${id}/speakers`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ speaker_names: speakerNames }),
+  });
+  if (!response.ok) throw new Error("Failed to update speaker names");
+}

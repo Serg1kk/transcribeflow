@@ -1,5 +1,6 @@
 # api/transcribe.py
 """Transcription API endpoints."""
+import json
 import shutil
 from datetime import datetime
 from pathlib import Path
@@ -135,3 +136,68 @@ async def get_transcription(
         created_at=transcription.created_at,
         progress=transcription.progress,
     )
+
+
+@router.get("/{transcription_id}/transcript")
+async def get_transcript_data(
+    transcription_id: str,
+    db: Session = Depends(get_db),
+):
+    """Get the full transcript JSON data."""
+    transcription = db.query(Transcription).filter(
+        Transcription.id == transcription_id
+    ).first()
+
+    if not transcription:
+        raise HTTPException(status_code=404, detail="Transcription not found")
+
+    if not transcription.output_dir:
+        raise HTTPException(status_code=404, detail="Transcript not ready")
+
+    transcript_path = Path(transcription.output_dir) / "transcript.json"
+    if not transcript_path.exists():
+        raise HTTPException(status_code=404, detail="Transcript file not found")
+
+    with open(transcript_path, "r", encoding="utf-8") as f:
+        return json.load(f)
+
+
+class SpeakerNamesUpdate(BaseModel):
+    """Request model for updating speaker names."""
+    speaker_names: dict
+
+
+@router.put("/{transcription_id}/speakers")
+async def update_speakers(
+    transcription_id: str,
+    update: SpeakerNamesUpdate,
+    db: Session = Depends(get_db),
+):
+    """Update speaker names for a transcription."""
+    transcription = db.query(Transcription).filter(
+        Transcription.id == transcription_id
+    ).first()
+
+    if not transcription:
+        raise HTTPException(status_code=404, detail="Transcription not found")
+
+    # Update in database
+    transcription.speaker_names = update.speaker_names
+    db.commit()
+
+    # Update in transcript.json file
+    if transcription.output_dir:
+        transcript_path = Path(transcription.output_dir) / "transcript.json"
+        if transcript_path.exists():
+            with open(transcript_path, "r", encoding="utf-8") as f:
+                data = json.load(f)
+
+            # Update speaker names in the speakers dict
+            for speaker_id, name in update.speaker_names.items():
+                if speaker_id in data["speakers"]:
+                    data["speakers"][speaker_id]["name"] = name
+
+            with open(transcript_path, "w", encoding="utf-8") as f:
+                json.dump(data, f, ensure_ascii=False, indent=2)
+
+    return {"status": "ok"}
