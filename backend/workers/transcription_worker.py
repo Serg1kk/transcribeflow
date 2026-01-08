@@ -20,8 +20,9 @@ from engines import (
     YandexEngine,
 )
 from models import Transcription, TranscriptionStatus
-from workers.diarization import DiarizationWorker
-from workers.whisperx_diarization import WhisperXDiarizationWorker
+# Lazy imports to avoid loading PyTorch before MLX transcription
+# from workers.diarization import DiarizationWorker
+# from workers.whisperx_diarization import WhisperXDiarizationWorker
 
 
 class TranscriptionWorker:
@@ -57,9 +58,11 @@ class TranscriptionWorker:
                 raise ValueError(f"Unknown engine: {engine_name}")
         return self._engines[engine_name]
 
-    def get_diarization_worker(self) -> DiarizationWorker:
-        """Get or create the diarization worker."""
+    def get_diarization_worker(self):
+        """Get or create the diarization worker (lazy import to avoid PyTorch loading)."""
         if self._diarization_worker is None:
+            # Lazy import to avoid loading PyTorch before MLX transcription completes
+            from workers.diarization import DiarizationWorker
             self._diarization_worker = DiarizationWorker(
                 hf_token=self.settings.hf_token,
                 min_speakers=self.settings.min_speakers,
@@ -68,9 +71,11 @@ class TranscriptionWorker:
             )
         return self._diarization_worker
 
-    def get_whisperx_worker(self) -> WhisperXDiarizationWorker:
-        """Get or create the WhisperX diarization worker."""
+    def get_whisperx_worker(self):
+        """Get or create the WhisperX diarization worker (lazy import to avoid PyTorch loading)."""
         if not hasattr(self, '_whisperx_worker') or self._whisperx_worker is None:
+            # Lazy import to avoid loading PyTorch before MLX transcription completes
+            from workers.whisperx_diarization import WhisperXDiarizationWorker
             self._whisperx_worker = WhisperXDiarizationWorker(
                 hf_token=self.settings.hf_token,
                 min_speakers=self.settings.min_speakers,
