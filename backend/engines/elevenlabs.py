@@ -87,44 +87,77 @@ class ElevenLabsEngine(TranscriptionEngine):
 
         processing_time = time.time() - start_time
 
-        # Parse response - ElevenLabs returns utterances with speaker info
-        segments = []
+        # Parse response - ElevenLabs returns text and words array
+        full_text = result.get("text", "")
+        raw_words = result.get("words", [])
+
+        # Build words list (filter out spacing and audio events)
         words = []
-
-        for utterance in result.get("utterances", []):
-            speaker_id = f"SPEAKER_{utterance.get('speaker_id', 0):02d}"
-
-            segments.append({
-                "start": utterance["start"],
-                "end": utterance["end"],
-                "text": utterance["text"],
-                "speaker": speaker_id,
-                "confidence": utterance.get("confidence", 0.0),
-            })
-
-            # Extract words from utterance
-            for word in utterance.get("words", []):
+        for w in raw_words:
+            if w.get("type") == "word":
                 words.append({
-                    "word": word["text"],
-                    "start": word["start"],
-                    "end": word["end"],
-                    "confidence": word.get("confidence", 0.0),
+                    "word": w.get("text", ""),
+                    "start": w.get("start", 0),
+                    "end": w.get("end", 0),
+                    "confidence": abs(w.get("logprob", 0)),  # logprob is negative
+                    "speaker": w.get("speaker_id", "speaker_0"),
                 })
 
-        # Combine all text
-        full_text = " ".join(u["text"] for u in result.get("utterances", []))
+        # Build segments by grouping consecutive words by speaker
+        segments = []
+        if words:
+            current_segment = {
+                "start": words[0]["start"],
+                "end": words[0]["end"],
+                "text": words[0]["word"],
+                "speaker": self._format_speaker_id(words[0].get("speaker")),
+                "confidence": words[0]["confidence"],
+            }
 
-        # Calculate duration from last segment
-        duration = segments[-1]["end"] if segments else 0
+            for word in words[1:]:
+                word_speaker = self._format_speaker_id(word.get("speaker"))
+                if word_speaker == current_segment["speaker"]:
+                    # Same speaker - extend segment
+                    current_segment["end"] = word["end"]
+                    current_segment["text"] += " " + word["word"]
+                else:
+                    # New speaker - save current and start new
+                    segments.append(current_segment)
+                    current_segment = {
+                        "start": word["start"],
+                        "end": word["end"],
+                        "text": word["word"],
+                        "speaker": word_speaker,
+                        "confidence": word["confidence"],
+                    }
+
+            # Don't forget last segment
+            segments.append(current_segment)
+
+        # Calculate duration from last word
+        duration = words[-1]["end"] if words else 0
 
         return TranscriptionResult(
             text=full_text,
             segments=segments,
-            words=words,
+            words=[{"word": w["word"], "start": w["start"], "end": w["end"], "confidence": w["confidence"]} for w in words],
             language=result.get("language_code", "unknown"),
             duration_seconds=duration,
             processing_time_seconds=processing_time,
         )
+
+    def _format_speaker_id(self, speaker_id: Optional[str]) -> str:
+        """Format speaker ID to standard format (SPEAKER_00, SPEAKER_01, etc.)"""
+        if not speaker_id:
+            return "SPEAKER_00"
+        # ElevenLabs returns "speaker_0", "speaker_1" etc.
+        if speaker_id.startswith("speaker_"):
+            num = speaker_id.replace("speaker_", "")
+            try:
+                return f"SPEAKER_{int(num):02d}"
+            except ValueError:
+                return "SPEAKER_00"
+        return speaker_id
 
     def _get_content_type(self, audio_path: Path) -> str:
         """Get content type based on file extension."""
