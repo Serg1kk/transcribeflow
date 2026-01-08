@@ -37,11 +37,22 @@ class DiarizationWorker:
         hf_token: Optional[str] = None,
         min_speakers: int = 2,
         max_speakers: int = 6,
+        device: str = "auto",
     ):
         self.hf_token = hf_token
         self.min_speakers = min_speakers
         self.max_speakers = max_speakers
+        self.device = device
         self._pipeline = None
+
+    def _resolve_device(self) -> str:
+        """Resolve 'auto' to actual device, return 'cpu' or 'mps'."""
+        if self.device == "auto":
+            import torch
+            if torch.backends.mps.is_available():
+                return "mps"
+            return "cpu"
+        return self.device
 
     def is_available(self) -> bool:
         """Check if pyannote is installed and token is set."""
@@ -52,13 +63,22 @@ class DiarizationWorker:
             return False
 
     def _load_pipeline(self):
-        """Lazy load the diarization pipeline."""
+        """Lazy load the diarization pipeline with device support."""
         if self._pipeline is None:
+            import torch
             from pyannote.audio import Pipeline
+
             self._pipeline = Pipeline.from_pretrained(
                 "pyannote/speaker-diarization-3.1",
                 token=self.hf_token
             )
+
+            # Move to device (MPS or CPU)
+            resolved_device = self._resolve_device()
+            if resolved_device == "mps":
+                self._pipeline.to(torch.device("mps"))
+            # CPU is default, no need to move
+
         return self._pipeline
 
     def _load_audio(self, audio_path: Path) -> Dict[str, Any]:
