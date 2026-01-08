@@ -22,12 +22,17 @@ class JsonConfigSettingsSource(PydanticBaseSettingsSource):
             return config[field_name], field_name, False
         return None, field_name, False
 
+    # Deprecated fields that should be ignored when loading config
+    DEPRECATED_FIELDS = {"diarization_enabled"}
+
     def _load_config(self) -> Dict[str, Any]:
-        """Load config from JSON file."""
+        """Load config from JSON file, filtering out deprecated fields."""
         if CONFIG_PATH.exists():
             try:
                 with open(CONFIG_PATH, "r", encoding="utf-8") as f:
-                    return json.load(f)
+                    config = json.load(f)
+                    # Filter out deprecated fields
+                    return {k: v for k, v in config.items() if k not in self.DEPRECATED_FIELDS}
             except (json.JSONDecodeError, IOError):
                 return {}
         return {}
@@ -64,10 +69,16 @@ class Settings(BaseSettings):
     default_model: str = "large-v2"
 
     # Diarization
-    diarization_enabled: bool = True
+    diarization_method: str = "fast"  # "none" | "fast" | "accurate"
+    compute_device: str = "auto"  # "auto" | "mps" | "cpu"
     hf_token: Optional[str] = None
     min_speakers: int = 2
     max_speakers: int = 6
+
+    @property
+    def diarization_enabled(self) -> bool:
+        """Backwards compatibility: True if diarization_method is not 'none'."""
+        return self.diarization_method != "none"
 
     # Whisper Anti-Hallucination Settings
     # These help prevent "Субтитры сделал DimaTorzok" and similar artifacts
