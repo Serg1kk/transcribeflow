@@ -168,3 +168,36 @@ async def update_settings(update: SettingsUpdateRequest):
         has_openrouter_key=bool(settings.openrouter_api_key),
         features=FEATURES,
     )
+
+
+class ValidateKeyRequest(BaseModel):
+    """Request to validate an API key."""
+    provider: str
+    api_key: str
+
+
+class ValidateKeyResponse(BaseModel):
+    """Response from key validation."""
+    valid: bool
+    error: Optional[str] = None
+
+
+@router.post("/validate-key", response_model=ValidateKeyResponse)
+async def validate_api_key(request: ValidateKeyRequest):
+    """Validate an API key for a cloud provider."""
+    from engines import AssemblyAIEngine, DeepgramEngine, ElevenLabsEngine, YandexEngine
+
+    engines = {
+        "assemblyai": AssemblyAIEngine,
+        "deepgram": DeepgramEngine,
+        "elevenlabs": ElevenLabsEngine,
+        "yandex": YandexEngine,
+    }
+
+    if request.provider not in engines:
+        return ValidateKeyResponse(valid=False, error=f"Unknown provider: {request.provider}")
+
+    engine = engines[request.provider](api_key=request.api_key)
+    result = await engine.validate_api_key()
+
+    return ValidateKeyResponse(**result)
