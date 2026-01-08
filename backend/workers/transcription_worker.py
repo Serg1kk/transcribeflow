@@ -21,6 +21,7 @@ from engines import (
 )
 from models import Transcription, TranscriptionStatus
 from workers.diarization import DiarizationWorker
+from workers.whisperx_diarization import WhisperXDiarizationWorker
 
 
 class TranscriptionWorker:
@@ -63,8 +64,19 @@ class TranscriptionWorker:
                 hf_token=self.settings.hf_token,
                 min_speakers=self.settings.min_speakers,
                 max_speakers=self.settings.max_speakers,
+                device=self.settings.compute_device,
             )
         return self._diarization_worker
+
+    def get_whisperx_worker(self) -> WhisperXDiarizationWorker:
+        """Get or create the WhisperX diarization worker."""
+        if not hasattr(self, '_whisperx_worker') or self._whisperx_worker is None:
+            self._whisperx_worker = WhisperXDiarizationWorker(
+                hf_token=self.settings.hf_token,
+                min_speakers=self.settings.min_speakers,
+                max_speakers=self.settings.max_speakers,
+            )
+        return self._whisperx_worker
 
     def get_whisper_settings(self) -> WhisperSettings:
         """Get Whisper anti-hallucination settings from config."""
@@ -137,13 +149,15 @@ class TranscriptionWorker:
             from engines.registry import PROVIDERS
             engine_info = PROVIDERS.get(transcription.engine, {})
 
-            if self.settings.diarization_enabled:
+            diarization_method = self.settings.diarization_method
+
+            if diarization_method != "none":
                 if engine_info.get("supports_diarization"):
                     # Cloud engine already did diarization - count speakers from segments
                     speaker_ids = set(seg.get("speaker", "SPEAKER_00") for seg in segments)
                     speakers_count = len(speaker_ids)
-                else:
-                    # MLX Local - use Pyannote for diarization
+                elif diarization_method == "fast":
+                    # Fast: Pyannote on MPS/GPU
                     transcription.status = TranscriptionStatus.DIARIZING
                     db.commit()
 
@@ -165,6 +179,30 @@ class TranscriptionWorker:
                         )
                         speakers_count = len(diarization_result.speakers)
                         diarization_time = time.time() - diarization_start_time
+
+                elif diarization_method == "accurate":
+                    # Accurate: WhisperX alignment + diarization
+                    transcription.status = TranscriptionStatus.DIARIZING
+                    db.commit()
+
+                    whisperx_worker = self.get_whisperx_worker()
+                    if whisperx_worker.is_available():
+                        diarization_start_time = time.time()
+
+                        num_speakers = None
+                        if transcription.min_speakers == transcription.max_speakers:
+                            num_speakers = transcription.min_speakers
+
+                        whisperx_result = whisperx_worker.diarize_with_alignment(
+                            audio_path=audio_path,
+                            segments=result.segments,
+                            language=result.language,
+                            num_speakers=num_speakers,
+                        )
+
+                        segments = whisperx_result.segments
+                        speakers_count = len(whisperx_result.speakers)
+                        diarization_time = whisperx_result.processing_time_seconds
 
             transcription.progress = 80.0
             db.commit()
