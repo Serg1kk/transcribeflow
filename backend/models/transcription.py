@@ -34,6 +34,9 @@ class Transcription(Base):
     min_speakers = Column(Integer, nullable=True)
     max_speakers = Column(Integer, nullable=True)
 
+    # Per-file transcription hint
+    initial_prompt = Column(Text, nullable=True)
+
     # Status & progress
     status = Column(Enum(TranscriptionStatus), default=TranscriptionStatus.QUEUED)
     progress = Column(Float, default=0.0)

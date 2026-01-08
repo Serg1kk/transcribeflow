@@ -62,6 +62,16 @@ def test_transcription_status_has_draft():
     assert TranscriptionStatus.DRAFT.value == "draft"
 
 
+def test_transcription_has_initial_prompt_field():
+    """Test that Transcription model has initial_prompt field."""
+    from models.transcription import Transcription
+    from sqlalchemy import inspect
+
+    mapper = inspect(Transcription)
+    column_names = [c.key for c in mapper.columns]
+    assert 'initial_prompt' in column_names
+
+
 def test_transcription_speaker_names_json():
     """Test speaker names are stored as JSON."""
     engine = create_engine("sqlite:///:memory:")
