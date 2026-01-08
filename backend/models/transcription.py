@@ -9,6 +9,7 @@ from models.database import Base
 
 class TranscriptionStatus(enum.Enum):
     """Status of a transcription task."""
+    DRAFT = "draft"           # Waiting for user to start
     QUEUED = "queued"
     PROCESSING = "processing"
     DIARIZING = "diarizing"
@@ -24,6 +25,7 @@ class Transcription(Base):
     filename = Column(String(255), nullable=False)
     original_path = Column(String(500), nullable=False)
     output_dir = Column(String(500), nullable=True)
+    file_size = Column(Integer, nullable=True)  # File size in bytes
 
     # Processing settings
     engine = Column(String(50), nullable=False, default="mlx-whisper")
@@ -41,7 +43,11 @@ class Transcription(Base):
     duration_seconds = Column(Float, nullable=True)
     speakers_count = Column(Integer, nullable=True)
     language_detected = Column(String(10), nullable=True)
-    processing_time_seconds = Column(Float, nullable=True)
+
+    # Timing breakdown
+    processing_time_seconds = Column(Float, nullable=True)  # Total time
+    transcription_time_seconds = Column(Float, nullable=True)  # ASR only
+    diarization_time_seconds = Column(Float, nullable=True)  # Speaker ID only
 
     # Speaker name mappings (JSON: {"SPEAKER_00": "Ivan", ...})
     speaker_names = Column(JSON, nullable=True)

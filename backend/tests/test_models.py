@@ -54,6 +54,14 @@ def test_transcription_status_transitions():
     session.close()
 
 
+def test_transcription_status_has_draft():
+    """Test that DRAFT status exists in TranscriptionStatus enum."""
+    from models.transcription import TranscriptionStatus
+
+    assert hasattr(TranscriptionStatus, 'DRAFT')
+    assert TranscriptionStatus.DRAFT.value == "draft"
+
+
 def test_transcription_speaker_names_json():
     """Test speaker names are stored as JSON."""
     engine = create_engine("sqlite:///:memory:")
