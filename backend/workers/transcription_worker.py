@@ -102,18 +102,27 @@ class TranscriptionWorker:
             # Step 1: Transcribe with ASR engine
             transcription_start_time = time.time()
             engine = self.get_engine(transcription.engine)
-            whisper_settings = self.get_whisper_settings()
 
-            # Override with per-file initial_prompt if set
-            if transcription.initial_prompt:
-                whisper_settings.initial_prompt = transcription.initial_prompt
+            # Only MLX Whisper uses the settings parameter
+            if transcription.engine == "mlx-whisper":
+                whisper_settings = self.get_whisper_settings()
+                # Override with per-file initial_prompt if set
+                if transcription.initial_prompt:
+                    whisper_settings.initial_prompt = transcription.initial_prompt
 
-            result = engine.transcribe(
-                audio_path=audio_path,
-                model=transcription.model,
-                language=transcription.language,
-                settings=whisper_settings,
-            )
+                result = engine.transcribe(
+                    audio_path=audio_path,
+                    model=transcription.model,
+                    language=transcription.language,
+                    settings=whisper_settings,
+                )
+            else:
+                # Cloud engines don't use Whisper settings
+                result = engine.transcribe(
+                    audio_path=audio_path,
+                    model=transcription.model,
+                    language=transcription.language,
+                )
             transcription_time = time.time() - transcription_start_time
 
             transcription.progress = 50.0
