@@ -4,12 +4,20 @@ const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 export interface Transcription {
   id: string;
   filename: string;
-  status: "queued" | "processing" | "diarizing" | "completed" | "failed";
+  status: "draft" | "queued" | "processing" | "diarizing" | "completed" | "failed";
   engine: string;
   model: string;
   language: string | null;
+  initial_prompt: string | null;
   created_at: string;
   progress: number;
+  error_message: string | null;
+  file_size: number | null;
+  duration_seconds: number | null;
+  // Timing breakdown
+  processing_time_seconds: number | null;
+  transcription_time_seconds: number | null;
+  diarization_time_seconds: number | null;
 }
 
 export async function uploadAudio(
