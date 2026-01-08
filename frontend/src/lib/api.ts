@@ -121,3 +121,41 @@ export async function updateSpeakerNames(
   });
   if (!response.ok) throw new Error("Failed to update speaker names");
 }
+
+export async function updateTranscription(
+  id: string,
+  data: { initial_prompt?: string }
+): Promise<Transcription> {
+  const response = await fetch(`${API_BASE}/api/transcribe/${id}`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data),
+  });
+  if (!response.ok) throw new Error("Failed to update transcription");
+  return response.json();
+}
+
+export async function startTranscriptions(ids: string[]): Promise<{ started: number; failed: number }> {
+  const response = await fetch(`${API_BASE}/api/transcribe/start`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ ids }),
+  });
+  if (!response.ok) throw new Error("Failed to start transcriptions");
+  return response.json();
+}
+
+export async function startAllTranscriptions(): Promise<{ started: number; failed: number }> {
+  const response = await fetch(`${API_BASE}/api/transcribe/start-all`, {
+    method: "POST",
+  });
+  if (!response.ok) throw new Error("Failed to start all transcriptions");
+  return response.json();
+}
+
+export async function deleteTranscription(id: string): Promise<void> {
+  const response = await fetch(`${API_BASE}/api/transcribe/${id}`, {
+    method: "DELETE",
+  });
+  if (!response.ok) throw new Error("Failed to delete transcription");
+}
