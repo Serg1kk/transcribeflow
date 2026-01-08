@@ -12,7 +12,7 @@ client = TestClient(app)
 
 def test_full_transcription_workflow():
     """Test the complete workflow from upload to transcript retrieval."""
-    # Step 1: Upload a file
+    # Step 1: Upload a file (now creates DRAFT status)
     fake_audio = BytesIO(b"fake audio content for e2e test")
 
     upload_response = client.post(
@@ -24,7 +24,7 @@ def test_full_transcription_workflow():
     assert upload_response.status_code == 201
     data = upload_response.json()
     transcription_id = data["id"]
-    assert data["status"] == "queued"
+    assert data["status"] == "draft"  # Changed from "queued" for DRAFT workflow
 
     # Step 2: Check it appears in the queue
     queue_response = client.get("/api/transcribe/queue")
@@ -36,6 +36,18 @@ def test_full_transcription_workflow():
     status_response = client.get(f"/api/transcribe/{transcription_id}")
     assert status_response.status_code == 200
     assert status_response.json()["id"] == transcription_id
+
+    # Step 4: Start the transcription (move from DRAFT to QUEUED)
+    start_response = client.post(
+        "/api/transcribe/start",
+        json={"ids": [transcription_id]}
+    )
+    assert start_response.status_code == 200
+    assert start_response.json()["started"] == 1
+
+    # Step 5: Verify status changed to queued
+    status_response = client.get(f"/api/transcribe/{transcription_id}")
+    assert status_response.json()["status"] == "queued"
 
 
 def test_settings_endpoint():
