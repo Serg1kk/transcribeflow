@@ -6,6 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from api.transcribe import router as transcribe_router
 from api.settings import router as settings_router
+from api.engines import router as engines_router
 from models import init_db
 from workers.queue_processor import queue_processor
 
@@ -32,7 +33,7 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000"],
+    allow_origins=["http://localhost:3000", "http://localhost:3001"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -47,3 +48,4 @@ async def health_check():
 
 app.include_router(transcribe_router)
 app.include_router(settings_router)
+app.include_router(engines_router)
