@@ -58,7 +58,8 @@ def test_settings_endpoint():
     data = response.json()
     assert "default_engine" in data
     assert "default_model" in data
-    assert "diarization_enabled" in data
+    assert "diarization_method" in data
+    assert "compute_device" in data
     assert "min_speakers" in data
     assert "max_speakers" in data
     assert "has_hf_token" in data
