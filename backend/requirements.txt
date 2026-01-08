@@ -12,6 +12,7 @@ mlx-whisper>=0.4.0
 pyannote.audio>=4.0.0
 torch>=2.1.0
 torchaudio>=2.1.0
+whisperx>=3.1.0
 
 # LLM
 litellm==1.17.9
