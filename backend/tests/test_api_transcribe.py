@@ -118,3 +118,38 @@ def test_update_transcription_not_found():
         json={"initial_prompt": "test"}
     )
     assert response.status_code == 404
+
+
+def test_start_transcriptions():
+    """Test starting selected draft transcriptions."""
+    # Upload two files
+    fake_audio1 = BytesIO(b"fake audio 1")
+    fake_audio2 = BytesIO(b"fake audio 2")
+
+    resp1 = client.post(
+        "/api/transcribe/upload",
+        files={"file": ("start_test1.mp3", fake_audio1, "audio/mpeg")},
+    )
+    resp2 = client.post(
+        "/api/transcribe/upload",
+        files={"file": ("start_test2.mp3", fake_audio2, "audio/mpeg")},
+    )
+    id1 = resp1.json()["id"]
+    id2 = resp2.json()["id"]
+
+    # Start both
+    response = client.post(
+        "/api/transcribe/start",
+        json={"ids": [id1, id2]}
+    )
+
+    assert response.status_code == 200
+    data = response.json()
+    assert data["started"] == 2
+    assert data["failed"] == 0
+
+    # Verify status changed
+    check1 = client.get(f"/api/transcribe/{id1}")
+    check2 = client.get(f"/api/transcribe/{id2}")
+    assert check1.json()["status"] == "queued"
+    assert check2.json()["status"] == "queued"

@@ -140,6 +140,46 @@ async def list_queue(
     ]
 
 
+class StartRequest(BaseModel):
+    """Request model for starting transcriptions."""
+    ids: List[str]
+
+
+class StartResponse(BaseModel):
+    """Response model for start operation."""
+    started: int
+    failed: int
+
+
+@router.post("/start", response_model=StartResponse)
+async def start_transcriptions(
+    request: StartRequest,
+    db: Session = Depends(get_db),
+):
+    """Move selected transcriptions from DRAFT to QUEUED status."""
+    started = 0
+    failed = 0
+
+    for tid in request.ids:
+        transcription = db.query(Transcription).filter(
+            Transcription.id == tid
+        ).first()
+
+        if not transcription:
+            failed += 1
+            continue
+
+        if transcription.status != TranscriptionStatus.DRAFT:
+            failed += 1
+            continue
+
+        transcription.status = TranscriptionStatus.QUEUED
+        started += 1
+
+    db.commit()
+    return StartResponse(started=started, failed=failed)
+
+
 @router.get("/{transcription_id}", response_model=TranscriptionResponse)
 async def get_transcription(
     transcription_id: str,
