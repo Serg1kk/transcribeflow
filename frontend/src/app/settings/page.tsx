@@ -34,7 +34,8 @@ const LLM_PROVIDERS = [
 interface Settings {
   default_engine: string;
   default_model: string;
-  diarization_enabled: boolean;
+  diarization_method: string;  // "none" | "fast" | "accurate"
+  compute_device: string;  // "auto" | "mps" | "cpu"
   min_speakers: number;
   max_speakers: number;
   // Whisper Anti-Hallucination
@@ -64,7 +65,8 @@ export default function SettingsPage() {
   // Form state
   const [defaultModel, setDefaultModel] = useState("");
   const [defaultEngine, setDefaultEngine] = useState("");
-  const [diarizationEnabled, setDiarizationEnabled] = useState(false);
+  const [diarizationMethod, setDiarizationMethod] = useState("fast");
+  const [computeDevice, setComputeDevice] = useState("auto");
   const [minSpeakers, setMinSpeakers] = useState(2);
   const [maxSpeakers, setMaxSpeakers] = useState(6);
   const [defaultLlmProvider, setDefaultLlmProvider] = useState("");
@@ -99,7 +101,8 @@ export default function SettingsPage() {
       // Set form values
       setDefaultModel(data.default_model);
       setDefaultEngine(data.default_engine);
-      setDiarizationEnabled(data.diarization_enabled);
+      setDiarizationMethod(data.diarization_method);
+      setComputeDevice(data.compute_device);
       setMinSpeakers(data.min_speakers);
       setMaxSpeakers(data.max_speakers);
       setDefaultLlmProvider(data.default_llm_provider);
@@ -147,7 +150,8 @@ export default function SettingsPage() {
     const updates: Record<string, any> = {
       default_model: defaultModel,
       default_engine: defaultEngine,
-      diarization_enabled: diarizationEnabled,
+      diarization_method: diarizationMethod,
+      compute_device: computeDevice,
       min_speakers: minSpeakers,
       max_speakers: maxSpeakers,
       default_llm_provider: defaultLlmProvider,
@@ -271,52 +275,92 @@ export default function SettingsPage() {
           </CardContent>
         </Card>
 
-        {/* Diarization Settings */}
+        {/* Speaker Diarization Settings */}
         <Card>
           <CardHeader>
             <CardTitle>Speaker Diarization</CardTitle>
             <CardDescription>Identify who said what in recordings</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="flex items-center gap-4">
-              <Label>Enable Diarization</Label>
-              <Button
-                variant={diarizationEnabled ? "default" : "outline"}
-                size="sm"
-                onClick={() => setDiarizationEnabled(!diarizationEnabled)}
-              >
-                {diarizationEnabled ? "Enabled" : "Disabled"}
-              </Button>
-              <Badge variant={settings.has_hf_token ? "outline" : "destructive"}>
-                HuggingFace Token: {settings.has_hf_token ? "Configured" : "Missing"}
-              </Badge>
-            </div>
+            {/* Only show for local engine */}
+            {defaultEngine === "mlx-whisper" && (
+              <>
+                <div className="space-y-2">
+                  <Label>Diarization Method</Label>
+                  <Select value={diarizationMethod} onValueChange={setDiarizationMethod}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">None - No diarization</SelectItem>
+                      <SelectItem value="fast">Fast (GPU) - Pyannote on MPS</SelectItem>
+                      <SelectItem value="accurate">Accurate - WhisperX word-level</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground">
+                    Fast: Quick speaker detection on GPU. Accurate: Precise word-level alignment (slower).
+                  </p>
+                </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>Min Speakers</Label>
-                <Input
-                  type="number"
-                  min={1}
-                  max={10}
-                  value={minSpeakers}
-                  onChange={(e) => setMinSpeakers(parseInt(e.target.value) || 2)}
-                />
+                <div className="space-y-2">
+                  <Label>Compute Device</Label>
+                  <Select value={computeDevice} onValueChange={setComputeDevice}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="auto">Auto - Detect best device</SelectItem>
+                      <SelectItem value="mps">GPU (MPS) - Faster, may heat up</SelectItem>
+                      <SelectItem value="cpu">CPU - Stable, slower</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground">
+                    MacBook Air users: Consider CPU for long files to avoid thermal throttling.
+                  </p>
+                </div>
+              </>
+            )}
+
+            {/* Show for cloud engines */}
+            {defaultEngine !== "mlx-whisper" && (
+              <p className="text-sm text-muted-foreground">
+                Cloud engines handle speaker detection automatically.
+              </p>
+            )}
+
+            {/* Speaker count settings - show when diarization is enabled */}
+            {(defaultEngine !== "mlx-whisper" || diarizationMethod !== "none") && (
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Min Speakers</Label>
+                  <Input
+                    type="number"
+                    min={1}
+                    max={10}
+                    value={minSpeakers}
+                    onChange={(e) => setMinSpeakers(parseInt(e.target.value) || 2)}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Max Speakers</Label>
+                  <Input
+                    type="number"
+                    min={1}
+                    max={10}
+                    value={maxSpeakers}
+                    onChange={(e) => setMaxSpeakers(parseInt(e.target.value) || 6)}
+                  />
+                </div>
               </div>
-              <div className="space-y-2">
-                <Label>Max Speakers</Label>
-                <Input
-                  type="number"
-                  min={1}
-                  max={10}
-                  value={maxSpeakers}
-                  onChange={(e) => setMaxSpeakers(parseInt(e.target.value) || 6)}
-                />
-              </div>
-            </div>
+            )}
 
             <div className="space-y-2">
               <Label>HuggingFace Token</Label>
+              <div className="flex items-center gap-2">
+                <Badge variant={settings.has_hf_token ? "outline" : "destructive"}>
+                  {settings.has_hf_token ? "Configured" : "Required"}
+                </Badge>
+              </div>
               <Input
                 type="password"
                 placeholder={settings.has_hf_token ? "********" : "Enter HuggingFace token"}
@@ -324,7 +368,10 @@ export default function SettingsPage() {
                 onChange={(e) => setHfToken(e.target.value)}
               />
               <p className="text-xs text-muted-foreground">
-                Get token from <a href="https://huggingface.co/settings/tokens" target="_blank" className="underline">huggingface.co/settings/tokens</a>
+                Required for diarization. Get token from{" "}
+                <a href="https://huggingface.co/settings/tokens" target="_blank" className="underline">
+                  huggingface.co/settings/tokens
+                </a>
               </p>
             </div>
           </CardContent>
