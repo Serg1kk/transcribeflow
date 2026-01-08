@@ -1,7 +1,7 @@
 // app/settings/page.tsx
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -18,20 +18,12 @@ import {
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
-const MODELS = [
-  { value: "tiny", label: "tiny" },
-  { value: "base", label: "base" },
-  { value: "small", label: "small" },
-  { value: "medium", label: "medium" },
-  { value: "large-v2", label: "large-v2" },
-  { value: "large-v3", label: "large-v3" },
-  { value: "large-v3-turbo", label: "large-v3-turbo" },
-  { value: "turbo", label: "turbo" },
-];
-
-const ENGINES = [
-  { value: "mlx-whisper", label: "MLX Whisper" },
-];
+interface Engine {
+  id: string;
+  name: string;
+  models: string[];
+  available: boolean;
+}
 
 const LLM_PROVIDERS = [
   { value: "gemini", label: "Google Gemini" },
@@ -65,6 +57,7 @@ interface Settings {
 
 export default function SettingsPage() {
   const [settings, setSettings] = useState<Settings | null>(null);
+  const [engines, setEngines] = useState<Engine[]>([]);
   const [isSaving, setIsSaving] = useState(false);
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
 
@@ -95,6 +88,7 @@ export default function SettingsPage() {
 
   useEffect(() => {
     fetchSettings();
+    fetchEngines();
   }, []);
 
   async function fetchSettings() {
@@ -120,6 +114,32 @@ export default function SettingsPage() {
       console.error("Failed to fetch settings:", error);
     }
   }
+
+  async function fetchEngines() {
+    try {
+      const res = await fetch(`${API_BASE}/api/engines`);
+      const data = await res.json();
+      if (data.engines) {
+        setEngines(data.engines);
+      }
+    } catch (error) {
+      console.error("Failed to fetch engines:", error);
+    }
+  }
+
+  // Get models for current engine
+  const currentEngine = engines.find((e) => e.id === defaultEngine);
+  const availableModels = useMemo(
+    () => currentEngine?.models || [],
+    [currentEngine]
+  );
+
+  // Reset model if not available for current engine
+  useEffect(() => {
+    if (availableModels.length > 0 && !availableModels.includes(defaultModel)) {
+      setDefaultModel(availableModels[0]);
+    }
+  }, [defaultEngine, availableModels, defaultModel]);
 
   async function saveSettings() {
     setIsSaving(true);
@@ -223,11 +243,15 @@ export default function SettingsPage() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {ENGINES.map((e) => (
-                      <SelectItem key={e.value} value={e.value}>
-                        {e.label}
-                      </SelectItem>
-                    ))}
+                    {engines.length > 0 ? (
+                      engines.map((e) => (
+                        <SelectItem key={e.id} value={e.id}>
+                          {e.name}
+                        </SelectItem>
+                      ))
+                    ) : (
+                      <SelectItem value="mlx-whisper">MLX Local</SelectItem>
+                    )}
                   </SelectContent>
                 </Select>
               </div>
@@ -238,11 +262,15 @@ export default function SettingsPage() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {MODELS.map((m) => (
-                      <SelectItem key={m.value} value={m.value}>
-                        {m.label}
-                      </SelectItem>
-                    ))}
+                    {availableModels.length > 0 ? (
+                      availableModels.map((m) => (
+                        <SelectItem key={m} value={m}>
+                          {m}
+                        </SelectItem>
+                      ))
+                    ) : (
+                      <SelectItem value="large-v3-turbo">large-v3-turbo</SelectItem>
+                    )}
                   </SelectContent>
                 </Select>
               </div>
