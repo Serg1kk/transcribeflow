@@ -72,3 +72,18 @@ def test_get_nonexistent_transcription():
     """Test 404 for nonexistent transcription."""
     response = client.get("/api/transcribe/nonexistent-id")
     assert response.status_code == 404
+
+
+def test_upload_response_includes_initial_prompt():
+    """Test upload response includes initial_prompt field."""
+    fake_audio = BytesIO(b"fake audio content")
+
+    response = client.post(
+        "/api/transcribe/upload",
+        files={"file": ("prompt_test.mp3", fake_audio, "audio/mpeg")},
+    )
+
+    assert response.status_code == 201
+    data = response.json()
+    assert "initial_prompt" in data
+    assert data["initial_prompt"] is None

@@ -25,6 +25,7 @@ class TranscriptionResponse(BaseModel):
     engine: str
     model: str
     language: Optional[str]
+    initial_prompt: Optional[str] = None  # Per-file transcription hint
     created_at: datetime
     progress: float
     error_message: Optional[str] = None
@@ -93,6 +94,7 @@ async def upload_audio(
         engine=transcription.engine,
         model=transcription.model,
         language=transcription.language,
+        initial_prompt=transcription.initial_prompt,
         created_at=transcription.created_at,
         progress=transcription.progress,
         error_message=transcription.error_message,
@@ -124,6 +126,7 @@ async def list_queue(
             engine=t.engine,
             model=t.model,
             language=t.language,
+            initial_prompt=t.initial_prompt,
             created_at=t.created_at,
             progress=t.progress,
             error_message=t.error_message,
@@ -157,6 +160,7 @@ async def get_transcription(
         engine=transcription.engine,
         model=transcription.model,
         language=transcription.language,
+        initial_prompt=transcription.initial_prompt,
         created_at=transcription.created_at,
         progress=transcription.progress,
         error_message=transcription.error_message,
