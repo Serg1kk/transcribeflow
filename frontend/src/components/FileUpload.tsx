@@ -1,7 +1,7 @@
 // components/FileUpload.tsx
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -14,14 +14,14 @@ import {
 } from "@/components/ui/select";
 import { uploadAudio } from "@/lib/api";
 
-const ENGINES = [
-  { value: "mlx-whisper", label: "MLX Whisper (recommended)" },
-];
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
-const MODELS = [
-  { value: "large-v2", label: "large-v2 (default)" },
-  { value: "large-v3-turbo", label: "large-v3-turbo" },
-];
+interface Engine {
+  id: string;
+  name: string;
+  models: string[];
+  available: boolean;
+}
 
 interface FileUploadProps {
   onUploadComplete?: () => void;
@@ -29,11 +29,49 @@ interface FileUploadProps {
 
 export function FileUpload({ onUploadComplete }: FileUploadProps) {
   const [isDragging, setIsDragging] = useState(false);
-  const [file, setFile] = useState<File | null>(null);
+  const [files, setFiles] = useState<File[]>([]);
+  const [engines, setEngines] = useState<Engine[]>([]);
   const [engine, setEngine] = useState("mlx-whisper");
-  const [model, setModel] = useState("large-v2");
+  const [model, setModel] = useState("large-v3-turbo");
   const [isUploading, setIsUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
   const [error, setError] = useState<string | null>(null);
+
+  // Fetch available engines and default settings
+  useEffect(() => {
+    // Fetch engines
+    fetch(`${API_BASE}/api/engines`)
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.engines) {
+          setEngines(data.engines);
+        }
+      })
+      .catch(() => {});
+
+    // Fetch default settings
+    fetch(`${API_BASE}/api/settings`)
+      .then((res) => res.json())
+      .then((settings) => {
+        if (settings.default_engine) setEngine(settings.default_engine);
+        if (settings.default_model) setModel(settings.default_model);
+      })
+      .catch(() => {});
+  }, []);
+
+  // Get models for current engine
+  const currentEngine = engines.find((e) => e.id === engine);
+  const availableModels = useMemo(
+    () => currentEngine?.models || [],
+    [currentEngine]
+  );
+
+  // Reset model if not available for current engine
+  useEffect(() => {
+    if (availableModels.length > 0 && !availableModels.includes(model)) {
+      setModel(availableModels[0]);
+    }
+  }, [engine, availableModels, model]);
 
   const handleDragOver = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -49,41 +87,58 @@ export function FileUpload({ onUploadComplete }: FileUploadProps) {
     e.preventDefault();
     setIsDragging(false);
 
-    const droppedFile = e.dataTransfer.files[0];
-    if (droppedFile && isAudioFile(droppedFile)) {
-      setFile(droppedFile);
+    const droppedFiles = Array.from(e.dataTransfer.files).filter(isAudioFile);
+    if (droppedFiles.length > 0) {
+      setFiles((prev) => [...prev, ...droppedFiles]);
       setError(null);
     } else {
-      setError("Please select an audio file (mp3, m4a, wav, ogg, flac, webm)");
+      setError("Please select audio files (mp3, m4a, wav, ogg, flac, webm)");
     }
   }, []);
 
   const handleFileSelect = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    const selectedFile = e.target.files?.[0];
-    if (selectedFile && isAudioFile(selectedFile)) {
-      setFile(selectedFile);
+    const selectedFiles = Array.from(e.target.files || []).filter(isAudioFile);
+    if (selectedFiles.length > 0) {
+      setFiles((prev) => [...prev, ...selectedFiles]);
       setError(null);
     } else {
-      setError("Please select an audio file");
+      setError("Please select audio files");
     }
+    // Reset input so same files can be selected again
+    e.target.value = "";
+  }, []);
+
+  const removeFile = useCallback((index: number) => {
+    setFiles((prev) => prev.filter((_, i) => i !== index));
+  }, []);
+
+  const clearAllFiles = useCallback(() => {
+    setFiles([]);
   }, []);
 
   const handleUpload = async () => {
-    if (!file) return;
+    if (files.length === 0) return;
 
     setIsUploading(true);
     setError(null);
+    setUploadProgress(0);
 
     try {
-      await uploadAudio(file, { engine, model });
-      setFile(null);
+      for (let i = 0; i < files.length; i++) {
+        await uploadAudio(files[i], { engine, model });
+        setUploadProgress(((i + 1) / files.length) * 100);
+      }
+      setFiles([]);
       onUploadComplete?.();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Upload error");
     } finally {
       setIsUploading(false);
+      setUploadProgress(0);
     }
   };
+
+  const totalSize = files.reduce((sum, f) => sum + f.size, 0);
 
   return (
     <Card>
@@ -102,28 +157,58 @@ export function FileUpload({ onUploadComplete }: FileUploadProps) {
           onDragLeave={handleDragLeave}
           onDrop={handleDrop}
         >
-          {file ? (
-            <div className="space-y-2">
-              <p className="font-medium">{file.name}</p>
+          {files.length > 0 ? (
+            <div className="space-y-3">
+              <div className="max-h-32 overflow-y-auto space-y-1">
+                {files.map((file, index) => (
+                  <div key={index} className="flex items-center justify-between text-sm bg-muted/50 rounded px-2 py-1">
+                    <span className="truncate flex-1 text-left">{file.name}</span>
+                    <span className="text-muted-foreground mx-2">
+                      {(file.size / 1024 / 1024).toFixed(1)} MB
+                    </span>
+                    <button
+                      onClick={() => removeFile(index)}
+                      className="text-muted-foreground hover:text-destructive"
+                    >
+                      x
+                    </button>
+                  </div>
+                ))}
+              </div>
               <p className="text-sm text-muted-foreground">
-                {(file.size / 1024 / 1024).toFixed(2)} MB
+                {files.length} file{files.length > 1 ? "s" : ""} ({(totalSize / 1024 / 1024).toFixed(2)} MB total)
               </p>
-              <Button variant="outline" size="sm" onClick={() => setFile(null)}>
-                Remove
-              </Button>
+              <div className="flex gap-2 justify-center">
+                <label>
+                  <input
+                    type="file"
+                    className="hidden"
+                    accept=".mp3,.m4a,.wav,.ogg,.flac,.webm"
+                    multiple
+                    onChange={handleFileSelect}
+                  />
+                  <Button variant="outline" size="sm" asChild>
+                    <span>Add more</span>
+                  </Button>
+                </label>
+                <Button variant="outline" size="sm" onClick={clearAllFiles}>
+                  Clear all
+                </Button>
+              </div>
             </div>
           ) : (
             <div className="space-y-2">
-              <p>Drag and drop a file here or</p>
+              <p>Drag and drop files here or</p>
               <label>
                 <input
                   type="file"
                   className="hidden"
                   accept=".mp3,.m4a,.wav,.ogg,.flac,.webm"
+                  multiple
                   onChange={handleFileSelect}
                 />
                 <Button variant="outline" asChild>
-                  <span>Select file</span>
+                  <span>Select file(s)</span>
                 </Button>
               </label>
             </div>
@@ -139,11 +224,15 @@ export function FileUpload({ onUploadComplete }: FileUploadProps) {
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {ENGINES.map((e) => (
-                  <SelectItem key={e.value} value={e.value}>
-                    {e.label}
-                  </SelectItem>
-                ))}
+                {engines.length > 0 ? (
+                  engines.map((e) => (
+                    <SelectItem key={e.id} value={e.id}>
+                      {e.name}
+                    </SelectItem>
+                  ))
+                ) : (
+                  <SelectItem value="mlx-whisper">MLX Local</SelectItem>
+                )}
               </SelectContent>
             </Select>
           </div>
@@ -155,11 +244,15 @@ export function FileUpload({ onUploadComplete }: FileUploadProps) {
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {MODELS.map((m) => (
-                  <SelectItem key={m.value} value={m.value}>
-                    {m.label}
-                  </SelectItem>
-                ))}
+                {availableModels.length > 0 ? (
+                  availableModels.map((m) => (
+                    <SelectItem key={m} value={m}>
+                      {m}
+                    </SelectItem>
+                  ))
+                ) : (
+                  <SelectItem value="large-v3-turbo">large-v3-turbo</SelectItem>
+                )}
               </SelectContent>
             </Select>
           </div>
@@ -173,10 +266,14 @@ export function FileUpload({ onUploadComplete }: FileUploadProps) {
         {/* Upload button */}
         <Button
           className="w-full"
-          disabled={!file || isUploading}
+          disabled={files.length === 0 || isUploading}
           onClick={handleUpload}
         >
-          {isUploading ? "Uploading..." : "Start Transcription"}
+          {isUploading
+            ? `Uploading... ${Math.round(uploadProgress)}%`
+            : files.length > 1
+            ? `Start Transcription (${files.length} files)`
+            : "Start Transcription"}
         </Button>
       </CardContent>
     </Card>
