@@ -391,3 +391,90 @@ async def update_speakers(
                 json.dump(data, f, ensure_ascii=False, indent=2)
 
     return {"status": "ok"}
+
+
+@router.get("/{transcription_id}/download/txt")
+async def download_transcript_txt(
+    transcription_id: str,
+    db: Session = Depends(get_db),
+):
+    """Download transcript as plain text."""
+    from fastapi.responses import FileResponse
+
+    transcription = db.query(Transcription).filter(
+        Transcription.id == transcription_id
+    ).first()
+
+    if not transcription:
+        raise HTTPException(status_code=404, detail="Transcription not found")
+
+    if not transcription.output_dir:
+        raise HTTPException(status_code=404, detail="Output directory not found")
+
+    txt_path = Path(transcription.output_dir) / "transcript.txt"
+    if not txt_path.exists():
+        raise HTTPException(status_code=404, detail="TXT file not found")
+
+    return FileResponse(
+        path=txt_path,
+        filename=f"{transcription.filename}.txt",
+        media_type="text/plain",
+    )
+
+
+@router.get("/{transcription_id}/download/json")
+async def download_transcript_json(
+    transcription_id: str,
+    db: Session = Depends(get_db),
+):
+    """Download transcript as JSON."""
+    from fastapi.responses import FileResponse
+
+    transcription = db.query(Transcription).filter(
+        Transcription.id == transcription_id
+    ).first()
+
+    if not transcription:
+        raise HTTPException(status_code=404, detail="Transcription not found")
+
+    if not transcription.output_dir:
+        raise HTTPException(status_code=404, detail="Output directory not found")
+
+    json_path = Path(transcription.output_dir) / "transcript.json"
+    if not json_path.exists():
+        raise HTTPException(status_code=404, detail="JSON file not found")
+
+    return FileResponse(
+        path=json_path,
+        filename=f"{transcription.filename}.json",
+        media_type="application/json",
+    )
+
+
+@router.get("/{transcription_id}/download/raw")
+async def download_raw_response(
+    transcription_id: str,
+    db: Session = Depends(get_db),
+):
+    """Download raw API response from cloud provider."""
+    from fastapi.responses import FileResponse
+
+    transcription = db.query(Transcription).filter(
+        Transcription.id == transcription_id
+    ).first()
+
+    if not transcription:
+        raise HTTPException(status_code=404, detail="Transcription not found")
+
+    if not transcription.output_dir:
+        raise HTTPException(status_code=404, detail="Output directory not found")
+
+    raw_path = Path(transcription.output_dir) / "raw_response.json"
+    if not raw_path.exists():
+        raise HTTPException(status_code=404, detail="Raw response not available (only for cloud engines)")
+
+    return FileResponse(
+        path=raw_path,
+        filename=f"{transcription.filename}_raw_{transcription.engine}.json",
+        media_type="application/json",
+    )

@@ -185,6 +185,7 @@ class TranscriptionWorker:
                 processing_time=total_processing_time,
                 transcription_time=transcription_time,
                 diarization_time=diarization_time,
+                raw_response=result.raw_response,
             )
 
             # Update transcription record
@@ -237,6 +238,7 @@ class TranscriptionWorker:
         processing_time: float,
         transcription_time: float = 0.0,
         diarization_time: float = 0.0,
+        raw_response: dict = None,
     ):
         """Save transcription results to files."""
         # Build transcript.json
@@ -272,6 +274,12 @@ class TranscriptionWorker:
         txt_path = output_dir / "transcript.txt"
         with open(txt_path, "w", encoding="utf-8") as f:
             f.write(self._format_transcript_txt(transcript_data))
+
+        # Save raw API response (for cloud engines)
+        if raw_response:
+            raw_path = output_dir / "raw_response.json"
+            with open(raw_path, "w", encoding="utf-8") as f:
+                json.dump(raw_response, f, ensure_ascii=False, indent=2)
 
     def _build_speakers_dict(self, segments: list) -> dict:
         """Build speakers dictionary with default names and colors."""

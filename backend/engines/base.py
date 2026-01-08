@@ -15,6 +15,7 @@ class TranscriptionResult:
     duration_seconds: float
     words: List[Dict[str, Any]] = field(default_factory=list)
     processing_time_seconds: float = 0.0
+    raw_response: Optional[Dict[str, Any]] = None  # Original API response for cloud engines
 
 
 class TranscriptionEngine(ABC):

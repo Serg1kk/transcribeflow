@@ -152,4 +152,5 @@ class AssemblyAIEngine(TranscriptionEngine):
             language=result.get("language_code", "unknown"),
             duration_seconds=result.get("audio_duration", 0),
             processing_time_seconds=processing_time,
+            raw_response=result,  # Original AssemblyAI response
         )

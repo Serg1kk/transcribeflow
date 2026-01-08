@@ -175,6 +175,7 @@ class YandexEngine(TranscriptionEngine):
             language=language or "auto",
             duration_seconds=duration,
             processing_time_seconds=processing_time,
+            raw_response=result,  # Original Yandex response
         )
 
     def _get_audio_encoding(self, audio_path: Path) -> str:

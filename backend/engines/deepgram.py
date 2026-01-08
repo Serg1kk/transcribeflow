@@ -137,6 +137,7 @@ class DeepgramEngine(TranscriptionEngine):
             language=metadata.get("detected_language", "unknown"),
             duration_seconds=metadata.get("duration", 0),
             processing_time_seconds=processing_time,
+            raw_response=result,  # Original Deepgram response
         )
 
     def _get_content_type(self, audio_path: Path) -> str:

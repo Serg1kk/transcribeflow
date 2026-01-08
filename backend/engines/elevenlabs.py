@@ -144,6 +144,7 @@ class ElevenLabsEngine(TranscriptionEngine):
             language=result.get("language_code", "unknown"),
             duration_seconds=duration,
             processing_time_seconds=processing_time,
+            raw_response=result,  # Original ElevenLabs response
         )
 
     def _format_speaker_id(self, speaker_id: Optional[str]) -> str:

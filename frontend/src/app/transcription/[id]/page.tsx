@@ -131,8 +131,24 @@ export default function TranscriptionPage() {
 
           {/* Download buttons */}
           <div className="flex gap-4 mt-6 pt-6 border-t">
-            <Button variant="outline">Download .txt</Button>
-            <Button variant="outline">Download .json</Button>
+            <Button
+              variant="outline"
+              onClick={() => window.open(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/transcribe/${id}/download/txt`, '_blank')}
+            >
+              Download .txt
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => window.open(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/transcribe/${id}/download/json`, '_blank')}
+            >
+              Download .json
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => window.open(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/transcribe/${id}/download/raw`, '_blank')}
+            >
+              Download Raw API Response
+            </Button>
           </div>
         </CardContent>
       </Card>
