@@ -10,7 +10,15 @@ from typing import Dict, Optional
 from sqlalchemy.orm import Session
 
 from config import Settings, get_settings
-from engines import MLXWhisperEngine, TranscriptionEngine, WhisperSettings
+from engines import (
+    MLXWhisperEngine,
+    TranscriptionEngine,
+    WhisperSettings,
+    AssemblyAIEngine,
+    DeepgramEngine,
+    ElevenLabsEngine,
+    YandexEngine,
+)
 from models import Transcription, TranscriptionStatus
 from workers.diarization import DiarizationWorker
 
@@ -28,6 +36,22 @@ class TranscriptionWorker:
         if engine_name not in self._engines:
             if engine_name == "mlx-whisper":
                 self._engines[engine_name] = MLXWhisperEngine()
+            elif engine_name == "assemblyai":
+                self._engines[engine_name] = AssemblyAIEngine(
+                    api_key=self.settings.assemblyai_api_key
+                )
+            elif engine_name == "deepgram":
+                self._engines[engine_name] = DeepgramEngine(
+                    api_key=self.settings.deepgram_api_key
+                )
+            elif engine_name == "elevenlabs":
+                self._engines[engine_name] = ElevenLabsEngine(
+                    api_key=self.settings.elevenlabs_api_key
+                )
+            elif engine_name == "yandex":
+                self._engines[engine_name] = YandexEngine(
+                    api_key=self.settings.yandex_api_key
+                )
             else:
                 raise ValueError(f"Unknown engine: {engine_name}")
         return self._engines[engine_name]
@@ -95,33 +119,43 @@ class TranscriptionWorker:
             transcription.progress = 50.0
             db.commit()
 
-            # Step 2: Speaker diarization (if enabled and available)
+            # Step 2: Speaker diarization
             segments = result.segments
             speakers_count = 1
             diarization_time = 0.0
 
+            # Check if engine supports built-in diarization
+            from engines.registry import PROVIDERS
+            engine_info = PROVIDERS.get(transcription.engine, {})
+
             if self.settings.diarization_enabled:
-                transcription.status = TranscriptionStatus.DIARIZING
-                db.commit()
+                if engine_info.get("supports_diarization"):
+                    # Cloud engine already did diarization - count speakers from segments
+                    speaker_ids = set(seg.get("speaker", "SPEAKER_00") for seg in segments)
+                    speakers_count = len(speaker_ids)
+                else:
+                    # MLX Local - use Pyannote for diarization
+                    transcription.status = TranscriptionStatus.DIARIZING
+                    db.commit()
 
-                diarization_worker = self.get_diarization_worker()
-                if diarization_worker.is_available():
-                    diarization_start_time = time.time()
+                    diarization_worker = self.get_diarization_worker()
+                    if diarization_worker.is_available():
+                        diarization_start_time = time.time()
 
-                    num_speakers = None
-                    if transcription.min_speakers == transcription.max_speakers:
-                        num_speakers = transcription.min_speakers
+                        num_speakers = None
+                        if transcription.min_speakers == transcription.max_speakers:
+                            num_speakers = transcription.min_speakers
 
-                    diarization_result = diarization_worker.diarize(
-                        audio_path=audio_path,
-                        num_speakers=num_speakers,
-                    )
+                        diarization_result = diarization_worker.diarize(
+                            audio_path=audio_path,
+                            num_speakers=num_speakers,
+                        )
 
-                    segments = diarization_worker.merge_transcription_with_diarization(
-                        result.segments, diarization_result
-                    )
-                    speakers_count = len(diarization_result.speakers)
-                    diarization_time = time.time() - diarization_start_time
+                        segments = diarization_worker.merge_transcription_with_diarization(
+                            result.segments, diarization_result
+                        )
+                        speakers_count = len(diarization_result.speakers)
+                        diarization_time = time.time() - diarization_start_time
 
             transcription.progress = 80.0
             db.commit()
