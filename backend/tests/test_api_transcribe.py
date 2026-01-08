@@ -87,3 +87,34 @@ def test_upload_response_includes_initial_prompt():
     data = response.json()
     assert "initial_prompt" in data
     assert data["initial_prompt"] is None
+
+
+def test_update_transcription_initial_prompt():
+    """Test updating initial_prompt for a draft transcription."""
+    # Upload a file (creates DRAFT)
+    fake_audio = BytesIO(b"fake audio content")
+    upload_response = client.post(
+        "/api/transcribe/upload",
+        files={"file": ("update_test.mp3", fake_audio, "audio/mpeg")},
+    )
+    transcription_id = upload_response.json()["id"]
+
+    # Update initial_prompt
+    response = client.put(
+        f"/api/transcribe/{transcription_id}",
+        json={"initial_prompt": "This is a technical interview about Python"}
+    )
+
+    assert response.status_code == 200
+    data = response.json()
+    assert data["initial_prompt"] == "This is a technical interview about Python"
+    assert data["status"] == "draft"
+
+
+def test_update_transcription_not_found():
+    """Test 404 when updating nonexistent transcription."""
+    response = client.put(
+        "/api/transcribe/nonexistent-id",
+        json={"initial_prompt": "test"}
+    )
+    assert response.status_code == 404

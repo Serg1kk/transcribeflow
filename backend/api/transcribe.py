@@ -172,6 +172,57 @@ async def get_transcription(
     )
 
 
+class TranscriptionUpdate(BaseModel):
+    """Request model for updating a transcription."""
+    initial_prompt: Optional[str] = None
+
+
+@router.put("/{transcription_id}", response_model=TranscriptionResponse)
+async def update_transcription(
+    transcription_id: str,
+    update: TranscriptionUpdate,
+    db: Session = Depends(get_db),
+):
+    """Update a transcription's editable fields."""
+    transcription = db.query(Transcription).filter(
+        Transcription.id == transcription_id
+    ).first()
+
+    if not transcription:
+        raise HTTPException(status_code=404, detail="Transcription not found")
+
+    # Only allow updates for DRAFT or QUEUED status
+    if transcription.status not in [TranscriptionStatus.DRAFT, TranscriptionStatus.QUEUED]:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Cannot update transcription in {transcription.status.value} status"
+        )
+
+    if update.initial_prompt is not None:
+        transcription.initial_prompt = update.initial_prompt
+
+    db.commit()
+    db.refresh(transcription)
+
+    return TranscriptionResponse(
+        id=transcription.id,
+        filename=transcription.filename,
+        status=transcription.status.value,
+        engine=transcription.engine,
+        model=transcription.model,
+        language=transcription.language,
+        initial_prompt=transcription.initial_prompt,
+        created_at=transcription.created_at,
+        progress=transcription.progress,
+        error_message=transcription.error_message,
+        file_size=transcription.file_size,
+        duration_seconds=transcription.duration_seconds,
+        processing_time_seconds=transcription.processing_time_seconds,
+        transcription_time_seconds=transcription.transcription_time_seconds,
+        diarization_time_seconds=transcription.diarization_time_seconds,
+    )
+
+
 @router.get("/{transcription_id}/transcript")
 async def get_transcript_data(
     transcription_id: str,
