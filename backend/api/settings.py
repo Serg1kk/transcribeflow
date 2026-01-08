@@ -18,7 +18,8 @@ class SettingsResponse(BaseModel):
     default_model: str
 
     # Diarization
-    diarization_enabled: bool
+    diarization_method: str  # "none" | "fast" | "accurate"
+    compute_device: str  # "auto" | "mps" | "cpu"
     min_speakers: int
     max_speakers: int
 
@@ -53,7 +54,8 @@ class SettingsUpdateRequest(BaseModel):
     default_model: Optional[str] = None
 
     # Diarization
-    diarization_enabled: Optional[bool] = None
+    diarization_method: Optional[str] = None
+    compute_device: Optional[str] = None
     min_speakers: Optional[int] = None
     max_speakers: Optional[int] = None
 
@@ -97,7 +99,8 @@ async def get_current_settings(settings: Settings = Depends(get_settings)):
     return SettingsResponse(
         default_engine=settings.default_engine,
         default_model=settings.default_model,
-        diarization_enabled=settings.diarization_enabled,
+        diarization_method=settings.diarization_method,
+        compute_device=settings.compute_device,
         min_speakers=settings.min_speakers,
         max_speakers=settings.max_speakers,
         whisper_no_speech_threshold=settings.whisper_no_speech_threshold,
@@ -149,7 +152,8 @@ async def update_settings(update: SettingsUpdateRequest):
     return SettingsResponse(
         default_engine=settings.default_engine,
         default_model=settings.default_model,
-        diarization_enabled=settings.diarization_enabled,
+        diarization_method=settings.diarization_method,
+        compute_device=settings.compute_device,
         min_speakers=settings.min_speakers,
         max_speakers=settings.max_speakers,
         whisper_no_speech_threshold=settings.whisper_no_speech_threshold,
