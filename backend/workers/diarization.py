@@ -1,9 +1,24 @@
 # workers/diarization.py
 """Speaker diarization using Pyannote Audio."""
+import subprocess
+import tempfile
 import time
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Dict, List, Optional, Set, Any
+
+# Workaround for torchaudio compatibility issue
+# Newer versions removed set_audio_backend, but pyannote may try to use it
+try:
+    import torchaudio
+    if not hasattr(torchaudio, 'set_audio_backend'):
+        # Add a no-op stub for compatibility
+        torchaudio.set_audio_backend = lambda x: None
+except ImportError:
+    pass
+
+# Formats that soundfile can read directly (no conversion needed)
+NATIVE_FORMATS = {'.wav', '.flac', '.ogg', '.mp3', '.aiff', '.au'}
 
 
 @dataclass
@@ -42,9 +57,50 @@ class DiarizationWorker:
             from pyannote.audio import Pipeline
             self._pipeline = Pipeline.from_pretrained(
                 "pyannote/speaker-diarization-3.1",
-                use_auth_token=self.hf_token
+                token=self.hf_token
             )
         return self._pipeline
+
+    def _load_audio(self, audio_path: Path) -> Dict[str, Any]:
+        """Load audio using torchaudio (workaround for torchcodec/FFmpeg 8 issue).
+
+        For formats not supported by soundfile (like m4a/AAC), uses ffmpeg to convert first.
+        Returns audio as a dict with waveform and sample_rate that pyannote accepts.
+        """
+        suffix = audio_path.suffix.lower()
+
+        if suffix in NATIVE_FORMATS:
+            # Direct loading for supported formats
+            waveform, sample_rate = torchaudio.load(str(audio_path))
+            return {"waveform": waveform, "sample_rate": sample_rate}
+
+        # For unsupported formats (m4a, webm, etc.), convert using ffmpeg
+        with tempfile.NamedTemporaryFile(suffix='.wav', delete=False) as tmp_file:
+            tmp_path = tmp_file.name
+
+        try:
+            # Convert to 16kHz mono WAV using ffmpeg
+            result = subprocess.run(
+                [
+                    'ffmpeg', '-y', '-i', str(audio_path),
+                    '-ar', '16000',  # 16kHz sample rate
+                    '-ac', '1',      # Mono
+                    '-f', 'wav',
+                    tmp_path
+                ],
+                capture_output=True,
+                text=True
+            )
+            if result.returncode != 0:
+                raise RuntimeError(f"ffmpeg conversion failed: {result.stderr}")
+
+            waveform, sample_rate = torchaudio.load(tmp_path)
+            return {"waveform": waveform, "sample_rate": sample_rate}
+        finally:
+            # Cleanup temp file
+            import os
+            if os.path.exists(tmp_path):
+                os.unlink(tmp_path)
 
     def diarize(
         self,
@@ -74,19 +130,36 @@ class DiarizationWorker:
             params["min_speakers"] = self.min_speakers
             params["max_speakers"] = self.max_speakers
 
-        # Run diarization
-        diarization = pipeline(str(audio_path), **params)
+        # Load audio with torchaudio (workaround for torchcodec/FFmpeg 8 incompatibility)
+        # pyannote 4.x requires torchcodec which doesn't support FFmpeg 8
+        audio_input = self._load_audio(audio_path)
 
-        # Extract segments
+        # Run diarization with preloaded audio
+        diarization = pipeline(audio_input, **params)
+
+        # Extract segments - pyannote 4.x returns DiarizeOutput with .speaker_diarization
         segments = []
         speakers = set()
-        for turn, _, speaker in diarization.itertracks(yield_label=True):
-            speakers.add(speaker)
-            segments.append({
-                "start": turn.start,
-                "end": turn.end,
-                "speaker": speaker,
-            })
+
+        # Handle both pyannote 3.x (itertracks) and 4.x (speaker_diarization) APIs
+        if hasattr(diarization, 'speaker_diarization'):
+            # pyannote 4.x API
+            for turn, speaker in diarization.speaker_diarization:
+                speakers.add(speaker)
+                segments.append({
+                    "start": turn.start,
+                    "end": turn.end,
+                    "speaker": speaker,
+                })
+        else:
+            # pyannote 3.x API (fallback)
+            for turn, _, speaker in diarization.itertracks(yield_label=True):
+                speakers.add(speaker)
+                segments.append({
+                    "start": turn.start,
+                    "end": turn.end,
+                    "speaker": speaker,
+                })
 
         processing_time = time.time() - start_time
 

@@ -37,7 +37,7 @@ if [ ! -d "node_modules" ]; then
 fi
 
 # Start frontend in background
-echo "Starting frontend on http://localhost:3000..."
+echo "Starting frontend on http://localhost:3001..."
 npm run dev &
 FRONTEND_PID=$!
 
@@ -55,7 +55,7 @@ echo ""
 echo "========================================"
 echo "TranscribeFlow is running!"
 echo ""
-echo "  Frontend: http://localhost:3000"
+echo "  Frontend: http://localhost:3001"
 echo "  Backend:  http://localhost:8000"
 echo "  API Docs: http://localhost:8000/docs"
 echo ""
