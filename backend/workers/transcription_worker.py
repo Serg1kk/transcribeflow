@@ -2,6 +2,7 @@
 """Main transcription processing worker."""
 import json
 import shutil
+import time
 from datetime import datetime
 from pathlib import Path
 from typing import Dict, Optional
@@ -9,7 +10,7 @@ from typing import Dict, Optional
 from sqlalchemy.orm import Session
 
 from config import Settings, get_settings
-from engines import MLXWhisperEngine, TranscriptionEngine
+from engines import MLXWhisperEngine, TranscriptionEngine, WhisperSettings
 from models import Transcription, TranscriptionStatus
 from workers.diarization import DiarizationWorker
 
@@ -41,6 +42,17 @@ class TranscriptionWorker:
             )
         return self._diarization_worker
 
+    def get_whisper_settings(self) -> WhisperSettings:
+        """Get Whisper anti-hallucination settings from config."""
+        return WhisperSettings(
+            no_speech_threshold=self.settings.whisper_no_speech_threshold,
+            logprob_threshold=self.settings.whisper_logprob_threshold,
+            compression_ratio_threshold=self.settings.whisper_compression_ratio_threshold,
+            hallucination_silence_threshold=self.settings.whisper_hallucination_silence_threshold,
+            condition_on_previous_text=self.settings.whisper_condition_on_previous_text,
+            initial_prompt=self.settings.whisper_initial_prompt,
+        )
+
     def process(self, transcription: Transcription, db: Session) -> bool:
         """Process a single transcription task.
 
@@ -57,17 +69,28 @@ class TranscriptionWorker:
             transcription.started_at = datetime.utcnow()
             db.commit()
 
+            total_start_time = time.time()
+
             audio_path = Path(transcription.original_path)
             if not audio_path.exists():
                 raise FileNotFoundError(f"Audio file not found: {audio_path}")
 
             # Step 1: Transcribe with ASR engine
+            transcription_start_time = time.time()
             engine = self.get_engine(transcription.engine)
+            whisper_settings = self.get_whisper_settings()
+
+            # Override with per-file initial_prompt if set
+            if transcription.initial_prompt:
+                whisper_settings.initial_prompt = transcription.initial_prompt
+
             result = engine.transcribe(
                 audio_path=audio_path,
                 model=transcription.model,
                 language=transcription.language,
+                settings=whisper_settings,
             )
+            transcription_time = time.time() - transcription_start_time
 
             transcription.progress = 50.0
             db.commit()
@@ -75,6 +98,7 @@ class TranscriptionWorker:
             # Step 2: Speaker diarization (if enabled and available)
             segments = result.segments
             speakers_count = 1
+            diarization_time = 0.0
 
             if self.settings.diarization_enabled:
                 transcription.status = TranscriptionStatus.DIARIZING
@@ -82,6 +106,8 @@ class TranscriptionWorker:
 
                 diarization_worker = self.get_diarization_worker()
                 if diarization_worker.is_available():
+                    diarization_start_time = time.time()
+
                     num_speakers = None
                     if transcription.min_speakers == transcription.max_speakers:
                         num_speakers = transcription.min_speakers
@@ -95,9 +121,12 @@ class TranscriptionWorker:
                         result.segments, diarization_result
                     )
                     speakers_count = len(diarization_result.speakers)
+                    diarization_time = time.time() - diarization_start_time
 
             transcription.progress = 80.0
             db.commit()
+
+            total_processing_time = time.time() - total_start_time
 
             # Step 3: Save results
             output_dir = self._create_output_directory(transcription, audio_path)
@@ -110,7 +139,9 @@ class TranscriptionWorker:
                 language=result.language,
                 duration=result.duration_seconds,
                 speakers_count=speakers_count,
-                processing_time=result.processing_time_seconds,
+                processing_time=total_processing_time,
+                transcription_time=transcription_time,
+                diarization_time=diarization_time,
             )
 
             # Update transcription record
@@ -118,7 +149,9 @@ class TranscriptionWorker:
             transcription.duration_seconds = result.duration_seconds
             transcription.speakers_count = speakers_count
             transcription.language_detected = result.language
-            transcription.processing_time_seconds = result.processing_time_seconds
+            transcription.processing_time_seconds = total_processing_time
+            transcription.transcription_time_seconds = transcription_time
+            transcription.diarization_time_seconds = diarization_time if diarization_time > 0 else None
             transcription.status = TranscriptionStatus.COMPLETED
             transcription.completed_at = datetime.utcnow()
             transcription.progress = 100.0
@@ -159,6 +192,8 @@ class TranscriptionWorker:
         duration: float,
         speakers_count: int,
         processing_time: float,
+        transcription_time: float = 0.0,
+        diarization_time: float = 0.0,
     ):
         """Save transcription results to files."""
         # Build transcript.json
@@ -179,7 +214,9 @@ class TranscriptionWorker:
                 "total_words": len(words),
                 "speakers_count": speakers_count,
                 "language_detected": language,
-                "processing_time_seconds": processing_time,
+                "processing_time_seconds": round(processing_time, 2),
+                "transcription_time_seconds": round(transcription_time, 2),
+                "diarization_time_seconds": round(diarization_time, 2) if diarization_time > 0 else None,
             },
         }
 
