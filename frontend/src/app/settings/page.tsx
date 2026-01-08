@@ -3,6 +3,7 @@
 
 import { useEffect, useState, useMemo } from "react";
 import Link from "next/link";
+import { toast } from "sonner";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -59,7 +60,6 @@ export default function SettingsPage() {
   const [settings, setSettings] = useState<Settings | null>(null);
   const [engines, setEngines] = useState<Engine[]>([]);
   const [isSaving, setIsSaving] = useState(false);
-  const [saveMessage, setSaveMessage] = useState<string | null>(null);
 
   // Form state
   const [defaultModel, setDefaultModel] = useState("");
@@ -143,7 +143,6 @@ export default function SettingsPage() {
 
   async function saveSettings() {
     setIsSaving(true);
-    setSaveMessage(null);
 
     const updates: Record<string, any> = {
       default_model: defaultModel,
@@ -180,7 +179,7 @@ export default function SettingsPage() {
       if (res.ok) {
         const data = await res.json();
         setSettings(data);
-        setSaveMessage("Settings saved successfully!");
+        toast.success("Settings saved successfully!");
         // Clear API key inputs after save
         setHfToken("");
         setAssemblyaiKey("");
@@ -190,13 +189,12 @@ export default function SettingsPage() {
         setGeminiKey("");
         setOpenrouterKey("");
       } else {
-        setSaveMessage("Failed to save settings");
+        toast.error("Failed to save settings");
       }
-    } catch (error) {
-      setSaveMessage("Error saving settings");
+    } catch {
+      toast.error("Error saving settings");
     } finally {
       setIsSaving(false);
-      setTimeout(() => setSaveMessage(null), 3000);
     }
   }
 
@@ -221,11 +219,6 @@ export default function SettingsPage() {
         </Button>
       </div>
 
-      {saveMessage && (
-        <div className={`mb-4 p-3 rounded ${saveMessage.includes("success") ? "bg-green-50 text-green-700" : "bg-red-50 text-red-700"}`}>
-          {saveMessage}
-        </div>
-      )}
 
       <div className="space-y-6">
         {/* Transcription Settings */}
