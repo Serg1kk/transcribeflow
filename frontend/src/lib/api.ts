@@ -159,3 +159,51 @@ export async function deleteTranscription(id: string): Promise<void> {
   });
   if (!response.ok) throw new Error("Failed to delete transcription");
 }
+
+// Engine capabilities
+export interface EngineCapabilities {
+  supports_initial_prompt: boolean;
+  supports_timestamps: boolean;
+  supports_word_timestamps: boolean;
+}
+
+export interface EngineInfo {
+  name: string;
+  display_name: string;
+  description: string;
+}
+
+export interface EngineCapabilitiesResponse {
+  name: string;
+  display_name: string;
+  capabilities: EngineCapabilities;
+}
+
+// Cache for engine capabilities
+const capabilitiesCache: Record<string, EngineCapabilities> = {};
+
+export async function getEngineCapabilities(engineName: string): Promise<EngineCapabilities> {
+  if (capabilitiesCache[engineName]) {
+    return capabilitiesCache[engineName];
+  }
+
+  const response = await fetch(`${API_BASE}/api/engines/${engineName}/capabilities`);
+  if (!response.ok) {
+    // Return default capabilities if engine not found
+    return {
+      supports_initial_prompt: false,
+      supports_timestamps: true,
+      supports_word_timestamps: true,
+    };
+  }
+
+  const data: EngineCapabilitiesResponse = await response.json();
+  capabilitiesCache[engineName] = data.capabilities;
+  return data.capabilities;
+}
+
+export function engineSupportsInitialPrompt(engineName: string): boolean {
+  // For now, we know mlx-whisper supports it
+  // This can be made async if needed
+  return engineName === "mlx-whisper";
+}
