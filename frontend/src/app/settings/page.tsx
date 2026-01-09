@@ -47,6 +47,11 @@ interface Settings {
   whisper_initial_prompt: string | null;
   // LLM & API
   default_llm_provider: string;
+  // Post-processing
+  postprocessing_provider: string;
+  postprocessing_model: string;
+  postprocessing_default_template: string | null;
+  // API keys
   has_hf_token: boolean;
   has_assemblyai_key: boolean;
   has_elevenlabs_key: boolean;
@@ -70,6 +75,10 @@ export default function SettingsPage() {
   const [minSpeakers, setMinSpeakers] = useState(2);
   const [maxSpeakers, setMaxSpeakers] = useState(6);
   const [defaultLlmProvider, setDefaultLlmProvider] = useState("");
+
+  // Post-processing state
+  const [postprocessingProvider, setPostprocessingProvider] = useState("gemini");
+  const [postprocessingModel, setPostprocessingModel] = useState("gemini-2.5-flash");
 
   // Whisper Anti-Hallucination state
   const [noSpeechThreshold, setNoSpeechThreshold] = useState(0.6);
@@ -106,6 +115,9 @@ export default function SettingsPage() {
       setMinSpeakers(data.min_speakers);
       setMaxSpeakers(data.max_speakers);
       setDefaultLlmProvider(data.default_llm_provider);
+      // Post-processing settings
+      setPostprocessingProvider(data.postprocessing_provider);
+      setPostprocessingModel(data.postprocessing_model);
       // Whisper settings
       setNoSpeechThreshold(data.whisper_no_speech_threshold);
       setLogprobThreshold(data.whisper_logprob_threshold);
@@ -147,7 +159,7 @@ export default function SettingsPage() {
   async function saveSettings() {
     setIsSaving(true);
 
-    const updates: Record<string, any> = {
+    const updates: Record<string, string | number | boolean | null> = {
       default_model: defaultModel,
       default_engine: defaultEngine,
       diarization_method: diarizationMethod,
@@ -155,6 +167,9 @@ export default function SettingsPage() {
       min_speakers: minSpeakers,
       max_speakers: maxSpeakers,
       default_llm_provider: defaultLlmProvider,
+      // Post-processing settings
+      postprocessing_provider: postprocessingProvider,
+      postprocessing_model: postprocessingModel,
       // Whisper Anti-Hallucination settings
       whisper_no_speech_threshold: noSpeechThreshold,
       whisper_logprob_threshold: logprobThreshold,
@@ -547,11 +562,53 @@ export default function SettingsPage() {
         <Card>
           <CardHeader>
             <CardTitle>LLM Post-Processing</CardTitle>
-            <CardDescription>AI-powered summarization and analysis</CardDescription>
+            <CardDescription>AI-powered transcript cleanup and summarization</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Post-Processing Provider</Label>
+                <Select value={postprocessingProvider} onValueChange={setPostprocessingProvider}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {LLM_PROVIDERS.map((p) => (
+                      <SelectItem key={p.value} value={p.value}>
+                        {p.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>Default Model</Label>
+                <Select value={postprocessingModel} onValueChange={setPostprocessingModel}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {postprocessingProvider === "gemini" ? (
+                      <>
+                        <SelectItem value="gemini-2.5-flash">Gemini 2.5 Flash</SelectItem>
+                        <SelectItem value="gemini-2.5-flash-lite">Gemini 2.5 Flash Lite</SelectItem>
+                        <SelectItem value="gemini-3-flash-preview">Gemini 3 Flash Preview</SelectItem>
+                      </>
+                    ) : (
+                      <>
+                        <SelectItem value="openai/gpt-4o-mini">GPT-4o Mini</SelectItem>
+                        <SelectItem value="anthropic/claude-3.5-haiku">Claude 3.5 Haiku</SelectItem>
+                        <SelectItem value="deepseek/deepseek-r1">DeepSeek R1</SelectItem>
+                        <SelectItem value="google/gemini-2.5-flash">Gemini 2.5 Flash (via OR)</SelectItem>
+                      </>
+                    )}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
             <div className="space-y-2">
-              <Label>Default LLM Provider</Label>
+              <Label>Default LLM Provider (Legacy)</Label>
               <Select value={defaultLlmProvider} onValueChange={setDefaultLlmProvider}>
                 <SelectTrigger>
                   <SelectValue />
@@ -564,6 +621,7 @@ export default function SettingsPage() {
                   ))}
                 </SelectContent>
               </Select>
+              <p className="text-xs text-muted-foreground">Used by legacy features</p>
             </div>
 
             <ApiKeyInput
