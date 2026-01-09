@@ -20,6 +20,10 @@ class QueueProcessor:
         self._running = False
         self._task: Optional[asyncio.Task] = None
 
+    def reset_workers(self):
+        """Reset worker caches when settings change."""
+        self.worker.reset_workers()
+
     async def start(self):
         """Start the background queue processor."""
         if self._running:

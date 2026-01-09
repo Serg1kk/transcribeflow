@@ -31,7 +31,17 @@ class TranscriptionWorker:
     def __init__(self, settings: Optional[Settings] = None):
         self.settings = settings or get_settings()
         self._engines: Dict[str, TranscriptionEngine] = {}
-        self._diarization_worker: Optional[DiarizationWorker] = None
+        self._diarization_worker = None
+        self._whisperx_worker = None
+
+    def reset_workers(self):
+        """Reset cached workers when settings change. Call after updating settings."""
+        from config import get_settings, clear_settings_cache
+        clear_settings_cache()
+        self.settings = get_settings()
+        self._diarization_worker = None
+        self._whisperx_worker = None
+        self._engines = {}
 
     def get_engine(self, engine_name: str) -> TranscriptionEngine:
         """Get or create a transcription engine by name."""
@@ -147,8 +157,10 @@ class TranscriptionWorker:
 
             # Step 2: Speaker diarization
             segments = result.segments
+            words = result.words  # Default: words from MLX Whisper
             speakers_count = 1
             diarization_time = 0.0
+            actual_diarization_method = "none"  # Track what was actually used
 
             # Check if engine supports built-in diarization
             from engines.registry import PROVIDERS
@@ -161,6 +173,7 @@ class TranscriptionWorker:
                     # Cloud engine already did diarization - count speakers from segments
                     speaker_ids = set(seg.get("speaker", "SPEAKER_00") for seg in segments)
                     speakers_count = len(speaker_ids)
+                    actual_diarization_method = "cloud"
                 elif diarization_method == "fast":
                     # Fast: Pyannote on MPS/GPU
                     transcription.status = TranscriptionStatus.DIARIZING
@@ -184,6 +197,7 @@ class TranscriptionWorker:
                         )
                         speakers_count = len(diarization_result.speakers)
                         diarization_time = time.time() - diarization_start_time
+                        actual_diarization_method = "fast"
 
                 elif diarization_method == "accurate":
                     # Accurate: WhisperX alignment + diarization
@@ -206,8 +220,10 @@ class TranscriptionWorker:
                         )
 
                         segments = whisperx_result.segments
+                        words = whisperx_result.words  # Use WhisperX words with speaker labels!
                         speakers_count = len(whisperx_result.speakers)
                         diarization_time = whisperx_result.processing_time_seconds
+                        actual_diarization_method = "accurate"
 
             transcription.progress = 80.0
             db.commit()
@@ -221,7 +237,7 @@ class TranscriptionWorker:
                 transcription=transcription,
                 text=result.text,
                 segments=segments,
-                words=result.words,
+                words=words,  # Use words variable (may be from WhisperX in accurate mode)
                 language=result.language,
                 duration=result.duration_seconds,
                 speakers_count=speakers_count,
@@ -229,6 +245,8 @@ class TranscriptionWorker:
                 transcription_time=transcription_time,
                 diarization_time=diarization_time,
                 raw_response=result.raw_response,
+                diarization_method=actual_diarization_method,
+                compute_device=self.settings.compute_device,
             )
 
             # Update transcription record
@@ -282,6 +300,8 @@ class TranscriptionWorker:
         transcription_time: float = 0.0,
         diarization_time: float = 0.0,
         raw_response: dict = None,
+        diarization_method: str = "none",
+        compute_device: str = "auto",
     ):
         """Save transcription results to files."""
         # Build transcript.json
@@ -295,6 +315,10 @@ class TranscriptionWorker:
                 "model": transcription.model,
                 "language": language,
             },
+            "settings": {
+                "diarization_method": diarization_method,
+                "compute_device": compute_device,
+            },
             "speakers": self._build_speakers_dict(segments),
             "segments": segments,
             "words": words,
@@ -305,6 +329,8 @@ class TranscriptionWorker:
                 "processing_time_seconds": round(processing_time, 2),
                 "transcription_time_seconds": round(transcription_time, 2),
                 "diarization_time_seconds": round(diarization_time, 2) if diarization_time > 0 else None,
+                "diarization_method": diarization_method,
+                "compute_device": compute_device,
             },
         }
 

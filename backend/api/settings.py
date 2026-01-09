@@ -7,6 +7,7 @@ from fastapi import APIRouter, Depends
 from pydantic import BaseModel
 
 from config import Settings, get_settings, clear_settings_cache, CONFIG_PATH
+from workers.queue_processor import queue_processor
 
 router = APIRouter(prefix="/api/settings", tags=["settings"])
 
@@ -144,8 +145,9 @@ async def update_settings(update: SettingsUpdateRequest):
     with open(CONFIG_PATH, "w", encoding="utf-8") as f:
         json.dump(config, f, indent=2, ensure_ascii=False)
 
-    # Clear settings cache to reload
+    # Clear settings cache and reset workers to apply new settings
     clear_settings_cache()
+    queue_processor.reset_workers()
 
     # Return updated settings
     settings = get_settings()
