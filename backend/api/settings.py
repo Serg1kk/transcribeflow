@@ -35,6 +35,11 @@ class SettingsResponse(BaseModel):
     # LLM
     default_llm_provider: str
 
+    # Post-processing
+    postprocessing_provider: str
+    postprocessing_model: str
+    postprocessing_default_template: Optional[str]
+
     # API key presence (not actual keys for security)
     has_hf_token: bool
     has_assemblyai_key: bool
@@ -71,6 +76,11 @@ class SettingsUpdateRequest(BaseModel):
     # LLM
     default_llm_provider: Optional[str] = None
 
+    # Post-processing
+    postprocessing_provider: Optional[str] = None
+    postprocessing_model: Optional[str] = None
+    postprocessing_default_template: Optional[str] = None
+
     # API keys (can be updated)
     hf_token: Optional[str] = None
     assemblyai_api_key: Optional[str] = None
@@ -89,8 +99,8 @@ FEATURES = {
     "elevenlabs": {"status": "implemented", "description": "ElevenLabs Scribe transcription"},
     "yandex": {"status": "implemented", "description": "Yandex SpeechKit transcription"},
     "diarization": {"status": "implemented", "description": "Speaker identification (Pyannote)"},
-    "gemini_llm": {"status": "tbd", "description": "Google Gemini for post-processing"},
-    "openrouter_llm": {"status": "tbd", "description": "OpenRouter for LLM access"},
+    "gemini_llm": {"status": "implemented", "description": "Google Gemini for post-processing"},
+    "openrouter_llm": {"status": "implemented", "description": "OpenRouter for LLM access"},
 }
 
 
@@ -111,6 +121,9 @@ async def get_current_settings(settings: Settings = Depends(get_settings)):
         whisper_condition_on_previous_text=settings.whisper_condition_on_previous_text,
         whisper_initial_prompt=settings.whisper_initial_prompt,
         default_llm_provider=settings.default_llm_provider,
+        postprocessing_provider=settings.postprocessing_provider,
+        postprocessing_model=settings.postprocessing_model,
+        postprocessing_default_template=settings.postprocessing_default_template,
         has_hf_token=bool(settings.hf_token),
         has_assemblyai_key=bool(settings.assemblyai_api_key),
         has_elevenlabs_key=bool(settings.elevenlabs_api_key),
@@ -165,6 +178,9 @@ async def update_settings(update: SettingsUpdateRequest):
         whisper_condition_on_previous_text=settings.whisper_condition_on_previous_text,
         whisper_initial_prompt=settings.whisper_initial_prompt,
         default_llm_provider=settings.default_llm_provider,
+        postprocessing_provider=settings.postprocessing_provider,
+        postprocessing_model=settings.postprocessing_model,
+        postprocessing_default_template=settings.postprocessing_default_template,
         has_hf_token=bool(settings.hf_token),
         has_assemblyai_key=bool(settings.assemblyai_api_key),
         has_elevenlabs_key=bool(settings.elevenlabs_api_key),
