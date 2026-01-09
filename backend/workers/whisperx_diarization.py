@@ -96,14 +96,23 @@ class WhisperXDiarizationWorker:
                 "text": seg["text"],
             })
 
+        # Load audio using torchaudio (workaround for torchcodec/FFmpeg 8 issue)
+        import torchaudio
+        waveform, sample_rate = torchaudio.load(str(audio_path))
+
         # Step 1: Align segments to get word-level timestamps
         align_model, metadata = self._load_align_model(language)
-        audio = whisperx.load_audio(str(audio_path))
+        # Convert to numpy for whisperx.align (expects mono float32)
+        import numpy as np
+        audio_np = waveform.squeeze().numpy()
+        if waveform.shape[0] > 1:  # stereo to mono
+            audio_np = waveform.mean(dim=0).numpy()
+
         aligned = whisperx.align(
             whisperx_segments,
             align_model,
             metadata,
-            audio,
+            audio_np,
             device="cpu",
             return_char_alignments=False,
         )
@@ -118,11 +127,21 @@ class WhisperXDiarizationWorker:
             diarize_params["min_speakers"] = self.min_speakers
             diarize_params["max_speakers"] = self.max_speakers
 
-        # DiarizationPipeline accepts file path directly
-        diarize_segments = diarize_model(str(audio_path), **diarize_params)
+        # Use preloaded audio dict (workaround for torchcodec issue)
+        audio_input = {"waveform": waveform, "sample_rate": sample_rate}
+        diarization = diarize_model(audio_input, **diarize_params)
+
+        # Convert pyannote Annotation to DataFrame for whisperx
+        import pandas as pd
+        diarize_df = pd.DataFrame(
+            diarization.itertracks(yield_label=True),
+            columns=['segment', 'label', 'speaker']
+        )
+        diarize_df['start'] = diarize_df['segment'].apply(lambda x: x.start)
+        diarize_df['end'] = diarize_df['segment'].apply(lambda x: x.end)
 
         # Step 3: Assign speakers to words
-        result = whisperx.assign_word_speakers(diarize_segments, aligned)
+        result = whisperx.assign_word_speakers(diarize_df, aligned)
 
         # Extract results
         speakers = set()
