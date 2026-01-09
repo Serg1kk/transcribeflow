@@ -420,8 +420,9 @@ export async function getSpeakerSuggestions(
   transcriptionId: string
 ): Promise<SpeakerSuggestions | null> {
   try {
+    // Add cache-busting to prevent stale data
     const response = await fetch(
-      `${API_BASE}/api/postprocess/transcriptions/${transcriptionId}/suggestions`
+      `${API_BASE}/api/postprocess/transcriptions/${transcriptionId}/suggestions?_t=${Date.now()}`
     );
     if (response.status === 404) {
       return null;

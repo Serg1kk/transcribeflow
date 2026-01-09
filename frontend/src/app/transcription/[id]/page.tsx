@@ -101,6 +101,8 @@ export default function TranscriptionPage() {
 
   const handleProcessingComplete = async () => {
     try {
+      // Small delay to ensure all files are written (suggestions.json may be written after cleaned.json)
+      await new Promise((resolve) => setTimeout(resolve, 500));
       const cleaned = await getCleanedTranscript(id);
       setCleanedTranscript(cleaned);
       setHasCleanedVersion(true);
