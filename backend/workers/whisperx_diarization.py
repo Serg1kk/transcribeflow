@@ -54,10 +54,10 @@ class WhisperXDiarizationWorker:
     def _load_diarize_model(self):
         """Lazy load the diarization model."""
         if self._diarize_model is None:
-            import whisperx
-            self._diarize_model = whisperx.DiarizationPipeline(
+            from whisperx.diarize import DiarizationPipeline
+            self._diarize_model = DiarizationPipeline(
                 use_auth_token=self.hf_token,
-                device="cpu"  # WhisperX diarization on CPU
+                device="cpu"  # Keep on CPU for accurate mode
             )
         return self._diarize_model
 
@@ -117,7 +117,8 @@ class WhisperXDiarizationWorker:
             diarize_params["min_speakers"] = self.min_speakers
             diarize_params["max_speakers"] = self.max_speakers
 
-        diarize_segments = diarize_model(audio, **diarize_params)
+        # DiarizationPipeline accepts file path directly
+        diarize_segments = diarize_model(str(audio_path), **diarize_params)
 
         # Step 3: Assign speakers to words
         result = whisperx.assign_word_speakers(diarize_segments, aligned)
