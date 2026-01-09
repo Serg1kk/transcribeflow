@@ -1,66 +1,31 @@
 // components/TranscriptComparison.tsx
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef } from "react";
 import { CleanedTranscript, TranscriptData } from "@/lib/api";
+import {
+  TranscriptPanel,
+  TranscriptPanelRef,
+} from "@/components/TranscriptPanel";
+import * as api from "@/lib/api";
 
 interface TranscriptComparisonProps {
   original: TranscriptData;
   cleaned: CleanedTranscript;
+  transcriptionId: string;
+  engine: string;
 }
 
 export function TranscriptComparison({
   original,
   cleaned,
+  transcriptionId,
+  engine,
 }: TranscriptComparisonProps) {
   const [syncScroll, setSyncScroll] = useState(true);
-  const leftRef = useRef<HTMLDivElement>(null);
-  const rightRef = useRef<HTMLDivElement>(null);
+  const leftRef = useRef<TranscriptPanelRef>(null);
+  const rightRef = useRef<TranscriptPanelRef>(null);
   const isScrolling = useRef(false);
-
-  // Sync scroll between panels
-  useEffect(() => {
-    if (!syncScroll) return;
-
-    const handleScroll = (source: HTMLDivElement, target: HTMLDivElement) => {
-      if (isScrolling.current) return;
-      isScrolling.current = true;
-
-      const scrollRatio =
-        source.scrollTop / (source.scrollHeight - source.clientHeight);
-      target.scrollTop =
-        scrollRatio * (target.scrollHeight - target.clientHeight);
-
-      requestAnimationFrame(() => {
-        isScrolling.current = false;
-      });
-    };
-
-    const leftEl = leftRef.current;
-    const rightEl = rightRef.current;
-
-    if (!leftEl || !rightEl) return;
-
-    const onLeftScroll = () => handleScroll(leftEl, rightEl);
-    const onRightScroll = () => handleScroll(rightEl, leftEl);
-
-    leftEl.addEventListener("scroll", onLeftScroll);
-    rightEl.addEventListener("scroll", onRightScroll);
-
-    return () => {
-      leftEl.removeEventListener("scroll", onLeftScroll);
-      rightEl.removeEventListener("scroll", onRightScroll);
-    };
-  }, [syncScroll]);
-
-  function formatTimestamp(seconds: number): string {
-    const hours = Math.floor(seconds / 3600);
-    const minutes = Math.floor((seconds % 3600) / 60);
-    const secs = Math.floor(seconds % 60);
-    return `${hours.toString().padStart(2, "0")}:${minutes
-      .toString()
-      .padStart(2, "0")}:${secs.toString().padStart(2, "0")}`;
-  }
 
   function formatTokens(tokens: number): string {
     if (tokens >= 1000) {
@@ -68,6 +33,74 @@ export function TranscriptComparison({
     }
     return tokens.toString();
   }
+
+  const handleLeftTimestampChange = (timestamp: number) => {
+    if (!syncScroll || isScrolling.current) return;
+    isScrolling.current = true;
+    rightRef.current?.scrollToTimestamp(timestamp);
+    setTimeout(() => {
+      isScrolling.current = false;
+    }, 100);
+  };
+
+  const handleRightTimestampChange = (timestamp: number) => {
+    if (!syncScroll || isScrolling.current) return;
+    isScrolling.current = true;
+    leftRef.current?.scrollToTimestamp(timestamp);
+    setTimeout(() => {
+      isScrolling.current = false;
+    }, 100);
+  };
+
+  // Copy/Download handlers for Original
+  const handleCopyOriginalTxt = async () => {
+    try {
+      await api.copyOriginalTxt(transcriptionId);
+    } catch (e) {
+      console.error("Failed to copy:", e);
+    }
+  };
+
+  const handleDownloadOriginalTxt = () => {
+    window.open(api.getOriginalTxtUrl(transcriptionId), "_blank");
+  };
+
+  const handleCopyOriginalJson = async () => {
+    try {
+      await api.copyOriginalJson(transcriptionId);
+    } catch (e) {
+      console.error("Failed to copy:", e);
+    }
+  };
+
+  const handleDownloadOriginalJson = () => {
+    window.open(api.getOriginalJsonUrl(transcriptionId), "_blank");
+  };
+
+  const handleCopyRaw = async () => {
+    try {
+      await api.copyRawApi(transcriptionId);
+    } catch (e) {
+      console.error("Failed to copy:", e);
+    }
+  };
+
+  const handleDownloadRaw = () => {
+    window.open(api.getRawApiUrl(transcriptionId), "_blank");
+  };
+
+  // Copy/Download handlers for Cleaned
+  const handleCopyCleanedTxt = async () => {
+    try {
+      await api.copyCleanedTxt(transcriptionId);
+    } catch (e) {
+      console.error("Failed to copy:", e);
+    }
+  };
+
+  const handleDownloadCleanedTxt = () => {
+    window.open(api.getCleanedTxtUrl(transcriptionId), "_blank");
+  };
 
   return (
     <div className="space-y-4">
@@ -103,63 +136,30 @@ export function TranscriptComparison({
 
       {/* Side-by-side panels */}
       <div className="grid grid-cols-2 gap-4">
-        {/* Original */}
-        <div className="space-y-2">
-          <h3 className="font-medium text-sm text-muted-foreground">
-            Original ({original.segments.length} segments)
-          </h3>
-          <div
-            ref={leftRef}
-            className="h-[600px] overflow-y-auto border rounded-lg p-4 space-y-3"
-          >
-            {original.segments.map((segment, index) => {
-              const speaker = original.speakers[segment.speaker];
-              return (
-                <div key={index} className="flex gap-2 text-sm">
-                  <span className="text-muted-foreground shrink-0 w-20">
-                    [{formatTimestamp(segment.start)}]
-                  </span>
-                  <span
-                    className="font-medium shrink-0 w-24"
-                    style={{ color: speaker?.color }}
-                  >
-                    {speaker?.name || segment.speaker}:
-                  </span>
-                  <span className="text-muted-foreground">{segment.text}</span>
-                </div>
-              );
-            })}
-          </div>
-        </div>
+        <TranscriptPanel
+          ref={leftRef}
+          type="original"
+          data={original}
+          segmentCount={original.segments.length}
+          engine={engine}
+          onCopyTxt={handleCopyOriginalTxt}
+          onDownloadTxt={handleDownloadOriginalTxt}
+          onCopyJson={handleCopyOriginalJson}
+          onDownloadJson={handleDownloadOriginalJson}
+          onCopyRaw={handleCopyRaw}
+          onDownloadRaw={handleDownloadRaw}
+          onVisibleTimestampChange={handleLeftTimestampChange}
+        />
 
-        {/* Cleaned */}
-        <div className="space-y-2">
-          <h3 className="font-medium text-sm text-muted-foreground">
-            Cleaned ({cleaned.stats.cleaned_segments} segments)
-          </h3>
-          <div
-            ref={rightRef}
-            className="h-[600px] overflow-y-auto border rounded-lg p-4 space-y-3"
-          >
-            {cleaned.segments.map((segment, index) => {
-              const speaker = cleaned.speakers[segment.speaker];
-              return (
-                <div key={index} className="flex gap-2 text-sm">
-                  <span className="text-muted-foreground shrink-0 w-20">
-                    [{formatTimestamp(segment.start)}]
-                  </span>
-                  <span
-                    className="font-medium shrink-0 w-24"
-                    style={{ color: speaker?.color }}
-                  >
-                    {speaker?.name || segment.speaker}:
-                  </span>
-                  <span>{segment.text}</span>
-                </div>
-              );
-            })}
-          </div>
-        </div>
+        <TranscriptPanel
+          ref={rightRef}
+          type="cleaned"
+          data={cleaned}
+          segmentCount={cleaned.stats.cleaned_segments}
+          onCopyTxt={handleCopyCleanedTxt}
+          onDownloadTxt={handleDownloadCleanedTxt}
+          onVisibleTimestampChange={handleRightTimestampChange}
+        />
       </div>
     </div>
   );

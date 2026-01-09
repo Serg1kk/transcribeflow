@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { SpeakerEditor } from "@/components/SpeakerEditor";
 import { PostProcessingControls } from "@/components/PostProcessingControls";
 import { TranscriptComparison } from "@/components/TranscriptComparison";
+import { TranscriptPanel } from "@/components/TranscriptPanel";
 import {
   getTranscriptionDetail,
   getTranscriptData,
@@ -19,6 +20,9 @@ import {
   TranscriptData,
   CleanedTranscript,
 } from "@/lib/api";
+import * as api from "@/lib/api";
+
+type ViewMode = "cleaned" | "original" | "comparison";
 
 export default function TranscriptionPage() {
   const params = useParams();
@@ -28,7 +32,7 @@ export default function TranscriptionPage() {
   const [transcript, setTranscript] = useState<TranscriptData | null>(null);
   const [cleanedTranscript, setCleanedTranscript] = useState<CleanedTranscript | null>(null);
   const [hasCleanedVersion, setHasCleanedVersion] = useState(false);
-  const [showComparison, setShowComparison] = useState(false);
+  const [viewMode, setViewMode] = useState<ViewMode>("original");
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -49,6 +53,7 @@ export default function TranscriptionPage() {
         if (cleanedExists) {
           const cleaned = await getCleanedTranscript(id);
           setCleanedTranscript(cleaned);
+          setViewMode("cleaned"); // Default to cleaned if exists
         }
       } catch (err) {
         setError(err instanceof Error ? err.message : "Error loading");
@@ -85,6 +90,12 @@ export default function TranscriptionPage() {
     setTranscript((prev) =>
       prev ? { ...prev, speakers: newSpeakers } : prev
     );
+    // Also update cleaned transcript speakers
+    if (cleanedTranscript) {
+      setCleanedTranscript((prev) =>
+        prev ? { ...prev, speakers: newSpeakers } : prev
+      );
+    }
   };
 
   const handleProcessingComplete = async () => {
@@ -92,14 +103,63 @@ export default function TranscriptionPage() {
       const cleaned = await getCleanedTranscript(id);
       setCleanedTranscript(cleaned);
       setHasCleanedVersion(true);
-      setShowComparison(true);
+      setViewMode("cleaned");
     } catch (err) {
       console.error("Failed to load cleaned transcript:", err);
     }
   };
 
+  // Copy/Download handlers
+  const handleCopyOriginalTxt = async () => {
+    try {
+      await api.copyOriginalTxt(id);
+    } catch (e) {
+      console.error("Failed to copy:", e);
+    }
+  };
+
+  const handleDownloadOriginalTxt = () => {
+    window.open(api.getOriginalTxtUrl(id), "_blank");
+  };
+
+  const handleCopyOriginalJson = async () => {
+    try {
+      await api.copyOriginalJson(id);
+    } catch (e) {
+      console.error("Failed to copy:", e);
+    }
+  };
+
+  const handleDownloadOriginalJson = () => {
+    window.open(api.getOriginalJsonUrl(id), "_blank");
+  };
+
+  const handleCopyRaw = async () => {
+    try {
+      await api.copyRawApi(id);
+    } catch (e) {
+      console.error("Failed to copy:", e);
+    }
+  };
+
+  const handleDownloadRaw = () => {
+    window.open(api.getRawApiUrl(id), "_blank");
+  };
+
+  const handleCopyCleanedTxt = async () => {
+    try {
+      await api.copyCleanedTxt(id);
+    } catch (e) {
+      console.error("Failed to copy:", e);
+    }
+  };
+
+  const handleDownloadCleanedTxt = () => {
+    window.open(api.getCleanedTxtUrl(id), "_blank");
+  };
+
   return (
-    <main className="container mx-auto py-8 px-4 max-w-4xl">
+    <main className="container mx-auto py-8 px-4 max-w-6xl">
       <Link href="/" className="text-primary hover:underline mb-4 inline-block">
         ← Back
       </Link>
@@ -131,18 +191,7 @@ export default function TranscriptionPage() {
 
           {/* Post-Processing Controls */}
           <div className="mt-6 pt-6 border-t">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-medium">LLM Post-Processing</h3>
-              {hasCleanedVersion && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setShowComparison(!showComparison)}
-                >
-                  {showComparison ? "Hide Comparison" : "Show Comparison"}
-                </Button>
-              )}
-            </div>
+            <h3 className="text-lg font-medium mb-4">LLM Post-Processing</h3>
             <PostProcessingControls
               transcriptionId={id}
               hasCleanedVersion={hasCleanedVersion}
@@ -152,70 +201,71 @@ export default function TranscriptionPage() {
         </CardContent>
       </Card>
 
-      {/* Comparison View or Transcript */}
-      {showComparison && cleanedTranscript ? (
-        <Card>
-          <CardHeader>
-            <CardTitle>Comparison</CardTitle>
-          </CardHeader>
-          <CardContent>
+      {/* Transcript View Card */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <CardTitle>Transcript</CardTitle>
+            {/* Tabs - only show if cleaned exists */}
+            {hasCleanedVersion && (
+              <div className="flex gap-1 p-1 bg-muted rounded-lg">
+                <Button
+                  variant={viewMode === "cleaned" ? "secondary" : "ghost"}
+                  size="sm"
+                  onClick={() => setViewMode("cleaned")}
+                >
+                  Cleaned
+                </Button>
+                <Button
+                  variant={viewMode === "original" ? "secondary" : "ghost"}
+                  size="sm"
+                  onClick={() => setViewMode("original")}
+                >
+                  Original
+                </Button>
+                <Button
+                  variant={viewMode === "comparison" ? "secondary" : "ghost"}
+                  size="sm"
+                  onClick={() => setViewMode("comparison")}
+                >
+                  Comparison
+                </Button>
+              </div>
+            )}
+          </div>
+        </CardHeader>
+        <CardContent>
+          {viewMode === "comparison" && cleanedTranscript ? (
             <TranscriptComparison
               original={transcript}
               cleaned={cleanedTranscript}
+              transcriptionId={id}
+              engine={transcription.engine}
             />
-          </CardContent>
-        </Card>
-      ) : (
-        /* Transcript */
-      <Card>
-        <CardHeader>
-          <CardTitle>Transcript</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            {transcript.segments.map((segment, index) => {
-              const speaker = transcript.speakers[segment.speaker];
-              return (
-                <div key={index} className="flex gap-4">
-                  <span className="text-muted-foreground text-sm w-20 shrink-0">
-                    [{formatTimestamp(segment.start)}]
-                  </span>
-                  <span
-                    className="font-medium w-24 shrink-0"
-                    style={{ color: speaker?.color }}
-                  >
-                    {speaker?.name || segment.speaker}:
-                  </span>
-                  <span>{segment.text}</span>
-                </div>
-              );
-            })}
-          </div>
-
-          {/* Download buttons */}
-          <div className="flex gap-4 mt-6 pt-6 border-t">
-            <Button
-              variant="outline"
-              onClick={() => window.open(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/transcribe/${id}/download/txt`, '_blank')}
-            >
-              Download .txt
-            </Button>
-            <Button
-              variant="outline"
-              onClick={() => window.open(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/transcribe/${id}/download/json`, '_blank')}
-            >
-              Download .json
-            </Button>
-            <Button
-              variant="outline"
-              onClick={() => window.open(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/transcribe/${id}/download/raw`, '_blank')}
-            >
-              Download Raw API Response
-            </Button>
-          </div>
+          ) : viewMode === "cleaned" && cleanedTranscript ? (
+            <TranscriptPanel
+              type="cleaned"
+              data={cleanedTranscript}
+              segmentCount={cleanedTranscript.stats.cleaned_segments}
+              onCopyTxt={handleCopyCleanedTxt}
+              onDownloadTxt={handleDownloadCleanedTxt}
+            />
+          ) : (
+            <TranscriptPanel
+              type="original"
+              data={transcript}
+              segmentCount={transcript.segments.length}
+              engine={transcription.engine}
+              onCopyTxt={handleCopyOriginalTxt}
+              onDownloadTxt={handleDownloadOriginalTxt}
+              onCopyJson={handleCopyOriginalJson}
+              onDownloadJson={handleDownloadOriginalJson}
+              onCopyRaw={handleCopyRaw}
+              onDownloadRaw={handleDownloadRaw}
+            />
+          )}
         </CardContent>
       </Card>
-      )}
     </main>
   );
 }
@@ -229,11 +279,4 @@ function formatDuration(seconds: number): string {
     return `${hours}:${minutes.toString().padStart(2, "0")}:${secs.toString().padStart(2, "0")}`;
   }
   return `${minutes}:${secs.toString().padStart(2, "0")}`;
-}
-
-function formatTimestamp(seconds: number): string {
-  const hours = Math.floor(seconds / 3600);
-  const minutes = Math.floor((seconds % 3600) / 60);
-  const secs = Math.floor(seconds % 60);
-  return `${hours.toString().padStart(2, "0")}:${minutes.toString().padStart(2, "0")}:${secs.toString().padStart(2, "0")}`;
 }

@@ -375,20 +375,35 @@ async def update_speakers(
     transcription.speaker_names = update.speaker_names
     db.commit()
 
-    # Update in transcript.json file
+    # Update in transcript files
     if transcription.output_dir:
-        transcript_path = Path(transcription.output_dir) / "transcript.json"
+        output_dir = Path(transcription.output_dir)
+
+        # Update transcript.json
+        transcript_path = output_dir / "transcript.json"
         if transcript_path.exists():
             with open(transcript_path, "r", encoding="utf-8") as f:
                 data = json.load(f)
 
-            # Update speaker names in the speakers dict
             for speaker_id, name in update.speaker_names.items():
                 if speaker_id in data["speakers"]:
                     data["speakers"][speaker_id]["name"] = name
 
             with open(transcript_path, "w", encoding="utf-8") as f:
                 json.dump(data, f, ensure_ascii=False, indent=2)
+
+        # Update transcript_cleaned.json if exists
+        cleaned_path = output_dir / "transcript_cleaned.json"
+        if cleaned_path.exists():
+            with open(cleaned_path, "r", encoding="utf-8") as f:
+                cleaned_data = json.load(f)
+
+            for speaker_id, name in update.speaker_names.items():
+                if speaker_id in cleaned_data.get("speakers", {}):
+                    cleaned_data["speakers"][speaker_id]["name"] = name
+
+            with open(cleaned_path, "w", encoding="utf-8") as f:
+                json.dump(cleaned_data, f, ensure_ascii=False, indent=2)
 
     return {"status": "ok"}
 
@@ -415,9 +430,12 @@ async def download_transcript_txt(
     if not txt_path.exists():
         raise HTTPException(status_code=404, detail="TXT file not found")
 
+    # Get base filename without extension
+    base_name = Path(transcription.filename).stem
+
     return FileResponse(
         path=txt_path,
-        filename=f"{transcription.filename}.txt",
+        filename=f"{base_name}_original.txt",
         media_type="text/plain",
     )
 
@@ -444,9 +462,12 @@ async def download_transcript_json(
     if not json_path.exists():
         raise HTTPException(status_code=404, detail="JSON file not found")
 
+    # Get base filename without extension
+    base_name = Path(transcription.filename).stem
+
     return FileResponse(
         path=json_path,
-        filename=f"{transcription.filename}.json",
+        filename=f"{base_name}_original.json",
         media_type="application/json",
     )
 
@@ -476,5 +497,69 @@ async def download_raw_response(
     return FileResponse(
         path=raw_path,
         filename=f"{transcription.filename}_raw_{transcription.engine}.json",
+        media_type="application/json",
+    )
+
+
+@router.get("/{transcription_id}/download/cleaned/txt")
+async def download_cleaned_txt(
+    transcription_id: str,
+    db: Session = Depends(get_db),
+):
+    """Download cleaned transcript as plain text."""
+    from fastapi.responses import FileResponse
+
+    transcription = db.query(Transcription).filter(
+        Transcription.id == transcription_id
+    ).first()
+
+    if not transcription:
+        raise HTTPException(status_code=404, detail="Transcription not found")
+
+    if not transcription.output_dir:
+        raise HTTPException(status_code=404, detail="Output directory not found")
+
+    txt_path = Path(transcription.output_dir) / "transcript_cleaned.txt"
+    if not txt_path.exists():
+        raise HTTPException(status_code=404, detail="Cleaned transcript not found")
+
+    # Get base filename without extension
+    base_name = Path(transcription.filename).stem
+
+    return FileResponse(
+        path=txt_path,
+        filename=f"{base_name}_cleaned.txt",
+        media_type="text/plain",
+    )
+
+
+@router.get("/{transcription_id}/download/cleaned/json")
+async def download_cleaned_json(
+    transcription_id: str,
+    db: Session = Depends(get_db),
+):
+    """Download cleaned transcript as JSON."""
+    from fastapi.responses import FileResponse
+
+    transcription = db.query(Transcription).filter(
+        Transcription.id == transcription_id
+    ).first()
+
+    if not transcription:
+        raise HTTPException(status_code=404, detail="Transcription not found")
+
+    if not transcription.output_dir:
+        raise HTTPException(status_code=404, detail="Output directory not found")
+
+    json_path = Path(transcription.output_dir) / "transcript_cleaned.json"
+    if not json_path.exists():
+        raise HTTPException(status_code=404, detail="Cleaned transcript not found")
+
+    # Get base filename without extension
+    base_name = Path(transcription.filename).stem
+
+    return FileResponse(
+        path=json_path,
+        filename=f"{base_name}_cleaned.json",
         media_type="application/json",
     )

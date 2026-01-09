@@ -317,3 +317,80 @@ export async function checkCleanedExists(
     return false;
   }
 }
+
+// Download URLs
+export function getOriginalTxtUrl(id: string): string {
+  return `${API_BASE}/api/transcribe/${id}/download/txt`;
+}
+
+export function getOriginalJsonUrl(id: string): string {
+  return `${API_BASE}/api/transcribe/${id}/download/json`;
+}
+
+export function getRawApiUrl(id: string): string {
+  return `${API_BASE}/api/transcribe/${id}/download/raw`;
+}
+
+export function getCleanedTxtUrl(id: string): string {
+  return `${API_BASE}/api/transcribe/${id}/download/cleaned/txt`;
+}
+
+export function getCleanedJsonUrl(id: string): string {
+  return `${API_BASE}/api/transcribe/${id}/download/cleaned/json`;
+}
+
+// Copy to clipboard helpers
+export async function copyOriginalTxt(id: string): Promise<void> {
+  const response = await fetch(`${API_BASE}/api/transcribe/${id}/transcript`);
+  if (!response.ok) throw new Error("Failed to fetch transcript");
+  const data: TranscriptData = await response.json();
+
+  const text = data.segments
+    .map(seg => {
+      const speaker = data.speakers[seg.speaker]?.name || seg.speaker;
+      return `[${formatTimestamp(seg.start)}] ${speaker}: ${seg.text}`;
+    })
+    .join("\n\n");
+
+  await navigator.clipboard.writeText(text);
+}
+
+export async function copyOriginalJson(id: string): Promise<void> {
+  const response = await fetch(`${API_BASE}/api/transcribe/${id}/transcript`);
+  if (!response.ok) throw new Error("Failed to fetch transcript");
+  const data = await response.json();
+  await navigator.clipboard.writeText(JSON.stringify(data, null, 2));
+}
+
+export async function copyRawApi(id: string): Promise<void> {
+  const response = await fetch(`${API_BASE}/api/transcribe/${id}/download/raw`);
+  if (!response.ok) throw new Error("Raw API response not available");
+  const data = await response.json();
+  await navigator.clipboard.writeText(JSON.stringify(data, null, 2));
+}
+
+export async function copyCleanedTxt(id: string): Promise<void> {
+  const response = await fetch(
+    `${API_BASE}/api/postprocess/transcriptions/${id}/cleaned`
+  );
+  if (!response.ok) throw new Error("Failed to fetch cleaned transcript");
+  const data: CleanedTranscript = await response.json();
+
+  const text = data.segments
+    .map(seg => {
+      const speaker = data.speakers[seg.speaker]?.name || seg.speaker;
+      return `[${formatTimestamp(seg.start)}] ${speaker}: ${seg.text}`;
+    })
+    .join("\n\n");
+
+  await navigator.clipboard.writeText(text);
+}
+
+function formatTimestamp(seconds: number): string {
+  const hours = Math.floor(seconds / 3600);
+  const minutes = Math.floor((seconds % 3600) / 60);
+  const secs = Math.floor(seconds % 60);
+  return `${hours.toString().padStart(2, "0")}:${minutes
+    .toString()
+    .padStart(2, "0")}:${secs.toString().padStart(2, "0")}`;
+}
