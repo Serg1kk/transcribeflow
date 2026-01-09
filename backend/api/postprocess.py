@@ -443,6 +443,7 @@ async def apply_speaker_suggestion(
 
     # Apply the name to both transcript files
     display_name = suggestion["display_name"]
+    transcript_data = None
 
     # Update transcript.json
     transcript_path = output_dir / "transcript.json"
@@ -456,6 +457,7 @@ async def apply_speaker_suggestion(
 
     # Update transcript_cleaned.json
     cleaned_path = output_dir / "transcript_cleaned.json"
+    cleaned_data = None
     if cleaned_path.exists():
         with open(cleaned_path, "r", encoding="utf-8") as f:
             cleaned_data = json.load(f)
@@ -463,6 +465,10 @@ async def apply_speaker_suggestion(
             cleaned_data["speakers"][speaker_id]["name"] = display_name
             with open(cleaned_path, "w", encoding="utf-8") as f:
                 json.dump(cleaned_data, f, ensure_ascii=False, indent=2)
+
+    # Regenerate TXT files
+    from api.transcribe import _regenerate_txt_files
+    _regenerate_txt_files(output_dir, transcript_data, cleaned_data)
 
     # Mark suggestion as applied
     suggestion["applied"] = True
@@ -557,6 +563,10 @@ async def apply_all_speaker_suggestions(
 
     with open(suggestions_path, "w", encoding="utf-8") as f:
         json.dump(suggestions_data, f, ensure_ascii=False, indent=2)
+
+    # Regenerate TXT files
+    from api.transcribe import _regenerate_txt_files
+    _regenerate_txt_files(output_dir, transcript_data, cleaned_data)
 
     # Update database
     transcription.speaker_names = speaker_names

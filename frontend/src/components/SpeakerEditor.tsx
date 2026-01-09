@@ -10,7 +10,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { Lightbulb, Check } from "lucide-react";
+import { Lightbulb, Check, X } from "lucide-react";
 import {
   updateSpeakerNames,
   getSpeakerSuggestions,
@@ -154,6 +154,10 @@ export function SpeakerEditor({
     return suggestions.find((s) => s.speaker_id === speakerId);
   };
 
+  const handleDismissSuggestion = (speakerId: string) => {
+    setSuggestions((prev) => prev.filter((s) => s.speaker_id !== speakerId));
+  };
+
   const getConfidenceColor = (suggestion: SpeakerSuggestion) => {
     const maxConf = Math.max(suggestion.name_confidence, suggestion.role_confidence);
     if (maxConf >= 0.8) return "text-green-600";
@@ -246,6 +250,15 @@ export function SpeakerEditor({
                       title="Apply suggestion"
                     >
                       <Check className="h-3.5 w-3.5" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-6 w-6 text-muted-foreground hover:text-destructive"
+                      onClick={() => handleDismissSuggestion(speaker.id)}
+                      title="Dismiss suggestion"
+                    >
+                      <X className="h-3.5 w-3.5" />
                     </Button>
                   </div>
                 )}

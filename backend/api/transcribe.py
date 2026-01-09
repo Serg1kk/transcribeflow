@@ -17,6 +17,83 @@ router = APIRouter(prefix="/api/transcribe", tags=["transcription"])
 ALLOWED_EXTENSIONS = {".mp3", ".m4a", ".wav", ".ogg", ".flac", ".webm"}
 
 
+def _format_timestamp(seconds: float) -> str:
+    """Format timestamp as HH:MM:SS."""
+    hours, remainder = divmod(int(seconds), 3600)
+    minutes, secs = divmod(remainder, 60)
+    return f"{hours:02d}:{minutes:02d}:{secs:02d}"
+
+
+def _regenerate_txt_files(output_dir: Path, original_data: dict | None, cleaned_data: dict | None):
+    """Regenerate TXT files with current speaker names from JSON data."""
+    # Regenerate transcript.txt
+    if original_data:
+        txt_path = output_dir / "transcript.txt"
+        meta = original_data.get("metadata", {})
+        speakers_dict = original_data.get("speakers", {})
+        segments = original_data.get("segments", [])
+
+        # Calculate duration from last segment
+        duration_seconds = meta.get("duration_seconds", 0)
+        if segments and not duration_seconds:
+            duration_seconds = segments[-1].get("end", segments[-1].get("start", 0))
+
+        hours, remainder = divmod(int(duration_seconds), 3600)
+        minutes, secs = divmod(remainder, 60)
+        duration_str = f"{hours}:{minutes:02d}:{secs:02d}" if hours else f"{minutes}:{secs:02d}"
+
+        lines = [
+            f"Transcription: {meta.get('filename', 'Unknown')}",
+            f"Date: {meta.get('created_at', '')[:10]}",
+            f"Duration: {duration_str}",
+            f"Participants: {', '.join(speakers_dict.keys())}",
+            "",
+            "-" * 40,
+            "",
+        ]
+
+        for seg in segments:
+            timestamp = _format_timestamp(seg.get("start", 0))
+            speaker_id = seg.get("speaker", "SPEAKER_UNKNOWN")
+            speaker = speakers_dict.get(speaker_id, {}).get("name", speaker_id)
+            lines.append(f"[{timestamp}] {speaker}: {seg.get('text', '')}")
+            lines.append("")
+
+        lines.append("-" * 40)
+
+        with open(txt_path, "w", encoding="utf-8") as f:
+            f.write("\n".join(lines))
+
+    # Regenerate transcript_cleaned.txt
+    if cleaned_data:
+        txt_path = output_dir / "transcript_cleaned.txt"
+        meta = cleaned_data.get("metadata", {})
+        speakers_dict = cleaned_data.get("speakers", {})
+        segments = cleaned_data.get("segments", [])
+
+        lines = [
+            f"Cleaned Transcript: {meta.get('filename', 'Unknown')}",
+            f"Cleaned: {meta.get('cleaned_at', '')[:10]}",
+            f"Template: {meta.get('template', '')}",
+            f"Model: {meta.get('model', '')}",
+            "",
+            "-" * 40,
+            "",
+        ]
+
+        for seg in segments:
+            timestamp = _format_timestamp(seg.get("start", 0))
+            speaker_id = seg.get("speaker", "SPEAKER_UNKNOWN")
+            speaker = speakers_dict.get(speaker_id, {}).get("name", speaker_id)
+            lines.append(f"[{timestamp}] {speaker}: {seg.get('text', '')}")
+            lines.append("")
+
+        lines.append("-" * 40)
+
+        with open(txt_path, "w", encoding="utf-8") as f:
+            f.write("\n".join(lines))
+
+
 class TranscriptionResponse(BaseModel):
     """Response model for transcription."""
     id: str
@@ -378,19 +455,21 @@ async def update_speakers(
     # Update in transcript files
     if transcription.output_dir:
         output_dir = Path(transcription.output_dir)
+        original_data = None
+        cleaned_data = None
 
         # Update transcript.json
         transcript_path = output_dir / "transcript.json"
         if transcript_path.exists():
             with open(transcript_path, "r", encoding="utf-8") as f:
-                data = json.load(f)
+                original_data = json.load(f)
 
             for speaker_id, name in update.speaker_names.items():
-                if speaker_id in data["speakers"]:
-                    data["speakers"][speaker_id]["name"] = name
+                if speaker_id in original_data["speakers"]:
+                    original_data["speakers"][speaker_id]["name"] = name
 
             with open(transcript_path, "w", encoding="utf-8") as f:
-                json.dump(data, f, ensure_ascii=False, indent=2)
+                json.dump(original_data, f, ensure_ascii=False, indent=2)
 
         # Update transcript_cleaned.json if exists
         cleaned_path = output_dir / "transcript_cleaned.json"
@@ -404,6 +483,9 @@ async def update_speakers(
 
             with open(cleaned_path, "w", encoding="utf-8") as f:
                 json.dump(cleaned_data, f, ensure_ascii=False, indent=2)
+
+        # Regenerate TXT files with updated speaker names
+        _regenerate_txt_files(output_dir, original_data, cleaned_data)
 
     return {"status": "ok"}
 
