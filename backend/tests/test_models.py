@@ -92,3 +92,17 @@ def test_transcription_speaker_names_json():
     fetched = session.query(Transcription).filter_by(id=transcription.id).first()
     assert fetched.speaker_names["SPEAKER_00"] == "Ivan"
     session.close()
+
+
+def test_llm_operation_model_exists():
+    """Test LLMOperation model can be imported."""
+    from models.llm_operation import LLMOperation, LLMOperationStatus
+    assert LLMOperation is not None
+    assert LLMOperationStatus is not None
+
+
+def test_llm_operation_status_values():
+    """Test LLMOperationStatus enum has expected values."""
+    from models.llm_operation import LLMOperationStatus
+    assert LLMOperationStatus.SUCCESS.value == "success"
+    assert LLMOperationStatus.FAILED.value == "failed"
