@@ -64,10 +64,11 @@ export function PostProcessingControls({
     setShowConfirm(false);
 
     try {
+      const startTime = new Date().toISOString();
       await startPostProcessing(transcriptionId, selectedTemplate);
       toast.success("Post-processing started");
 
-      // Poll for completion or failure
+      // Poll for completion or failure by checking operation status
       const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
       let pollCount = 0;
       const maxPolls = 60; // 2 minutes at 2s intervals
@@ -76,29 +77,30 @@ export function PostProcessingControls({
         pollCount++;
 
         try {
-          // Check for success (cleaned transcript exists)
-          const cleanedResponse = await fetch(
-            `${API_BASE}/api/postprocess/transcriptions/${transcriptionId}/cleaned`
-          );
-          if (cleanedResponse.ok) {
-            clearInterval(pollInterval);
-            setIsProcessing(false);
-            toast.success("Post-processing complete!");
-            onProcessingComplete();
-            return;
-          }
-
-          // Check for failure (operation with failed status)
+          // Check operation status (not file existence - file might be from previous run)
           const opsResponse = await fetch(
-            `${API_BASE}/api/postprocess/operations?transcription_id=${transcriptionId}&limit=1`
+            `${API_BASE}/api/postprocess/operations?transcription_id=${transcriptionId}&limit=1&_t=${Date.now()}`
           );
           if (opsResponse.ok) {
             const ops = await opsResponse.json();
-            if (ops.length > 0 && ops[0].status === "failed") {
-              clearInterval(pollInterval);
-              setIsProcessing(false);
-              toast.error(`Post-processing failed: ${ops[0].error_message || "Unknown error"}`);
-              return;
+            if (ops.length > 0) {
+              const latestOp = ops[0];
+              // Only consider operations created after we started
+              if (latestOp.created_at >= startTime) {
+                if (latestOp.status === "success") {
+                  clearInterval(pollInterval);
+                  setIsProcessing(false);
+                  toast.success("Post-processing complete!");
+                  onProcessingComplete();
+                  return;
+                } else if (latestOp.status === "failed") {
+                  clearInterval(pollInterval);
+                  setIsProcessing(false);
+                  toast.error(`Post-processing failed: ${latestOp.error_message || "Unknown error"}`);
+                  return;
+                }
+                // status is "processing" - keep polling
+              }
             }
           }
 
