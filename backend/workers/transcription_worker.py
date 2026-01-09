@@ -276,7 +276,9 @@ class TranscriptionWorker:
         """Create output directory for transcription results."""
         date_str = datetime.utcnow().strftime("%Y-%m-%d")
         stem = audio_path.stem
-        dir_name = f"{date_str}_{stem}"
+        # Include short ID to avoid overwrites when same file is uploaded multiple times
+        short_id = str(transcription.id)[:8]
+        dir_name = f"{date_str}_{stem}_{short_id}"
 
         output_dir = self.settings.transcribed_path / dir_name
         output_dir.mkdir(parents=True, exist_ok=True)
