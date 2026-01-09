@@ -67,31 +67,51 @@ export function PostProcessingControls({
       await startPostProcessing(transcriptionId, selectedTemplate);
       toast.success("Post-processing started");
 
-      // Poll for completion
+      // Poll for completion or failure
+      const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+      let pollCount = 0;
+      const maxPolls = 60; // 2 minutes at 2s intervals
+
       const pollInterval = setInterval(async () => {
+        pollCount++;
+
         try {
-          const response = await fetch(
-            `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"}/api/postprocess/transcriptions/${transcriptionId}/cleaned`
+          // Check for success (cleaned transcript exists)
+          const cleanedResponse = await fetch(
+            `${API_BASE}/api/postprocess/transcriptions/${transcriptionId}/cleaned`
           );
-          if (response.ok) {
+          if (cleanedResponse.ok) {
             clearInterval(pollInterval);
             setIsProcessing(false);
             toast.success("Post-processing complete!");
             onProcessingComplete();
+            return;
+          }
+
+          // Check for failure (operation with failed status)
+          const opsResponse = await fetch(
+            `${API_BASE}/api/postprocess/operations?transcription_id=${transcriptionId}&limit=1`
+          );
+          if (opsResponse.ok) {
+            const ops = await opsResponse.json();
+            if (ops.length > 0 && ops[0].status === "failed") {
+              clearInterval(pollInterval);
+              setIsProcessing(false);
+              toast.error(`Post-processing failed: ${ops[0].error_message || "Unknown error"}`);
+              return;
+            }
+          }
+
+          // Timeout check
+          if (pollCount >= maxPolls) {
+            clearInterval(pollInterval);
+            setIsProcessing(false);
+            toast.error("Post-processing timed out");
           }
         } catch {
-          // Still processing
+          // Network error, keep polling
         }
       }, 2000);
-
-      // Timeout after 2 minutes
-      setTimeout(() => {
-        clearInterval(pollInterval);
-        if (isProcessing) {
-          setIsProcessing(false);
-          toast.error("Post-processing timed out");
-        }
-      }, 120000);
     } catch (error) {
       setIsProcessing(false);
       toast.error(
