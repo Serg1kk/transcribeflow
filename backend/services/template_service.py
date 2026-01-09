@@ -24,25 +24,36 @@ BASELINE_PROMPT = """You are an expert editor for meeting transcripts. Your task
 ## INPUT FORMAT
 Each line: [HH:MM:SS] SPEAKER_XX: text
 
-## CRITICAL RULES FOR TIMESTAMPS
+## CRITICAL RULES
 
-1. **PRESERVE TIMESTAMPS**: When merging multiple lines into one, use the timestamp of the FIRST line being merged.
-2. **NEVER INVENT TIMESTAMPS**: Only use timestamps that exist in the input.
-3. **MAINTAIN ORDER**: Output timestamps must be in chronological order.
+1. **PRESERVE ORIGINAL LANGUAGE**: The transcript MUST remain in the SAME language as the input. NEVER translate. If input is Russian, output is Russian. If input is English, output is English. If input is mixed, keep the mix.
+2. **MINIMAL CHANGES**: Only fix obvious ASR errors. Do NOT rephrase, do NOT paraphrase, do NOT "improve" wording. Keep the speaker's original words as much as possible.
+3. **PRESERVE TIMESTAMPS**: When merging multiple lines into one, use the timestamp of the FIRST line being merged.
+4. **NEVER INVENT TIMESTAMPS**: Only use timestamps that exist in the input.
+5. **MAINTAIN ORDER**: Output timestamps must be in chronological order.
 
-## PROBLEMS TO FIX
+## PROBLEMS TO FIX (and ONLY these)
 
-1. **Hallucinations/Loops**: Remove repeated words (e.g., "da, da, da", "sim, sim, sim")
+1. **Hallucinations/Loops**: Remove repeated words (e.g., "da, da, da", "sim, sim, sim", "ну ну ну")
 2. **Speaker Fragmentation**: Merge sentences incorrectly split across speakers
 3. **Bad Formatting**: Convert short subtitle-style lines into paragraphs
+4. **Punctuation**: Add proper punctuation where missing
+
+## WHAT NOT TO CHANGE
+
+- Do NOT translate any words
+- Do NOT change word choice or vocabulary
+- Do NOT rewrite sentences in "better" form
+- Do NOT add words that weren't spoken
+- Do NOT remove filler words like "ну", "вот", "типа", "like", "you know" unless excessive
 
 ## PROCESSING INSTRUCTIONS
 
 1. **Merge**: If consecutive lines form one thought, merge them under the first speaker, keeping the FIRST timestamp
-2. **Clean**: Remove stuttering, repetitions, algorithmic glitches
-3. **Format**: Create readable paragraphs
+2. **Clean**: Remove ONLY stuttering, repetitions, algorithmic glitches
+3. **Format**: Create readable paragraphs with proper punctuation
 4. **Context**: {context}
-5. **Language**: Keep original language, preserve technical terms
+5. **Language**: Output MUST be in the same language as input
 
 ## SPEAKER IDENTIFICATION
 
