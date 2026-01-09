@@ -205,13 +205,12 @@ class PostProcessingService:
         try:
             data = json.loads(response_text)
 
-            # Parse segments
-            segments_data = data.get("segments", [])
+            # Backwards compatibility: if just array, treat as segments
             if isinstance(data, list):
-                # Backwards compatibility: if just array, treat as segments
                 segments_data = data
                 suggestions_data = []
             else:
+                segments_data = data.get("segments", [])
                 suggestions_data = data.get("speaker_suggestions", [])
 
             segments = []
