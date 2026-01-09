@@ -35,6 +35,7 @@ export default function TranscriptionPage() {
   const [viewMode, setViewMode] = useState<ViewMode>("original");
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [suggestionsKey, setSuggestionsKey] = useState(0);
 
   useEffect(() => {
     async function fetchData() {
@@ -104,6 +105,8 @@ export default function TranscriptionPage() {
       setCleanedTranscript(cleaned);
       setHasCleanedVersion(true);
       setViewMode("cleaned");
+      // Trigger SpeakerEditor to refetch suggestions
+      setSuggestionsKey((prev) => prev + 1);
     } catch (err) {
       console.error("Failed to load cleaned transcript:", err);
     }
@@ -184,6 +187,7 @@ export default function TranscriptionPage() {
 
           {/* Speaker Editor */}
           <SpeakerEditor
+            key={suggestionsKey}
             transcriptionId={id}
             speakers={transcript.speakers}
             onUpdate={handleSpeakersUpdate}
