@@ -343,22 +343,37 @@ class TranscriptionWorker:
     def _format_transcript_txt(self, data: dict) -> str:
         """Format transcript as human-readable text."""
         meta = data["metadata"]
+        speakers_dict = data["speakers"]
+
+        # Check if diarization was disabled (only SPEAKER_UNKNOWN)
+        has_real_speakers = len(speakers_dict) > 1 or (
+            len(speakers_dict) == 1 and "SPEAKER_UNKNOWN" not in speakers_dict
+        )
+
+        # Build header
         lines = [
             f"Transcription: {meta['filename']}",
             f"Date: {meta['created_at'][:10]}",
             f"Duration: {self._format_duration(meta['duration_seconds'])}",
-            f"Participants: {', '.join(s['name'] for s in data['speakers'].values())}",
-            "",
-            "-" * 40,
-            "",
         ]
 
-        speakers_dict = data["speakers"]
+        if has_real_speakers:
+            participants = ', '.join(s['name'] for s in speakers_dict.values())
+            lines.append(f"Participants: {participants}")
+
+        lines.extend(["", "-" * 40, ""])
+
+        # Format segments
         for seg in data["segments"]:
             timestamp = self._format_timestamp(seg["start"])
-            speaker = speakers_dict.get(seg.get("speaker", ""), {}).get("name", "Unknown")
             text = seg["text"]
-            lines.append(f"[{timestamp}] {speaker}: {text}")
+
+            if has_real_speakers:
+                speaker = speakers_dict.get(seg.get("speaker", ""), {}).get("name", "Unknown")
+                lines.append(f"[{timestamp}] {speaker}: {text}")
+            else:
+                # No diarization - just timestamp and text
+                lines.append(f"[{timestamp}] {text}")
             lines.append("")
 
         lines.append("-" * 40)
