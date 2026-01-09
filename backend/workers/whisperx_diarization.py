@@ -174,8 +174,10 @@ class WhisperXDiarizationWorker:
             diarization = diarize_model(audio_input, **diarize_params)
 
             # Convert pyannote Annotation to DataFrame for whisperx
+            # pyannote 4.x returns DiarizeOutput, extract the Annotation
+            annotation = diarization.speaker_diarization if hasattr(diarization, 'speaker_diarization') else diarization
             diarize_df = pd.DataFrame(
-                diarization.itertracks(yield_label=True),
+                annotation.itertracks(yield_label=True),
                 columns=['segment', 'label', 'speaker']
             )
             diarize_df['start'] = diarize_df['segment'].apply(lambda x: x.start)
