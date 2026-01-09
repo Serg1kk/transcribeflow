@@ -78,6 +78,27 @@ class OperationHistoryResponse(BaseModel):
     status: str
 
 
+class SpeakerSuggestionResponse(BaseModel):
+    """Speaker suggestion response."""
+    speaker_id: str
+    display_name: str
+    name: Optional[str]
+    name_confidence: float
+    name_reason: Optional[str]
+    role: Optional[str]
+    role_confidence: float
+    role_reason: Optional[str]
+    applied: bool
+
+
+class SpeakerSuggestionsResponse(BaseModel):
+    """Speaker suggestions list response."""
+    created_at: str
+    template: str
+    model: str
+    suggestions: List[SpeakerSuggestionResponse]
+
+
 # Template endpoints
 @router.get("/templates", response_model=List[TemplateResponse])
 async def list_templates():
@@ -347,3 +368,198 @@ async def list_operations(
         )
         for op in operations
     ]
+
+
+# Speaker suggestions endpoints
+@router.get("/transcriptions/{transcription_id}/suggestions")
+async def get_speaker_suggestions(
+    transcription_id: str,
+    db: Session = Depends(get_db),
+):
+    """Get speaker name suggestions for a transcription."""
+    import json
+    from pathlib import Path
+
+    transcription = db.query(Transcription).filter(
+        Transcription.id == transcription_id
+    ).first()
+
+    if not transcription:
+        raise HTTPException(status_code=404, detail="Transcription not found")
+
+    if not transcription.output_dir:
+        raise HTTPException(status_code=404, detail="Transcript not ready")
+
+    suggestions_path = Path(transcription.output_dir) / "speaker_suggestions.json"
+    if not suggestions_path.exists():
+        raise HTTPException(status_code=404, detail="No speaker suggestions available")
+
+    with open(suggestions_path, "r", encoding="utf-8") as f:
+        return json.load(f)
+
+
+@router.post("/transcriptions/{transcription_id}/suggestions/{speaker_id}/apply")
+async def apply_speaker_suggestion(
+    transcription_id: str,
+    speaker_id: str,
+    db: Session = Depends(get_db),
+):
+    """Apply a speaker name suggestion."""
+    import json
+    from pathlib import Path
+
+    transcription = db.query(Transcription).filter(
+        Transcription.id == transcription_id
+    ).first()
+
+    if not transcription:
+        raise HTTPException(status_code=404, detail="Transcription not found")
+
+    if not transcription.output_dir:
+        raise HTTPException(status_code=404, detail="Transcript not ready")
+
+    output_dir = Path(transcription.output_dir)
+    suggestions_path = output_dir / "speaker_suggestions.json"
+
+    if not suggestions_path.exists():
+        raise HTTPException(status_code=404, detail="No speaker suggestions available")
+
+    # Load suggestions
+    with open(suggestions_path, "r", encoding="utf-8") as f:
+        suggestions_data = json.load(f)
+
+    # Find the suggestion
+    suggestion = None
+    for sug in suggestions_data["suggestions"]:
+        if sug["speaker_id"] == speaker_id:
+            suggestion = sug
+            break
+
+    if not suggestion:
+        raise HTTPException(status_code=404, detail="Suggestion not found for this speaker")
+
+    if suggestion["applied"]:
+        raise HTTPException(status_code=400, detail="Suggestion already applied")
+
+    # Apply the name to both transcript files
+    display_name = suggestion["display_name"]
+
+    # Update transcript.json
+    transcript_path = output_dir / "transcript.json"
+    if transcript_path.exists():
+        with open(transcript_path, "r", encoding="utf-8") as f:
+            transcript_data = json.load(f)
+        if speaker_id in transcript_data.get("speakers", {}):
+            transcript_data["speakers"][speaker_id]["name"] = display_name
+            with open(transcript_path, "w", encoding="utf-8") as f:
+                json.dump(transcript_data, f, ensure_ascii=False, indent=2)
+
+    # Update transcript_cleaned.json
+    cleaned_path = output_dir / "transcript_cleaned.json"
+    if cleaned_path.exists():
+        with open(cleaned_path, "r", encoding="utf-8") as f:
+            cleaned_data = json.load(f)
+        if speaker_id in cleaned_data.get("speakers", {}):
+            cleaned_data["speakers"][speaker_id]["name"] = display_name
+            with open(cleaned_path, "w", encoding="utf-8") as f:
+                json.dump(cleaned_data, f, ensure_ascii=False, indent=2)
+
+    # Mark suggestion as applied
+    suggestion["applied"] = True
+    with open(suggestions_path, "w", encoding="utf-8") as f:
+        json.dump(suggestions_data, f, ensure_ascii=False, indent=2)
+
+    # Update database
+    if transcription.speaker_names is None:
+        transcription.speaker_names = {}
+    transcription.speaker_names[speaker_id] = display_name
+    db.commit()
+
+    return {"status": "applied", "speaker_id": speaker_id, "name": display_name}
+
+
+@router.post("/transcriptions/{transcription_id}/suggestions/apply-all")
+async def apply_all_speaker_suggestions(
+    transcription_id: str,
+    db: Session = Depends(get_db),
+):
+    """Apply all non-applied speaker name suggestions."""
+    import json
+    from pathlib import Path
+
+    transcription = db.query(Transcription).filter(
+        Transcription.id == transcription_id
+    ).first()
+
+    if not transcription:
+        raise HTTPException(status_code=404, detail="Transcription not found")
+
+    if not transcription.output_dir:
+        raise HTTPException(status_code=404, detail="Transcript not ready")
+
+    output_dir = Path(transcription.output_dir)
+    suggestions_path = output_dir / "speaker_suggestions.json"
+
+    if not suggestions_path.exists():
+        raise HTTPException(status_code=404, detail="No speaker suggestions available")
+
+    # Load suggestions
+    with open(suggestions_path, "r", encoding="utf-8") as f:
+        suggestions_data = json.load(f)
+
+    # Load transcript files
+    transcript_path = output_dir / "transcript.json"
+    cleaned_path = output_dir / "transcript_cleaned.json"
+
+    transcript_data = None
+    cleaned_data = None
+
+    if transcript_path.exists():
+        with open(transcript_path, "r", encoding="utf-8") as f:
+            transcript_data = json.load(f)
+
+    if cleaned_path.exists():
+        with open(cleaned_path, "r", encoding="utf-8") as f:
+            cleaned_data = json.load(f)
+
+    # Apply all non-applied suggestions
+    applied_count = 0
+    speaker_names = transcription.speaker_names or {}
+
+    for sug in suggestions_data["suggestions"]:
+        if sug["applied"] or not sug["display_name"]:
+            continue
+
+        speaker_id = sug["speaker_id"]
+        display_name = sug["display_name"]
+
+        # Update transcript.json
+        if transcript_data and speaker_id in transcript_data.get("speakers", {}):
+            transcript_data["speakers"][speaker_id]["name"] = display_name
+
+        # Update transcript_cleaned.json
+        if cleaned_data and speaker_id in cleaned_data.get("speakers", {}):
+            cleaned_data["speakers"][speaker_id]["name"] = display_name
+
+        # Mark as applied
+        sug["applied"] = True
+        speaker_names[speaker_id] = display_name
+        applied_count += 1
+
+    # Save all files
+    if transcript_data:
+        with open(transcript_path, "w", encoding="utf-8") as f:
+            json.dump(transcript_data, f, ensure_ascii=False, indent=2)
+
+    if cleaned_data:
+        with open(cleaned_path, "w", encoding="utf-8") as f:
+            json.dump(cleaned_data, f, ensure_ascii=False, indent=2)
+
+    with open(suggestions_path, "w", encoding="utf-8") as f:
+        json.dump(suggestions_data, f, ensure_ascii=False, indent=2)
+
+    # Update database
+    transcription.speaker_names = speaker_names
+    db.commit()
+
+    return {"status": "applied", "applied": applied_count}
