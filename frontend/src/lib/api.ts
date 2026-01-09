@@ -257,6 +257,26 @@ export interface CleanedTranscript {
   };
 }
 
+// Speaker suggestions types
+export interface SpeakerSuggestion {
+  speaker_id: string;
+  display_name: string;
+  name: string | null;
+  name_confidence: number;
+  name_reason: string | null;
+  role: string | null;
+  role_confidence: number;
+  role_reason: string | null;
+  applied: boolean;
+}
+
+export interface SpeakerSuggestions {
+  created_at: string;
+  template: string;
+  model: string;
+  suggestions: SpeakerSuggestion[];
+}
+
 // Post-processing API functions
 export async function getTemplates(): Promise<Template[]> {
   const response = await fetch(`${API_BASE}/api/postprocess/templates`);
@@ -393,4 +413,50 @@ function formatTimestamp(seconds: number): string {
   return `${hours.toString().padStart(2, "0")}:${minutes
     .toString()
     .padStart(2, "0")}:${secs.toString().padStart(2, "0")}`;
+}
+
+// Speaker suggestions API functions
+export async function getSpeakerSuggestions(
+  transcriptionId: string
+): Promise<SpeakerSuggestions | null> {
+  try {
+    const response = await fetch(
+      `${API_BASE}/api/postprocess/transcriptions/${transcriptionId}/suggestions`
+    );
+    if (response.status === 404) {
+      return null;
+    }
+    if (!response.ok) throw new Error("Failed to fetch suggestions");
+    return response.json();
+  } catch {
+    return null;
+  }
+}
+
+export async function applySpeakerSuggestion(
+  transcriptionId: string,
+  speakerId: string
+): Promise<void> {
+  const response = await fetch(
+    `${API_BASE}/api/postprocess/transcriptions/${transcriptionId}/suggestions/${speakerId}/apply`,
+    { method: "POST" }
+  );
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.detail || "Failed to apply suggestion");
+  }
+}
+
+export async function applyAllSpeakerSuggestions(
+  transcriptionId: string
+): Promise<{ applied: number }> {
+  const response = await fetch(
+    `${API_BASE}/api/postprocess/transcriptions/${transcriptionId}/suggestions/apply-all`,
+    { method: "POST" }
+  );
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.detail || "Failed to apply suggestions");
+  }
+  return response.json();
 }
