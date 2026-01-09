@@ -57,3 +57,21 @@ def test_settings_diarization_method_values():
     for value in ["none", "fast", "accurate"]:
         settings = Settings(diarization_method=value)
         assert settings.diarization_method == value
+
+
+def test_settings_postprocessing_provider_default():
+    """Test postprocessing_provider defaults to 'gemini'."""
+    settings = Settings()
+    assert settings.postprocessing_provider == "gemini"
+
+
+def test_settings_postprocessing_model_default():
+    """Test postprocessing_model defaults to 'gemini-2.5-flash'."""
+    settings = Settings()
+    assert settings.postprocessing_model == "gemini-2.5-flash"
+
+
+def test_settings_postprocessing_default_template():
+    """Test postprocessing_default_template defaults to None."""
+    settings = Settings()
+    assert settings.postprocessing_default_template is None

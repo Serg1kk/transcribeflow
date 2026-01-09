@@ -100,6 +100,11 @@ class Settings(BaseSettings):
     openrouter_api_key: Optional[str] = None
     gemini_api_key: Optional[str] = None
 
+    # Post-processing settings
+    postprocessing_provider: str = "gemini"  # "gemini" | "openrouter"
+    postprocessing_model: str = "gemini-2.5-flash"
+    postprocessing_default_template: Optional[str] = None  # None = always ask
+
     # Server
     backend_host: str = "127.0.0.1"
     backend_port: int = 8000
