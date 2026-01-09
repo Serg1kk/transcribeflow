@@ -44,38 +44,55 @@ Each line: [HH:MM:SS] SPEAKER_XX: text
 4. **Context**: {context}
 5. **Language**: Keep original language, preserve technical terms
 
+## SPEAKER IDENTIFICATION
+
+Analyze the conversation to identify speakers by their names and roles. Look for:
+- Direct addressing: "Привет, Андрей", "Лена, покажи...", "Thanks, Mike"
+- Self-introduction: "Меня зовут...", "Это Сергей", "I'm John"
+- Role indicators from context: discusses code → developer, discusses design → designer, asks about deadlines → manager
+
+Available roles for this context: {role_context}
+
 ## OUTPUT FORMAT (STRICT JSON)
 
-Return a JSON array. Each element MUST have exactly these fields:
-- "speaker": string (SPEAKER_00, SPEAKER_01, etc. - DO NOT change these IDs)
-- "text": string (cleaned merged text)
-- "start": number (timestamp in SECONDS - from FIRST merged segment)
+Return a JSON object with two keys: "segments" and "speaker_suggestions".
 
-Example:
-Input:
-[00:02:00] SPEAKER_01: We need to
-[00:02:01] SPEAKER_02: fix the bug
-[00:02:02] SPEAKER_01: in production.
-[00:02:04] SPEAKER_01: Da, da, da.
-[00:02:30] SPEAKER_02: Next topic.
+```json
+{{{{
+  "segments": [
+    {{{{"speaker": "SPEAKER_00", "text": "cleaned text", "start": 120}}}}
+  ],
+  "speaker_suggestions": [
+    {{{{
+      "speaker_id": "SPEAKER_00",
+      "name": "Лена",
+      "name_confidence": 0.9,
+      "name_reason": "SPEAKER_01 said 'Лена, покажи макеты'",
+      "role": "designer",
+      "role_confidence": 0.85,
+      "role_reason": "Discusses UI, mockups, visual design"
+    }}}}
+  ]
+}}}}
+```
 
-Output:
-[
-  {{"speaker": "SPEAKER_01", "text": "We need to fix the bug in production.", "start": 120}},
-  {{"speaker": "SPEAKER_02", "text": "Next topic.", "start": 150}}
-]
-
-Note: 00:02:00 = 120 seconds, 00:02:30 = 150 seconds
+Rules for speaker_suggestions:
+- Include ALL speakers from input, even if name/role unknown
+- If name unknown: "name": null, "name_confidence": 0, "name_reason": null
+- If role unknown: "role": null, "role_confidence": 0, "role_reason": null
+- confidence is 0.0 to 1.0
+- reason should quote or describe the evidence
 
 ## SELF-CHECK BEFORE RETURNING
 
 Before returning your answer, verify:
 1. All timestamps are numbers (seconds), not strings
 2. Timestamps are in ascending order
-3. No timestamp is larger than the last input timestamp
-4. All speaker IDs match the input format (SPEAKER_XX)
+3. All speaker IDs match the input format (SPEAKER_XX)
+4. speaker_suggestions includes every speaker from input
+5. confidence values are between 0.0 and 1.0
 
-Return ONLY the JSON array, no explanations."""
+Return ONLY the JSON object, no explanations."""
 
 # Default templates
 DEFAULT_TEMPLATES = [
@@ -84,7 +101,8 @@ DEFAULT_TEMPLATES = [
         name="IT Meeting",
         description="Tech standups, sprint reviews, architecture discussions",
         system_prompt=BASELINE_PROMPT.format(
-            context="This is a technical IT meeting involving developers and managers. Preserve technical slang (e.g., 'backend', 'frontend', 'feature', 'bug', 'deploy', 'API', 'PR'). Do not over-correct technical terms."
+            context="This is a technical IT meeting involving developers and managers. Preserve technical slang (e.g., 'backend', 'frontend', 'feature', 'bug', 'deploy', 'API', 'PR'). Do not over-correct technical terms.",
+            role_context="developer, designer, QA, DevOps, manager, product owner, team lead, architect"
         ),
         temperature=0.2
     ),
@@ -93,7 +111,8 @@ DEFAULT_TEMPLATES = [
         name="Interview",
         description="Job interviews, podcasts, Q&A sessions",
         system_prompt=BASELINE_PROMPT.format(
-            context="This is an interview or Q&A session. Preserve the natural back-and-forth flow between interviewer and interviewee. Maintain question-answer structure."
+            context="This is an interview or Q&A session. Preserve the natural back-and-forth flow between interviewer and interviewee. Maintain question-answer structure.",
+            role_context="interviewer, candidate, HR manager, recruiter, host, guest"
         ),
         temperature=0.3
     ),
@@ -102,7 +121,8 @@ DEFAULT_TEMPLATES = [
         name="Business Call",
         description="Client calls, sales meetings, professional discussions",
         system_prompt=BASELINE_PROMPT.format(
-            context="This is a professional business call or meeting. Preserve formal language and business terminology. Maintain professional tone."
+            context="This is a professional business call or meeting. Preserve formal language and business terminology. Maintain professional tone.",
+            role_context="client, sales manager, account manager, consultant, CEO, CFO, director, partner"
         ),
         temperature=0.2
     ),
