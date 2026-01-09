@@ -1,6 +1,7 @@
 # services/postprocessing_service.py
 """Post-processing service for LLM-based transcript cleanup."""
 import json
+import logging
 import time
 from dataclasses import dataclass
 from datetime import datetime
@@ -14,6 +15,8 @@ from models import Transcription, LLMOperation, LLMOperationStatus
 from services.template_service import TemplateService, Template
 from services.llm_models_service import LLMModelsService
 from services.llm_providers import GeminiClient, OpenRouterClient, LLMResponse
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -138,15 +141,19 @@ class PostProcessingService:
 
         # Call LLM
         client = self._get_client(provider)
+        logger.info(f"Calling LLM: provider={provider}, model={model}, template={template_id}")
         llm_response = await client.complete(
             system_prompt=template.system_prompt,
             user_message=user_message,
             model=model,
             temperature=template.temperature,
         )
+        logger.info(f"LLM response: tokens_in={llm_response.input_tokens}, tokens_out={llm_response.output_tokens}")
+        logger.debug(f"LLM raw response:\n{llm_response.text[:2000]}")
 
         # Parse response
         cleaned_segments, speaker_suggestions = self._parse_llm_response(llm_response.text)
+        logger.info(f"Parsed: segments={len(cleaned_segments)}, suggestions={len(speaker_suggestions)}")
 
         # Calculate cost
         model_info = self.models_service.get_model(provider, model)

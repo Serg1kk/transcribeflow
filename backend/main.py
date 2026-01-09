@@ -1,4 +1,5 @@
 """TranscribeFlow Backend - Main Application Entry Point."""
+import logging
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
@@ -10,6 +11,15 @@ from api.engines import router as engines_router
 from api.postprocess import router as postprocess_router
 from models import init_db
 from workers.queue_processor import queue_processor
+
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    datefmt="%H:%M:%S",
+)
+# Set DEBUG for postprocessing to see LLM responses
+logging.getLogger("services.postprocessing_service").setLevel(logging.DEBUG)
 
 
 @asynccontextmanager
