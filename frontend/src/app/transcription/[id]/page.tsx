@@ -8,11 +8,16 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { SpeakerEditor } from "@/components/SpeakerEditor";
+import { PostProcessingControls } from "@/components/PostProcessingControls";
+import { TranscriptComparison } from "@/components/TranscriptComparison";
 import {
   getTranscriptionDetail,
   getTranscriptData,
+  getCleanedTranscript,
+  checkCleanedExists,
   TranscriptionDetail,
   TranscriptData,
+  CleanedTranscript,
 } from "@/lib/api";
 
 export default function TranscriptionPage() {
@@ -21,6 +26,9 @@ export default function TranscriptionPage() {
 
   const [transcription, setTranscription] = useState<TranscriptionDetail | null>(null);
   const [transcript, setTranscript] = useState<TranscriptData | null>(null);
+  const [cleanedTranscript, setCleanedTranscript] = useState<CleanedTranscript | null>(null);
+  const [hasCleanedVersion, setHasCleanedVersion] = useState(false);
+  const [showComparison, setShowComparison] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -33,6 +41,15 @@ export default function TranscriptionPage() {
         ]);
         setTranscription(detail);
         setTranscript(data);
+
+        // Check if cleaned version exists
+        const cleanedExists = await checkCleanedExists(id);
+        setHasCleanedVersion(cleanedExists);
+
+        if (cleanedExists) {
+          const cleaned = await getCleanedTranscript(id);
+          setCleanedTranscript(cleaned);
+        }
       } catch (err) {
         setError(err instanceof Error ? err.message : "Error loading");
       } finally {
@@ -70,6 +87,17 @@ export default function TranscriptionPage() {
     );
   };
 
+  const handleProcessingComplete = async () => {
+    try {
+      const cleaned = await getCleanedTranscript(id);
+      setCleanedTranscript(cleaned);
+      setHasCleanedVersion(true);
+      setShowComparison(true);
+    } catch (err) {
+      console.error("Failed to load cleaned transcript:", err);
+    }
+  };
+
   return (
     <main className="container mx-auto py-8 px-4 max-w-4xl">
       <Link href="/" className="text-primary hover:underline mb-4 inline-block">
@@ -100,10 +128,45 @@ export default function TranscriptionPage() {
             speakers={transcript.speakers}
             onUpdate={handleSpeakersUpdate}
           />
+
+          {/* Post-Processing Controls */}
+          <div className="mt-6 pt-6 border-t">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-medium">LLM Post-Processing</h3>
+              {hasCleanedVersion && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowComparison(!showComparison)}
+                >
+                  {showComparison ? "Hide Comparison" : "Show Comparison"}
+                </Button>
+              )}
+            </div>
+            <PostProcessingControls
+              transcriptionId={id}
+              hasCleanedVersion={hasCleanedVersion}
+              onProcessingComplete={handleProcessingComplete}
+            />
+          </div>
         </CardContent>
       </Card>
 
-      {/* Transcript */}
+      {/* Comparison View or Transcript */}
+      {showComparison && cleanedTranscript ? (
+        <Card>
+          <CardHeader>
+            <CardTitle>Comparison</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <TranscriptComparison
+              original={transcript}
+              cleaned={cleanedTranscript}
+            />
+          </CardContent>
+        </Card>
+      ) : (
+        /* Transcript */
       <Card>
         <CardHeader>
           <CardTitle>Transcript</CardTitle>
@@ -152,6 +215,7 @@ export default function TranscriptionPage() {
           </div>
         </CardContent>
       </Card>
+      )}
     </main>
   );
 }
