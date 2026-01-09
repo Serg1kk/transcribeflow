@@ -207,3 +207,113 @@ export function engineSupportsInitialPrompt(engineName: string): boolean {
   // This can be made async if needed
   return engineName === "mlx-whisper";
 }
+
+// Post-processing types
+export interface Template {
+  id: string;
+  name: string;
+  description: string;
+  temperature: number;
+}
+
+export interface TemplateDetail extends Template {
+  system_prompt: string;
+}
+
+export interface LLMModel {
+  id: string;
+  name: string;
+  input_price_per_1m: number | null;
+  output_price_per_1m: number | null;
+}
+
+export interface LLMModelsConfig {
+  gemini: { models: LLMModel[] };
+  openrouter: { models: LLMModel[] };
+}
+
+export interface CleanedTranscript {
+  metadata: {
+    id: string;
+    filename: string;
+    cleaned_at: string;
+    template: string;
+    provider: string;
+    model: string;
+  };
+  speakers: Record<string, { name: string; color: string }>;
+  segments: Array<{
+    start: number;
+    speaker: string;
+    text: string;
+  }>;
+  stats: {
+    original_segments: number;
+    cleaned_segments: number;
+    input_tokens: number;
+    output_tokens: number;
+    cost_usd: number | null;
+    processing_time_seconds: number;
+  };
+}
+
+// Post-processing API functions
+export async function getTemplates(): Promise<Template[]> {
+  const response = await fetch(`${API_BASE}/api/postprocess/templates`);
+  if (!response.ok) throw new Error("Failed to fetch templates");
+  return response.json();
+}
+
+export async function getLLMModels(): Promise<LLMModelsConfig> {
+  const response = await fetch(`${API_BASE}/api/postprocess/models`);
+  if (!response.ok) throw new Error("Failed to fetch LLM models");
+  return response.json();
+}
+
+export async function startPostProcessing(
+  transcriptionId: string,
+  templateId: string,
+  provider?: string,
+  model?: string
+): Promise<{ status: string; transcription_id: string }> {
+  const response = await fetch(
+    `${API_BASE}/api/postprocess/transcriptions/${transcriptionId}`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        template_id: templateId,
+        provider,
+        model,
+      }),
+    }
+  );
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.detail || "Failed to start post-processing");
+  }
+  return response.json();
+}
+
+export async function getCleanedTranscript(
+  transcriptionId: string
+): Promise<CleanedTranscript> {
+  const response = await fetch(
+    `${API_BASE}/api/postprocess/transcriptions/${transcriptionId}/cleaned`
+  );
+  if (!response.ok) throw new Error("Cleaned transcript not found");
+  return response.json();
+}
+
+export async function checkCleanedExists(
+  transcriptionId: string
+): Promise<boolean> {
+  try {
+    const response = await fetch(
+      `${API_BASE}/api/postprocess/transcriptions/${transcriptionId}/cleaned`
+    );
+    return response.ok;
+  } catch {
+    return false;
+  }
+}
