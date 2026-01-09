@@ -54,11 +54,12 @@ class WhisperXDiarizationWorker:
     def _load_diarize_model(self):
         """Lazy load the diarization model."""
         if self._diarize_model is None:
-            from whisperx.diarize import DiarizationPipeline
-            self._diarize_model = DiarizationPipeline(
-                use_auth_token=self.hf_token,
-                device="cpu"  # Keep on CPU for accurate mode
+            from pyannote.audio import Pipeline
+            self._diarize_model = Pipeline.from_pretrained(
+                "pyannote/speaker-diarization-3.1",
+                token=self.hf_token,  # New API uses 'token' not 'use_auth_token'
             )
+            # Keep on CPU for accurate mode
         return self._diarize_model
 
     def diarize_with_alignment(
