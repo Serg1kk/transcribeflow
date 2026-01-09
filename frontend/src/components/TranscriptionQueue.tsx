@@ -427,6 +427,17 @@ function CompletedItem({ transcription }: { transcription: Transcription }) {
     return `${Math.floor(seconds / 60)}m ${Math.round(seconds % 60)}s`;
   };
 
+  const formatDuration = (seconds: number | null) => {
+    if (!seconds) return null;
+    const mins = Math.floor(seconds / 60);
+    const secs = Math.round(seconds % 60);
+    return `${mins}:${secs.toString().padStart(2, "0")}`;
+  };
+
+  const fileSizeMB = transcription.file_size
+    ? (transcription.file_size / 1024 / 1024).toFixed(1) + " MB"
+    : null;
+
   return (
     <div className="border rounded-lg p-3 space-y-2">
       <div className="flex items-center justify-between">
@@ -441,7 +452,6 @@ function CompletedItem({ transcription }: { transcription: Transcription }) {
           ) : (
             <span className="font-medium">{transcription.filename}</span>
           )}
-          <span className="text-xs text-muted-foreground">{transcription.engine}/{transcription.model}</span>
         </div>
         <Badge variant={isFailed ? "destructive" : "outline"}>
           {isFailed ? "Failed" : "Completed"}
@@ -460,17 +470,23 @@ function CompletedItem({ transcription }: { transcription: Transcription }) {
         </p>
       )}
 
-      {isCompleted && transcription.processing_time_seconds && (
-        <div className="flex gap-3 text-xs text-muted-foreground bg-muted/50 rounded px-2 py-1">
-          <span>Total: {formatTime(transcription.processing_time_seconds)}</span>
-          {transcription.transcription_time_seconds && (
-            <span>ASR: {formatTime(transcription.transcription_time_seconds)}</span>
-          )}
-          {transcription.diarization_time_seconds && (
-            <span>Diarization: {formatTime(transcription.diarization_time_seconds)}</span>
-          )}
-        </div>
-      )}
+      <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground bg-muted/50 rounded px-2 py-1">
+        <span>{transcription.engine}/{transcription.model}</span>
+        {fileSizeMB && <span>{fileSizeMB}</span>}
+        {transcription.duration_seconds && <span>{formatDuration(transcription.duration_seconds)}</span>}
+        {isCompleted && transcription.processing_time_seconds && (
+          <>
+            <span className="text-muted-foreground/50">|</span>
+            <span>Total: {formatTime(transcription.processing_time_seconds)}</span>
+            {transcription.transcription_time_seconds && (
+              <span>ASR: {formatTime(transcription.transcription_time_seconds)}</span>
+            )}
+            {transcription.diarization_time_seconds && (
+              <span>Diarization: {formatTime(transcription.diarization_time_seconds)}</span>
+            )}
+          </>
+        )}
+      </div>
     </div>
   );
 }
