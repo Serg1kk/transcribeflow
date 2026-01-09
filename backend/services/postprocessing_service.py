@@ -25,9 +25,24 @@ class CleanedSegment:
 
 
 @dataclass
+class SpeakerSuggestion:
+    """A speaker name/role suggestion from LLM."""
+    speaker_id: str
+    display_name: str
+    name: Optional[str]
+    name_confidence: float
+    name_reason: Optional[str]
+    role: Optional[str]
+    role_confidence: float
+    role_reason: Optional[str]
+    applied: bool = False
+
+
+@dataclass
 class PostProcessingResult:
     """Result of post-processing operation."""
     segments: List[CleanedSegment]
+    speaker_suggestions: List[SpeakerSuggestion]
     input_tokens: int
     output_tokens: int
     cost_usd: Optional[float]
@@ -131,7 +146,7 @@ class PostProcessingService:
         )
 
         # Parse response
-        cleaned_segments = self._parse_llm_response(llm_response.text)
+        cleaned_segments, speaker_suggestions = self._parse_llm_response(llm_response.text)
 
         # Calculate cost
         model_info = self.models_service.get_model(provider, model)
@@ -148,6 +163,7 @@ class PostProcessingService:
         self._save_cleaned_transcript(
             transcription=transcription,
             segments=cleaned_segments,
+            speaker_suggestions=speaker_suggestions,
             original_data=transcript_data,
             template=template,
             provider=provider,
@@ -177,24 +193,26 @@ class PostProcessingService:
 
         return PostProcessingResult(
             segments=cleaned_segments,
+            speaker_suggestions=speaker_suggestions,
             input_tokens=llm_response.input_tokens,
             output_tokens=llm_response.output_tokens,
             cost_usd=cost_usd,
             processing_time_seconds=processing_time,
         )
 
-    def _parse_llm_response(self, response_text: str) -> List[CleanedSegment]:
-        """Parse LLM response into cleaned segments."""
+    def _parse_llm_response(self, response_text: str) -> tuple[List[CleanedSegment], List[SpeakerSuggestion]]:
+        """Parse LLM response into cleaned segments and speaker suggestions."""
         try:
             data = json.loads(response_text)
 
-            # Handle array or object with segments key
+            # Parse segments
+            segments_data = data.get("segments", [])
             if isinstance(data, list):
+                # Backwards compatibility: if just array, treat as segments
                 segments_data = data
-            elif isinstance(data, dict) and "segments" in data:
-                segments_data = data["segments"]
+                suggestions_data = []
             else:
-                segments_data = [data]
+                suggestions_data = data.get("speaker_suggestions", [])
 
             segments = []
             for seg in segments_data:
@@ -203,7 +221,37 @@ class PostProcessingService:
                     speaker=seg.get("speaker", "SPEAKER_UNKNOWN"),
                     text=seg.get("text", ""),
                 ))
-            return segments
+
+            # Parse speaker suggestions
+            suggestions = []
+            for sug in suggestions_data:
+                name = sug.get("name")
+                role = sug.get("role")
+
+                # Build display_name
+                if name and role:
+                    display_name = f"{name} ({role})"
+                elif name:
+                    display_name = name
+                elif role:
+                    display_name = role
+                else:
+                    display_name = ""
+
+                if display_name:  # Only add if we have something to suggest
+                    suggestions.append(SpeakerSuggestion(
+                        speaker_id=sug.get("speaker_id", ""),
+                        display_name=display_name,
+                        name=name,
+                        name_confidence=float(sug.get("name_confidence", 0)),
+                        name_reason=sug.get("name_reason"),
+                        role=role,
+                        role_confidence=float(sug.get("role_confidence", 0)),
+                        role_reason=sug.get("role_reason"),
+                        applied=False,
+                    ))
+
+            return segments, suggestions
         except (json.JSONDecodeError, KeyError, TypeError) as e:
             raise ValueError(f"Failed to parse LLM response: {e}")
 
@@ -211,6 +259,7 @@ class PostProcessingService:
         self,
         transcription: Transcription,
         segments: List[CleanedSegment],
+        speaker_suggestions: List[SpeakerSuggestion],
         original_data: dict,
         template: Template,
         provider: str,
@@ -261,6 +310,31 @@ class PostProcessingService:
         txt_path = output_dir / "transcript_cleaned.txt"
         with open(txt_path, "w", encoding="utf-8") as f:
             f.write(self._format_cleaned_txt(cleaned_data))
+
+        # Save speaker_suggestions.json
+        if speaker_suggestions:
+            suggestions_path = output_dir / "speaker_suggestions.json"
+            suggestions_data = {
+                "created_at": datetime.utcnow().isoformat(),
+                "template": template.id,
+                "model": model,
+                "suggestions": [
+                    {
+                        "speaker_id": s.speaker_id,
+                        "display_name": s.display_name,
+                        "name": s.name,
+                        "name_confidence": s.name_confidence,
+                        "name_reason": s.name_reason,
+                        "role": s.role,
+                        "role_confidence": s.role_confidence,
+                        "role_reason": s.role_reason,
+                        "applied": s.applied,
+                    }
+                    for s in speaker_suggestions
+                ]
+            }
+            with open(suggestions_path, "w", encoding="utf-8") as f:
+                json.dump(suggestions_data, f, ensure_ascii=False, indent=2)
 
         # Append to postprocessing_log.json
         log_path = output_dir / "postprocessing_log.json"
