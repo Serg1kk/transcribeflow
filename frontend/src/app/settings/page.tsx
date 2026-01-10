@@ -251,16 +251,16 @@ export default function SettingsPage() {
 
 
       <div className="space-y-6">
-        {/* Transcription Settings */}
+        {/* Transcription Settings (ASR) */}
         <Card>
           <CardHeader>
-            <CardTitle>Transcription</CardTitle>
-            <CardDescription>Default settings for new transcriptions</CardDescription>
+            <CardTitle>Transcription (ASR)</CardTitle>
+            <CardDescription>Speech-to-text engine settings</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label>Default Engine</Label>
+                <Label>Engine</Label>
                 <Select value={defaultEngine} onValueChange={setDefaultEngine}>
                   <SelectTrigger>
                     <SelectValue />
@@ -279,7 +279,7 @@ export default function SettingsPage() {
                 </Select>
               </div>
               <div className="space-y-2">
-                <Label>Default Model</Label>
+                <Label>Model</Label>
                 <Select value={defaultModel} onValueChange={setDefaultModel}>
                   <SelectTrigger>
                     <SelectValue />
@@ -298,6 +298,11 @@ export default function SettingsPage() {
                 </Select>
               </div>
             </div>
+            {defaultEngine === "mlx-whisper" && (
+              <p className="text-xs text-muted-foreground">
+                MLX Whisper runs on Apple Silicon GPU (Metal). No CPU option available.
+              </p>
+            )}
           </CardContent>
         </Card>
 
@@ -312,7 +317,7 @@ export default function SettingsPage() {
             {defaultEngine === "mlx-whisper" && (
               <>
                 <div className="space-y-2">
-                  <Label>Diarization Method</Label>
+                  <Label>Method</Label>
                   <Select value={diarizationMethod} onValueChange={setDiarizationMethod}>
                     <SelectTrigger>
                       <SelectValue />
@@ -330,7 +335,7 @@ export default function SettingsPage() {
 
                 {diarizationMethod !== "none" && (
                   <div className="space-y-2">
-                    <Label>Diarization Device</Label>
+                    <Label>Compute Device</Label>
                     <Select value={computeDevice} onValueChange={setComputeDevice}>
                       <SelectTrigger>
                         <SelectValue />
@@ -346,62 +351,88 @@ export default function SettingsPage() {
                     </p>
                   </div>
                 )}
+
+                {/* Speaker count settings */}
+                {diarizationMethod !== "none" && (
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label>Min Speakers</Label>
+                      <Input
+                        type="number"
+                        min={1}
+                        max={10}
+                        value={minSpeakers}
+                        onChange={(e) => setMinSpeakers(parseInt(e.target.value) || 2)}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Max Speakers</Label>
+                      <Input
+                        type="number"
+                        min={1}
+                        max={10}
+                        value={maxSpeakers}
+                        onChange={(e) => setMaxSpeakers(parseInt(e.target.value) || 6)}
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {diarizationMethod !== "none" && (
+                  <div className="space-y-2">
+                    <Label>HuggingFace Token</Label>
+                    <div className="flex items-center gap-2">
+                      <Badge variant={settings.has_hf_token ? "outline" : "destructive"}>
+                        {settings.has_hf_token ? "Configured" : "Required"}
+                      </Badge>
+                    </div>
+                    <Input
+                      type="password"
+                      placeholder={settings.has_hf_token ? "********" : "Enter HuggingFace token"}
+                      value={hfToken}
+                      onChange={(e) => setHfToken(e.target.value)}
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Required for diarization. Get token from{" "}
+                      <a href="https://huggingface.co/settings/tokens" target="_blank" className="underline">
+                        huggingface.co/settings/tokens
+                      </a>
+                    </p>
+                  </div>
+                )}
               </>
             )}
 
             {/* Show for cloud engines */}
             {defaultEngine !== "mlx-whisper" && (
-              <p className="text-sm text-muted-foreground">
-                Cloud engines handle speaker detection automatically.
-              </p>
-            )}
-
-            {/* Speaker count settings - show when diarization is enabled */}
-            {(defaultEngine !== "mlx-whisper" || diarizationMethod !== "none") && (
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>Min Speakers</Label>
-                  <Input
-                    type="number"
-                    min={1}
-                    max={10}
-                    value={minSpeakers}
-                    onChange={(e) => setMinSpeakers(parseInt(e.target.value) || 2)}
-                  />
+              <>
+                <p className="text-sm text-muted-foreground">
+                  Cloud engines handle speaker detection automatically.
+                </p>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>Min Speakers</Label>
+                    <Input
+                      type="number"
+                      min={1}
+                      max={10}
+                      value={minSpeakers}
+                      onChange={(e) => setMinSpeakers(parseInt(e.target.value) || 2)}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Max Speakers</Label>
+                    <Input
+                      type="number"
+                      min={1}
+                      max={10}
+                      value={maxSpeakers}
+                      onChange={(e) => setMaxSpeakers(parseInt(e.target.value) || 6)}
+                    />
+                  </div>
                 </div>
-                <div className="space-y-2">
-                  <Label>Max Speakers</Label>
-                  <Input
-                    type="number"
-                    min={1}
-                    max={10}
-                    value={maxSpeakers}
-                    onChange={(e) => setMaxSpeakers(parseInt(e.target.value) || 6)}
-                  />
-                </div>
-              </div>
+              </>
             )}
-
-            <div className="space-y-2">
-              <Label>HuggingFace Token</Label>
-              <div className="flex items-center gap-2">
-                <Badge variant={settings.has_hf_token ? "outline" : "destructive"}>
-                  {settings.has_hf_token ? "Configured" : "Required"}
-                </Badge>
-              </div>
-              <Input
-                type="password"
-                placeholder={settings.has_hf_token ? "********" : "Enter HuggingFace token"}
-                value={hfToken}
-                onChange={(e) => setHfToken(e.target.value)}
-              />
-              <p className="text-xs text-muted-foreground">
-                Required for diarization. Get token from{" "}
-                <a href="https://huggingface.co/settings/tokens" target="_blank" className="underline">
-                  huggingface.co/settings/tokens
-                </a>
-              </p>
-            </div>
           </CardContent>
         </Card>
 

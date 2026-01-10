@@ -499,7 +499,7 @@ function CompletedItem({ transcription }: { transcription: Transcription }) {
                 )}
                 {transcription.diarization_time_seconds && transcription.diarization_method !== "none" && (
                   <span>
-                    Diarization ({transcription.compute_device === "mps" || transcription.compute_device === "auto" ? "GPU" : "CPU"}): {formatTime(transcription.diarization_time_seconds)}
+                    Diarization ({transcription.compute_device === "cpu" ? "CPU" : "GPU"}): {formatTime(transcription.diarization_time_seconds)}
                   </span>
                 )}
               </>
