@@ -59,6 +59,18 @@ export function MindmapViewer({ markdown, className = "", filename = "mindmap" }
         setIsReady(true);
       }
     });
+
+    // Cleanup when component unmounts (e.g., switching tabs)
+    return () => {
+      if (markmapRef.current) {
+        try {
+          markmapRef.current.destroy();
+        } catch {
+          // Ignore cleanup errors
+        }
+        markmapRef.current = null;
+      }
+    };
   }, [markdown, initMarkmapOnSvg]);
 
   // Initialize fullscreen markmap when opened, cleanup when closed
