@@ -210,7 +210,7 @@ export function SpeakerEditor({
                   className="w-4 h-4 rounded-full shrink-0"
                   style={{ backgroundColor: speaker.color }}
                 />
-                <span className="text-sm text-muted-foreground w-24 shrink-0">
+                <span className="text-sm text-muted-foreground w-36 shrink-0 truncate" title={speaker.id}>
                   {speaker.id}
                 </span>
                 <span className="text-muted-foreground">→</span>
