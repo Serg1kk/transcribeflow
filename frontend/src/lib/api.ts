@@ -1,6 +1,18 @@
 // lib/api.ts
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
+export interface LLMOperationSummary {
+  operation_type: "cleanup" | "insights";
+  provider: string;
+  model: string;
+  template_id: string;
+  input_tokens: number;
+  output_tokens: number;
+  cost_usd: number | null;
+  processing_time_seconds: number;
+  created_at: string;
+}
+
 export interface Transcription {
   id: string;
   filename: string;
@@ -20,6 +32,8 @@ export interface Transcription {
   processing_time_seconds: number | null;
   transcription_time_seconds: number | null;
   diarization_time_seconds: number | null;
+  // LLM operations
+  llm_operations: LLMOperationSummary[];
 }
 
 export async function uploadAudio(

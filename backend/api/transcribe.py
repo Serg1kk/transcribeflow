@@ -9,7 +9,7 @@ from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
 
-from models import get_db, Transcription, TranscriptionStatus
+from models import get_db, Transcription, TranscriptionStatus, LLMOperation, LLMOperationType
 from config import get_settings, Settings
 
 router = APIRouter(prefix="/api/transcribe", tags=["transcription"])
@@ -94,6 +94,19 @@ def _regenerate_txt_files(output_dir: Path, original_data: dict | None, cleaned_
             f.write("\n".join(lines))
 
 
+class LLMOperationSummary(BaseModel):
+    """Summary of an LLM operation (clean or insights)."""
+    operation_type: str  # "cleanup" | "insights"
+    provider: str
+    model: str
+    template_id: str
+    input_tokens: int
+    output_tokens: int
+    cost_usd: Optional[float]
+    processing_time_seconds: float
+    created_at: datetime
+
+
 class TranscriptionResponse(BaseModel):
     """Response model for transcription."""
     id: str
@@ -114,6 +127,8 @@ class TranscriptionResponse(BaseModel):
     processing_time_seconds: Optional[float] = None  # Total processing time
     transcription_time_seconds: Optional[float] = None  # ASR time only
     diarization_time_seconds: Optional[float] = None  # Speaker ID time only
+    # LLM operations
+    llm_operations: List[LLMOperationSummary] = []
 
     class Config:
         from_attributes = True
@@ -185,6 +200,53 @@ async def upload_audio(
     )
 
 
+def _build_transcription_response(t: Transcription, db: Session) -> TranscriptionResponse:
+    """Build TranscriptionResponse with LLM operations."""
+    # Fetch LLM operations for this transcription
+    llm_ops = (
+        db.query(LLMOperation)
+        .filter(LLMOperation.transcription_id == t.id)
+        .order_by(LLMOperation.created_at.desc())
+        .all()
+    )
+
+    llm_operations = [
+        LLMOperationSummary(
+            operation_type=op.operation_type.value,
+            provider=op.provider,
+            model=op.model,
+            template_id=op.template_id,
+            input_tokens=op.input_tokens,
+            output_tokens=op.output_tokens,
+            cost_usd=op.cost_usd,
+            processing_time_seconds=op.processing_time_seconds,
+            created_at=op.created_at,
+        )
+        for op in llm_ops
+    ]
+
+    return TranscriptionResponse(
+        id=t.id,
+        filename=t.filename,
+        status=t.status.value,
+        engine=t.engine,
+        model=t.model,
+        language=t.language,
+        initial_prompt=t.initial_prompt,
+        created_at=t.created_at,
+        progress=t.progress,
+        error_message=t.error_message,
+        file_size=t.file_size,
+        duration_seconds=t.duration_seconds,
+        compute_device=t.compute_device,
+        diarization_method=t.diarization_method,
+        processing_time_seconds=t.processing_time_seconds,
+        transcription_time_seconds=t.transcription_time_seconds,
+        diarization_time_seconds=t.diarization_time_seconds,
+        llm_operations=llm_operations,
+    )
+
+
 @router.get("/queue", response_model=List[TranscriptionResponse])
 async def list_queue(
     db: Session = Depends(get_db),
@@ -197,26 +259,7 @@ async def list_queue(
         .limit(limit)
         .all()
     )
-    return [
-        TranscriptionResponse(
-            id=t.id,
-            filename=t.filename,
-            status=t.status.value,
-            engine=t.engine,
-            model=t.model,
-            language=t.language,
-            initial_prompt=t.initial_prompt,
-            created_at=t.created_at,
-            progress=t.progress,
-            error_message=t.error_message,
-            file_size=t.file_size,
-            duration_seconds=t.duration_seconds,
-            processing_time_seconds=t.processing_time_seconds,
-            transcription_time_seconds=t.transcription_time_seconds,
-            diarization_time_seconds=t.diarization_time_seconds,
-        )
-        for t in transcriptions
-    ]
+    return [_build_transcription_response(t, db) for t in transcriptions]
 
 
 class StartRequest(BaseModel):

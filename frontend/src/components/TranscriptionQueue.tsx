@@ -423,27 +423,56 @@ function CompletedItem({ transcription }: { transcription: Transcription }) {
   const isCompleted = transcription.status === "completed";
   const isFailed = transcription.status === "failed";
 
+  // Format time as "1h 23m 45s" (skip hours if < 1h, skip minutes if < 1m)
   const formatTime = (seconds: number | null) => {
     if (!seconds) return null;
-    if (seconds < 60) return `${Math.round(seconds)}s`;
-    return `${Math.floor(seconds / 60)}m ${Math.round(seconds % 60)}s`;
+    const hours = Math.floor(seconds / 3600);
+    const mins = Math.floor((seconds % 3600) / 60);
+    const secs = Math.round(seconds % 60);
+
+    if (hours > 0) {
+      return `${hours}h ${mins}m ${secs}s`;
+    } else if (mins > 0) {
+      return `${mins}m ${secs}s`;
+    }
+    return `${secs}s`;
   };
 
+  // Format duration for file (same format as formatTime)
   const formatDuration = (seconds: number | null) => {
-    if (!seconds) return null;
-    const mins = Math.floor(seconds / 60);
-    const secs = Math.round(seconds % 60);
-    return `${mins}:${secs.toString().padStart(2, "0")}`;
+    return formatTime(seconds);
   };
 
   const fileSizeMB = transcription.file_size
     ? (transcription.file_size / 1024 / 1024).toFixed(1) + " MB"
     : null;
 
+  // Get LLM operations by type (latest only for display, but count all for cost)
+  const cleanupOps = transcription.llm_operations?.filter(op => op.operation_type === "cleanup") || [];
+  const insightsOps = transcription.llm_operations?.filter(op => op.operation_type === "insights") || [];
+  const latestCleanup = cleanupOps[0]; // Already sorted desc by created_at
+  const latestInsights = insightsOps[0];
+
+  // Calculate totals
+  const totalLLMCost = transcription.llm_operations?.reduce((sum, op) => sum + (op.cost_usd || 0), 0) || 0;
+  const totalLLMTime = transcription.llm_operations?.reduce((sum, op) => sum + op.processing_time_seconds, 0) || 0;
+  const totalTime = (transcription.processing_time_seconds || 0) + totalLLMTime;
+
+  const formatCost = (cost: number | null) => {
+    if (!cost) return null;
+    return `$${cost.toFixed(4)}`;
+  };
+
+  const formatTokens = (input: number, output: number) => {
+    const formatK = (n: number) => n >= 1000 ? `${(n/1000).toFixed(1)}k` : n.toString();
+    return `${formatK(input)}→${formatK(output)}`;
+  };
+
   return (
     <div className="border rounded-lg p-3 space-y-2">
+      {/* Header: filename + size + duration + badge */}
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-3">
           {isCompleted ? (
             <Link
               href={`/transcription/${transcription.id}`}
@@ -454,68 +483,112 @@ function CompletedItem({ transcription }: { transcription: Transcription }) {
           ) : (
             <span className="font-medium">{transcription.filename}</span>
           )}
+          <span className="text-xs text-muted-foreground">
+            {fileSizeMB && <span>{fileSizeMB}</span>}
+            {fileSizeMB && transcription.duration_seconds && <span> • </span>}
+            {transcription.duration_seconds && <span>{formatDuration(transcription.duration_seconds)}</span>}
+          </span>
         </div>
         <Badge variant={isFailed ? "destructive" : "outline"}>
           {isFailed ? "Failed" : "Completed"}
         </Badge>
       </div>
 
+      {/* Error message for failed */}
       {isFailed && transcription.error_message && (
         <div className="text-sm text-red-600 bg-red-50 rounded p-2">
           {transcription.error_message}
         </div>
       )}
 
+      {/* Context (formerly Initial prompt) */}
       {transcription.initial_prompt && (
         <p className="text-sm text-muted-foreground">
-          Initial prompt: &quot;{transcription.initial_prompt}&quot;
+          Context: &quot;{transcription.initial_prompt}&quot;
         </p>
       )}
 
-      <div className="text-xs text-muted-foreground bg-muted/50 rounded px-2 py-1 space-y-0.5">
-        {/* Line 1: File info + Processing settings */}
-        <div className="flex flex-wrap gap-x-3">
-          {/* File info first */}
-          {fileSizeMB && <span>Size: {fileSizeMB}</span>}
-          {transcription.duration_seconds && <span>Duration: {formatDuration(transcription.duration_seconds)}</span>}
+      {/* Processing section */}
+      {isCompleted && (
+        <div className="text-xs text-muted-foreground bg-muted/50 rounded px-3 py-2 space-y-1 font-mono">
+          {/* ASR */}
+          <div className="flex justify-between">
+            <span>
+              <span className="text-green-600">✓</span> ASR: {transcription.model} (GPU)
+            </span>
+            <span>{formatTime(transcription.transcription_time_seconds)}</span>
+          </div>
 
-          <span className="text-muted-foreground/40">•</span>
-
-          {/* ASR info */}
-          {transcription.engine === "mlx-whisper" ? (
-            <span>ASR: {transcription.model} (GPU)</span>
-          ) : (
-            <span>ASR: {transcription.engine}</span>
-          )}
-
-          {/* Diarization info */}
-          {transcription.diarization_method && transcription.diarization_method !== "none" && (
-            <>
-              <span className="text-muted-foreground/40">•</span>
-              <span>
-                Diarization: {transcription.diarization_method === "fast" ? "Fast" : "Accurate"} ({transcription.compute_device === "cpu" ? "CPU" : "GPU"})
-              </span>
-            </>
-          )}
-        </div>
-
-        {/* Line 2: Timing info - only for completed */}
-        {isCompleted && transcription.processing_time_seconds && (
-          <div className="flex flex-wrap gap-x-3">
-            <span>Total: {formatTime(transcription.processing_time_seconds)}</span>
-            {transcription.engine === "mlx-whisper" && (
+          {/* Diarization */}
+          <div className="flex justify-between">
+            {transcription.diarization_method && transcription.diarization_method !== "none" ? (
               <>
-                {transcription.transcription_time_seconds && (
-                  <span>ASR: {formatTime(transcription.transcription_time_seconds)}</span>
-                )}
-                {transcription.diarization_time_seconds && transcription.diarization_method !== "none" && (
-                  <span>Diarization: {formatTime(transcription.diarization_time_seconds)}</span>
-                )}
+                <span>
+                  <span className="text-green-600">✓</span> Diarization: {transcription.diarization_method === "fast" ? "Fast" : "Accurate"} ({transcription.compute_device === "cpu" ? "CPU" : "GPU"})
+                </span>
+                <span>{formatTime(transcription.diarization_time_seconds)}</span>
+              </>
+            ) : (
+              <>
+                <span><span className="text-muted-foreground/50">○</span> Diarization: not run</span>
+                <span></span>
               </>
             )}
           </div>
-        )}
-      </div>
+
+          {/* Clean */}
+          <div className="flex justify-between">
+            {latestCleanup ? (
+              <>
+                <span>
+                  <span className="text-green-600">✓</span> Clean ({latestCleanup.template_id}): {latestCleanup.model} ({formatTokens(latestCleanup.input_tokens, latestCleanup.output_tokens)})
+                  {cleanupOps.length > 1 && <span className="text-muted-foreground/60"> *</span>}
+                </span>
+                <span>{formatTime(latestCleanup.processing_time_seconds)} • {formatCost(latestCleanup.cost_usd)}</span>
+              </>
+            ) : (
+              <>
+                <span><span className="text-muted-foreground/50">○</span> Clean: not run</span>
+                <span></span>
+              </>
+            )}
+          </div>
+
+          {/* AI Insights */}
+          <div className="flex justify-between">
+            {latestInsights ? (
+              <>
+                <span>
+                  <span className="text-green-600">✓</span> AI Insights ({latestInsights.template_id}): {latestInsights.model} ({formatTokens(latestInsights.input_tokens, latestInsights.output_tokens)})
+                  {insightsOps.length > 1 && <span className="text-muted-foreground/60"> *</span>}
+                </span>
+                <span>{formatTime(latestInsights.processing_time_seconds)} • {formatCost(latestInsights.cost_usd)}</span>
+              </>
+            ) : (
+              <>
+                <span><span className="text-muted-foreground/50">○</span> AI Insights: not run</span>
+                <span></span>
+              </>
+            )}
+          </div>
+
+          {/* Separator and Total */}
+          <div className="border-t border-muted-foreground/20 pt-1 mt-1 flex justify-between font-semibold">
+            <span>Total</span>
+            <span>
+              {formatTime(totalTime)}
+              {totalLLMCost > 0 && <span> • {formatCost(totalLLMCost)}</span>}
+            </span>
+          </div>
+
+          {/* Note about multiple runs */}
+          {(cleanupOps.length > 1 || insightsOps.length > 1) && (
+            <div className="text-[10px] text-muted-foreground/60 pt-1">
+              * Shows latest run only. Total cost includes all {cleanupOps.length + insightsOps.length} operations.
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }
