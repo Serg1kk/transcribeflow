@@ -174,6 +174,20 @@ DEFAULT_INSIGHT_TEMPLATES = [
         system_prompt="",
         temperature=0.4
     ),
+    InsightTemplate(
+        id="podcast",
+        name="Podcast",
+        description="Audio shows, conversations, long-form discussions",
+        include_mindmap=True,
+        sections=[
+            {"id": "key_topics", "title": "Key Topics", "description": "Main themes and subjects discussed in the episode"},
+            {"id": "notable_insights", "title": "Notable Insights", "description": "Interesting ideas, opinions, and perspectives shared"},
+            {"id": "recommendations", "title": "Recommendations", "description": "Books, tools, resources, people mentioned by guests/hosts"},
+            {"id": "takeaways", "title": "Key Takeaways", "description": "Main conclusions and actionable advice from the episode"},
+        ],
+        system_prompt="",
+        temperature=0.4
+    ),
 ]
 
 
