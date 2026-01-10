@@ -13,8 +13,11 @@ export function Header({ showSettings = true, showBack = false }: HeaderProps) {
   return (
     <div className="flex items-center justify-between mb-8">
       <Link href="/" className="flex items-center gap-3 hover:opacity-80 transition-opacity">
-        <Image src="/logo.png" alt="TranscribeFlow" width={40} height={40} />
-        <span className="text-2xl font-bold">TranscribeFlow</span>
+        <Image src="/logo.png" alt="TranscribeFlow" width={44} height={44} />
+        <span className="text-2xl tracking-wide uppercase">
+          <span className="font-bold" style={{ color: "#1a365d" }}>Transcribe</span>
+          <span className="font-normal" style={{ color: "#2d4a6f" }}>Flow</span>
+        </span>
       </Link>
       <div className="flex items-center gap-4">
         {showBack && (
