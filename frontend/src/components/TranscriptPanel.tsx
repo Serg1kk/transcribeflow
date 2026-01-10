@@ -220,8 +220,9 @@ export const TranscriptPanel = forwardRef<TranscriptPanelRef, TranscriptPanelPro
                   [{formatTimestamp(segment.start)}]
                 </span>
                 <span
-                  className="font-medium shrink-0 w-24"
-                  style={{ color: speaker?.color }}
+                  className="font-medium shrink-0 w-28 min-w-20"
+                  style={{ color: speaker?.color, overflowWrap: "anywhere" }}
+                  title={speaker?.name || segment.speaker}
                 >
                   {speaker?.name || segment.speaker}:
                 </span>
