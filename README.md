@@ -131,8 +131,9 @@ Add your key in **Settings** page after starting the app.
 | Feature | Description |
 |---------|-------------|
 | **ASR Cleanup** | Fix transcription errors using LLM |
-| **Speaker Identification** | Auto-detect speaker names from context |
+| **Speaker Identification** | LLM detects names and/or roles from context (e.g., "Seller & Client", "Developer & Designer"). Suggestions appear in UI — apply, reject, or edit as you like |
 | **Fragment Merging** | Combine broken sentences |
+| **Comparison View** | Side-by-side diff between original and cleaned transcript to see what changed |
 | **Template System** | IT Meeting, Sales Call, Interview templates |
 
 ### AI Insights (Level 2)
