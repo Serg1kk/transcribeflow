@@ -317,6 +317,32 @@ export default function SettingsPage() {
             {defaultEngine === "mlx-whisper" && (
               <>
                 <div className="space-y-2">
+                  <Label>Compute Device</Label>
+                  <Select
+                    value={computeDevice}
+                    onValueChange={(value) => {
+                      setComputeDevice(value);
+                      // Reset to "fast" if switching to GPU while "accurate" is selected
+                      if (value !== "cpu" && diarizationMethod === "accurate") {
+                        setDiarizationMethod("fast");
+                      }
+                    }}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="auto">Auto - Detect best device (GPU preferred)</SelectItem>
+                      <SelectItem value="mps">GPU (MPS) - Faster, may heat up</SelectItem>
+                      <SelectItem value="cpu">CPU - Stable, slower, more methods</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground">
+                    MacBook Air users: Consider CPU for long files to avoid thermal throttling.
+                  </p>
+                </div>
+
+                <div className="space-y-2">
                   <Label>Method</Label>
                   <Select value={diarizationMethod} onValueChange={setDiarizationMethod}>
                     <SelectTrigger>
@@ -325,32 +351,18 @@ export default function SettingsPage() {
                     <SelectContent>
                       <SelectItem value="none">None - No diarization</SelectItem>
                       <SelectItem value="fast">Fast - Pyannote speaker detection</SelectItem>
-                      <SelectItem value="accurate">Accurate - WhisperX word-level</SelectItem>
+                      {computeDevice === "cpu" && (
+                        <SelectItem value="accurate">Accurate - WhisperX word-level (CPU only)</SelectItem>
+                      )}
                     </SelectContent>
                   </Select>
                   <p className="text-xs text-muted-foreground">
-                    Fast: Quick speaker detection. Accurate: Precise word-level alignment (slower).
+                    {computeDevice === "cpu"
+                      ? "Fast: Quick detection. Accurate: Word-level alignment (slower, CPU only)."
+                      : "Fast: Quick speaker detection on GPU."
+                    }
                   </p>
                 </div>
-
-                {diarizationMethod !== "none" && (
-                  <div className="space-y-2">
-                    <Label>Compute Device</Label>
-                    <Select value={computeDevice} onValueChange={setComputeDevice}>
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="auto">Auto - Detect best device</SelectItem>
-                        <SelectItem value="mps">GPU (MPS) - Faster, may heat up</SelectItem>
-                        <SelectItem value="cpu">CPU - Stable, slower</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <p className="text-xs text-muted-foreground">
-                      MacBook Air users: Consider CPU for long files to avoid thermal throttling.
-                    </p>
-                  </div>
-                )}
 
                 {/* Speaker count settings */}
                 {diarizationMethod !== "none" && (
