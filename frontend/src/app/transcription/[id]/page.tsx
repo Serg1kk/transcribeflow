@@ -11,14 +11,23 @@ import { SpeakerEditor } from "@/components/SpeakerEditor";
 import { PostProcessingControls } from "@/components/PostProcessingControls";
 import { TranscriptComparison } from "@/components/TranscriptComparison";
 import { TranscriptPanel } from "@/components/TranscriptPanel";
+import { InsightsControls } from "@/components/InsightsControls";
+import { InsightsPanel } from "@/components/InsightsPanel";
 import {
   getTranscriptionDetail,
   getTranscriptData,
   getCleanedTranscript,
   checkCleanedExists,
+  getInsights,
+  listInsights,
+  getInsightTemplates,
+  generateInsights,
+  checkInsightSources,
   TranscriptionDetail,
   TranscriptData,
   CleanedTranscript,
+  Insights,
+  InsightTemplate,
 } from "@/lib/api";
 import * as api from "@/lib/api";
 
@@ -36,6 +45,12 @@ export default function TranscriptionPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [suggestionsKey, setSuggestionsKey] = useState(0);
+
+  // AI Insights state
+  const [insights, setInsights] = useState<Insights | null>(null);
+  const [insightTemplates, setInsightTemplates] = useState<InsightTemplate[]>([]);
+  const [hasInsights, setHasInsights] = useState(false);
+  const [isRegenerating, setIsRegenerating] = useState(false);
 
   useEffect(() => {
     async function fetchData() {
@@ -55,6 +70,21 @@ export default function TranscriptionPage() {
           const cleaned = await getCleanedTranscript(id);
           setCleanedTranscript(cleaned);
           setViewMode("cleaned"); // Default to cleaned if exists
+        }
+
+        // Load AI Insights
+        try {
+          const templates = await getInsightTemplates();
+          setInsightTemplates(templates);
+
+          const insightsList = await listInsights(id);
+          if (insightsList.length > 0) {
+            setHasInsights(true);
+            const latestInsights = await getInsights(id, insightsList[0].template_id);
+            setInsights(latestInsights);
+          }
+        } catch (insightErr) {
+          console.error("Failed to load insights:", insightErr);
         }
       } catch (err) {
         setError(err instanceof Error ? err.message : "Error loading");
@@ -111,6 +141,59 @@ export default function TranscriptionPage() {
       setSuggestionsKey((prev) => prev + 1);
     } catch (err) {
       console.error("Failed to load cleaned transcript:", err);
+    }
+  };
+
+  // AI Insights handlers
+  const handleInsightsComplete = async (templateId: string) => {
+    try {
+      const insightsData = await getInsights(id, templateId);
+      setInsights(insightsData);
+      setHasInsights(true);
+    } catch (err) {
+      console.error("Failed to load insights:", err);
+    }
+  };
+
+  const handleInsightsRegenerate = async (templateId: string) => {
+    setIsRegenerating(true);
+    try {
+      const sources = await checkInsightSources(id);
+      const source = sources.cleaned ? "cleaned" : "original";
+      await generateInsights(id, templateId, source);
+
+      // Poll for completion
+      const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+      const startTime = new Date().toISOString();
+      let pollCount = 0;
+      const maxPolls = 60;
+
+      const pollInterval = setInterval(async () => {
+        pollCount++;
+        try {
+          const response = await fetch(
+            `${API_BASE}/api/insights/transcriptions/${id}/${templateId}?_t=${Date.now()}`
+          );
+          if (response.ok) {
+            const data = await response.json();
+            if (data.metadata?.created_at >= startTime) {
+              clearInterval(pollInterval);
+              setInsights(data);
+              setIsRegenerating(false);
+              return;
+            }
+          }
+          if (pollCount >= maxPolls) {
+            clearInterval(pollInterval);
+            setIsRegenerating(false);
+          }
+        } catch {
+          // Keep polling
+        }
+      }, 2000);
+    } catch (err) {
+      console.error("Failed to regenerate insights:", err);
+      setIsRegenerating(false);
     }
   };
 
@@ -204,8 +287,35 @@ export default function TranscriptionPage() {
               onProcessingComplete={handleProcessingComplete}
             />
           </div>
+
+          {/* AI Insights Controls */}
+          <div className="mt-6 pt-6 border-t">
+            <h3 className="text-lg font-medium mb-4">AI Insights</h3>
+            <InsightsControls
+              transcriptionId={id}
+              hasInsights={hasInsights}
+              onGenerationComplete={handleInsightsComplete}
+            />
+          </div>
         </CardContent>
       </Card>
+
+      {/* AI Insights Card */}
+      {insights && (
+        <Card className="mb-6">
+          <CardHeader>
+            <CardTitle>AI Insights</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <InsightsPanel
+              insights={insights}
+              templates={insightTemplates}
+              onRegenerate={handleInsightsRegenerate}
+              isRegenerating={isRegenerating}
+            />
+          </CardContent>
+        </Card>
+      )}
 
       {/* Transcript View Card */}
       <Card>
