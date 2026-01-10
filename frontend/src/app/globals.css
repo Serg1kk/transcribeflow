@@ -78,6 +78,9 @@
   body {
     @apply bg-background text-foreground;
     position: relative;
+    /* Prevent Radix UI from adding padding when opening dropdowns */
+    padding-right: 0 !important;
+    margin-right: 0 !important;
   }
   body::before {
     content: "";
