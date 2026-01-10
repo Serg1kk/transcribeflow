@@ -2,8 +2,8 @@
 "use client";
 
 import { useEffect, useState, useMemo } from "react";
-import Link from "next/link";
 import { toast } from "sonner";
+import { Header } from "@/components/Header";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -238,9 +238,7 @@ export default function SettingsPage() {
 
   return (
     <main className="container mx-auto py-8 px-4 max-w-4xl">
-      <Link href="/" className="text-primary hover:underline mb-4 inline-block">
-        &larr; Back
-      </Link>
+      <Header showSettings={false} showBack={true} />
 
       <div className="flex items-center justify-between mb-8">
         <h1 className="text-3xl font-bold">Settings</h1>

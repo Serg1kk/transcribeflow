@@ -116,16 +116,6 @@ export function MindmapViewer({ markdown, className = "" }: MindmapViewerProps) 
     }
   }
 
-  async function handleCopyJson() {
-    try {
-      const json = JSON.stringify({ format: "markdown", content: markdown }, null, 2);
-      await navigator.clipboard.writeText(json);
-      toast.success("JSON copied!");
-    } catch {
-      toast.error("Failed to copy");
-    }
-  }
-
   function handleDownloadMarkdown() {
     const blob = new Blob([markdown], { type: "text/markdown" });
     const url = URL.createObjectURL(blob);
@@ -134,6 +124,69 @@ export function MindmapViewer({ markdown, className = "" }: MindmapViewerProps) 
     a.download = "mindmap.md";
     a.click();
     URL.revokeObjectURL(url);
+  }
+
+  async function svgToPng(svgElement: SVGSVGElement): Promise<Blob> {
+    const svgData = new XMLSerializer().serializeToString(svgElement);
+    const svgBlob = new Blob([svgData], { type: "image/svg+xml;charset=utf-8" });
+    const url = URL.createObjectURL(svgBlob);
+
+    return new Promise((resolve, reject) => {
+      const img = new window.Image();
+      img.onload = () => {
+        const canvas = document.createElement("canvas");
+        const scale = 2; // Higher resolution
+        canvas.width = svgElement.clientWidth * scale;
+        canvas.height = svgElement.clientHeight * scale;
+        const ctx = canvas.getContext("2d");
+        if (!ctx) {
+          reject(new Error("Failed to get canvas context"));
+          return;
+        }
+        ctx.fillStyle = "white";
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.scale(scale, scale);
+        ctx.drawImage(img, 0, 0);
+        URL.revokeObjectURL(url);
+        canvas.toBlob((blob) => {
+          if (blob) resolve(blob);
+          else reject(new Error("Failed to create blob"));
+        }, "image/png");
+      };
+      img.onerror = () => reject(new Error("Failed to load SVG"));
+      img.src = url;
+    });
+  }
+
+  async function handleDownloadPng() {
+    const svgElement = isFullscreen ? fullscreenSvgRef.current : svgRef.current;
+    if (!svgElement) return;
+    try {
+      const blob = await svgToPng(svgElement);
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "mindmap.png";
+      a.click();
+      URL.revokeObjectURL(url);
+      toast.success("PNG downloaded!");
+    } catch {
+      toast.error("Failed to export PNG");
+    }
+  }
+
+  async function handleCopyPng() {
+    const svgElement = isFullscreen ? fullscreenSvgRef.current : svgRef.current;
+    if (!svgElement) return;
+    try {
+      const blob = await svgToPng(svgElement);
+      await navigator.clipboard.write([
+        new ClipboardItem({ "image/png": blob })
+      ]);
+      toast.success("PNG copied to clipboard!");
+    } catch {
+      toast.error("Failed to copy PNG");
+    }
   }
 
   return (
@@ -170,12 +223,15 @@ export function MindmapViewer({ markdown, className = "" }: MindmapViewerProps) 
       </div>
 
       {isReady && (
-        <div className="flex gap-2 mt-4">
+        <div className="flex flex-wrap gap-2 mt-4">
+          <Button variant="outline" size="sm" onClick={handleCopyPng}>
+            Copy PNG
+          </Button>
+          <Button variant="outline" size="sm" onClick={handleDownloadPng}>
+            Download PNG
+          </Button>
           <Button variant="outline" size="sm" onClick={handleCopyMarkdown}>
             Copy Markdown
-          </Button>
-          <Button variant="outline" size="sm" onClick={handleCopyJson}>
-            Copy JSON
           </Button>
           <Button variant="outline" size="sm" onClick={handleDownloadMarkdown}>
             Download .md

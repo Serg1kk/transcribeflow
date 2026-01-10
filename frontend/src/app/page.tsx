@@ -2,10 +2,9 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
-import Image from "next/image";
 import { FileUpload } from "@/components/FileUpload";
 import { TranscriptionQueue } from "@/components/TranscriptionQueue";
+import { Header } from "@/components/Header";
 
 export default function Home() {
   const [refreshTrigger, setRefreshTrigger] = useState(0);
@@ -16,15 +15,7 @@ export default function Home() {
 
   return (
     <main className="container mx-auto py-8 px-4 max-w-4xl">
-      <div className="flex items-center justify-between mb-8">
-        <div className="flex items-center gap-3">
-          <Image src="/logo.png" alt="TranscribeFlow" width={40} height={40} />
-          <h1 className="text-3xl font-bold">TranscribeFlow</h1>
-        </div>
-        <Link href="/settings" className="text-primary hover:underline">
-          Settings
-        </Link>
-      </div>
+      <Header />
 
       <div className="space-y-8">
         <FileUpload onUploadComplete={handleUploadComplete} />

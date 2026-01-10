@@ -4,6 +4,7 @@
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
+import { Header } from "@/components/Header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -248,9 +249,7 @@ export default function TranscriptionPage() {
 
   return (
     <main className="container mx-auto py-8 px-4 max-w-6xl">
-      <Link href="/" className="text-primary hover:underline mb-4 inline-block">
-        ← Back
-      </Link>
+      <Header showSettings={false} showBack={true} />
 
       <Card className="mb-6">
         <CardHeader>

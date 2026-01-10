@@ -1,4 +1,8 @@
-# TranscribeFlow
+<p align="center">
+  <img src="./images/logo.png" alt="TranscribeFlow Logo" width="200" />
+</p>
+
+<h1 align="center">TranscribeFlow</h1>
 
 ![TranscribeFlow Hero](./images/hero.png)
 
