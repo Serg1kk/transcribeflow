@@ -321,35 +321,47 @@ export default function TranscriptionPage() {
       {/* Transcript View Card */}
       <Card>
         <CardHeader>
-          <div className="flex items-center justify-between">
-            <CardTitle>Transcript</CardTitle>
-            {/* Tabs - only show if cleaned exists */}
-            {hasCleanedVersion && (
-              <div className="flex gap-1 p-1 bg-muted rounded-lg">
+          <CardTitle>Transcript</CardTitle>
+          {/* Tabs - only show if cleaned exists */}
+          {hasCleanedVersion && (
+            <div className="flex justify-center pt-2">
+              <div className="inline-flex gap-1 p-1.5 bg-muted rounded-xl border">
                 <Button
-                  variant={viewMode === "cleaned" ? "secondary" : "ghost"}
-                  size="sm"
+                  variant={viewMode === "cleaned" ? "default" : "ghost"}
+                  size="default"
                   onClick={() => setViewMode("cleaned")}
+                  className={viewMode === "cleaned" ? "shadow-sm" : "hover:bg-background/50"}
                 >
+                  <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
                   Cleaned
                 </Button>
                 <Button
-                  variant={viewMode === "original" ? "secondary" : "ghost"}
-                  size="sm"
+                  variant={viewMode === "original" ? "default" : "ghost"}
+                  size="default"
                   onClick={() => setViewMode("original")}
+                  className={viewMode === "original" ? "shadow-sm" : "hover:bg-background/50"}
                 >
+                  <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                  </svg>
                   Original
                 </Button>
                 <Button
-                  variant={viewMode === "comparison" ? "secondary" : "ghost"}
-                  size="sm"
+                  variant={viewMode === "comparison" ? "default" : "ghost"}
+                  size="default"
                   onClick={() => setViewMode("comparison")}
+                  className={viewMode === "comparison" ? "shadow-sm" : "hover:bg-background/50"}
                 >
+                  <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                  </svg>
                   Comparison
                 </Button>
               </div>
-            )}
-          </div>
+            </div>
+          )}
         </CardHeader>
         <CardContent>
           {viewMode === "comparison" && cleanedTranscript ? (
