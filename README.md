@@ -2,8 +2,6 @@
   <img src="./images/logo.png" alt="TranscribeFlow Logo" width="200" />
 </p>
 
-<h1 align="center">TranscribeFlow</h1>
-
 ![TranscribeFlow Hero](./images/hero.png)
 
 > **Local AI-powered meeting transcription with speaker diarization and intelligent insights — optimized for Apple Silicon.**
