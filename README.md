@@ -165,6 +165,15 @@ After starting the app, go to **http://localhost:3000/settings** to configure:
 | Compute Device | Auto, MPS (GPU), CPU | For local processing |
 | Min/Max Speakers | 1-10 | Expected speaker count |
 
+**Model recommendations:**
+- **M1 Pro / M1 Max / M2 Pro+ / M3 Pro+** → Use `large-v3` for best transcription quality
+- **MacBook Air / base M1/M2/M3** → Use `large-v3-turbo` (faster, slightly less accurate)
+- If transcription feels slow or machine overheats → try smaller model or `turbo` variant
+
+**Compute device recommendations:**
+- **M1 Pro and higher** → `MPS (GPU)` works great, significantly faster diarization
+- **MacBook Air / weaker machines** → Switch to `CPU` if you experience freezing or overheating
+
 ### Whisper Quality Settings
 Fine-tune to prevent hallucinations (e.g., "Субтитры сделал DimaTorzok" during silence):
 - No Speech Threshold
