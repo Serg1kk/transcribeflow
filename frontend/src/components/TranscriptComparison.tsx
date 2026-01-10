@@ -1,7 +1,7 @@
-// components/TranscriptComparison.tsx
-"use client";
+'use client';
 
 import { useState, useRef } from "react";
+import { useIntl } from "react-intl";
 import { CleanedTranscript, TranscriptData } from "@/lib/api";
 import {
   TranscriptPanel,
@@ -22,6 +22,7 @@ export function TranscriptComparison({
   transcriptionId,
   engine,
 }: TranscriptComparisonProps) {
+  const intl = useIntl();
   const [syncScroll, setSyncScroll] = useState(true);
   const leftRef = useRef<TranscriptPanelRef>(null);
   const rightRef = useRef<TranscriptPanelRef>(null);
@@ -114,12 +115,12 @@ export function TranscriptComparison({
               onChange={(e) => setSyncScroll(e.target.checked)}
               className="rounded"
             />
-            Sync scroll
+            {intl.formatMessage({ id: 'transcription.comparison.syncScroll' })}
           </label>
         </div>
         <div className="flex items-center gap-4 text-sm text-muted-foreground">
           <span>
-            Cleaned with <strong>{cleaned.metadata.template}</strong>
+            {intl.formatMessage({ id: 'transcription.comparison.cleanedWith' }, { template: cleaned.metadata.template })}
           </span>
           <span>{cleaned.metadata.model}</span>
           <span>

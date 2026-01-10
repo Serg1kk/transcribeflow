@@ -1,7 +1,7 @@
-// components/TranscriptPanel.tsx
-"use client";
+'use client';
 
 import { useRef, forwardRef, useImperativeHandle } from "react";
+import { useIntl } from "react-intl";
 import { Button } from "@/components/ui/button";
 import { Copy, FileText, Braces, FileJson } from "lucide-react";
 import { TranscriptData, CleanedTranscript } from "@/lib/api";
@@ -42,6 +42,7 @@ export const TranscriptPanel = forwardRef<TranscriptPanelRef, TranscriptPanelPro
     },
     ref
   ) {
+    const intl = useIntl();
     const containerRef = useRef<HTMLDivElement>(null);
     const segmentRefs = useRef<Map<number, HTMLDivElement>>(new Map());
 
@@ -114,24 +115,26 @@ export const TranscriptPanel = forwardRef<TranscriptPanelRef, TranscriptPanelPro
     const segments = "segments" in data ? data.segments : [];
     const speakers = "speakers" in data ? data.speakers : {};
     const isCloud = engine && engine !== "mlx-whisper";
-    const title = type === "original" ? "Original" : "Cleaned";
+    const title = type === "original"
+      ? intl.formatMessage({ id: 'transcription.panel.title.original' })
+      : intl.formatMessage({ id: 'transcription.panel.title.cleaned' });
 
     return (
       <div className="space-y-2">
         {/* Header with buttons */}
         <div className="flex items-center justify-between">
           <h3 className="font-medium text-sm text-muted-foreground">
-            {title} ({segmentCount} segments)
+            {intl.formatMessage({ id: 'transcription.panel.segments' }, { title, count: segmentCount })}
           </h3>
           <div className="flex items-center gap-1">
             {/* TXT group */}
-            <span className="text-xs text-muted-foreground mr-1">TXT</span>
+            <span className="text-xs text-muted-foreground mr-1">{intl.formatMessage({ id: 'transcription.export.txt' })}</span>
             <Button
               variant="ghost"
               size="icon"
               className="h-7 w-7"
               onClick={onCopyTxt}
-              title="Copy as text"
+              title={intl.formatMessage({ id: 'transcription.export.copyText' })}
             >
               <Copy className="h-3.5 w-3.5" />
             </Button>
@@ -140,7 +143,7 @@ export const TranscriptPanel = forwardRef<TranscriptPanelRef, TranscriptPanelPro
               size="icon"
               className="h-7 w-7"
               onClick={onDownloadTxt}
-              title="Download .txt"
+              title={intl.formatMessage({ id: 'transcription.export.downloadTxt' })}
             >
               <FileText className="h-3.5 w-3.5" />
             </Button>
@@ -149,13 +152,13 @@ export const TranscriptPanel = forwardRef<TranscriptPanelRef, TranscriptPanelPro
             {type === "original" && onCopyJson && onDownloadJson && (
               <>
                 <div className="w-px h-4 bg-border mx-1" />
-                <span className="text-xs text-muted-foreground mr-1">JSON</span>
+                <span className="text-xs text-muted-foreground mr-1">{intl.formatMessage({ id: 'transcription.export.json' })}</span>
                 <Button
                   variant="ghost"
                   size="icon"
                   className="h-7 w-7"
                   onClick={onCopyJson}
-                  title="Copy JSON"
+                  title={intl.formatMessage({ id: 'transcription.export.copyJson' })}
                 >
                   <Copy className="h-3.5 w-3.5" />
                 </Button>
@@ -164,7 +167,7 @@ export const TranscriptPanel = forwardRef<TranscriptPanelRef, TranscriptPanelPro
                   size="icon"
                   className="h-7 w-7"
                   onClick={onDownloadJson}
-                  title="Download .json"
+                  title={intl.formatMessage({ id: 'transcription.export.downloadJson' })}
                 >
                   <Braces className="h-3.5 w-3.5" />
                 </Button>
@@ -175,13 +178,13 @@ export const TranscriptPanel = forwardRef<TranscriptPanelRef, TranscriptPanelPro
             {type === "original" && isCloud && onCopyRaw && onDownloadRaw && (
               <>
                 <div className="w-px h-4 bg-border mx-1" />
-                <span className="text-xs text-muted-foreground mr-1">Raw</span>
+                <span className="text-xs text-muted-foreground mr-1">{intl.formatMessage({ id: 'transcription.export.raw' })}</span>
                 <Button
                   variant="ghost"
                   size="icon"
                   className="h-7 w-7"
                   onClick={onCopyRaw}
-                  title="Copy raw API response"
+                  title={intl.formatMessage({ id: 'transcription.export.copyRaw' })}
                 >
                   <Copy className="h-3.5 w-3.5" />
                 </Button>
@@ -190,7 +193,7 @@ export const TranscriptPanel = forwardRef<TranscriptPanelRef, TranscriptPanelPro
                   size="icon"
                   className="h-7 w-7"
                   onClick={onDownloadRaw}
-                  title="Download raw API response"
+                  title={intl.formatMessage({ id: 'transcription.export.downloadRaw' })}
                 >
                   <FileJson className="h-3.5 w-3.5" />
                 </Button>

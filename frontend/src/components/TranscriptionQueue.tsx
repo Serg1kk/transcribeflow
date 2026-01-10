@@ -2,6 +2,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
+import { useIntl } from "react-intl";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -20,15 +21,6 @@ import Link from "next/link";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
-const STATUS_LABELS: Record<string, string> = {
-  draft: "Draft",
-  queued: "Queued",
-  processing: "Transcribing...",
-  diarizing: "Identifying speakers...",
-  completed: "Completed",
-  failed: "Failed",
-};
-
 interface TranscriptionQueueProps {
   refreshTrigger?: number;
 }
@@ -36,6 +28,7 @@ interface TranscriptionQueueProps {
 type SectionKey = "draft" | "queued" | "inProgress" | "completed";
 
 export function TranscriptionQueue({ refreshTrigger }: TranscriptionQueueProps) {
+  const intl = useIntl();
   const [transcriptions, setTranscriptions] = useState<Transcription[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -46,6 +39,15 @@ export function TranscriptionQueue({ refreshTrigger }: TranscriptionQueueProps) 
     completed: false,
   });
   const [isStarting, setIsStarting] = useState(false);
+
+  const STATUS_LABELS: Record<string, string> = {
+    draft: intl.formatMessage({ id: "queue.section.draft" }),
+    queued: intl.formatMessage({ id: "queue.section.queued" }),
+    processing: intl.formatMessage({ id: "status.transcribing" }),
+    diarizing: intl.formatMessage({ id: "status.diarizing" }),
+    completed: intl.formatMessage({ id: "status.completed" }),
+    failed: intl.formatMessage({ id: "status.failed" }),
+  };
 
   const fetchQueue = useCallback(async () => {
     try {
@@ -124,7 +126,8 @@ export function TranscriptionQueue({ refreshTrigger }: TranscriptionQueueProps) 
   };
 
   const handleClearHistory = async (filterType: "all" | "failed") => {
-    if (!confirm(`Delete ${filterType === "all" ? "ALL" : "failed"} transcriptions?`)) {
+    const typeLabel = filterType === "all" ? "ALL" : "failed";
+    if (!confirm(intl.formatMessage({ id: "queue.confirm.delete" }, { type: typeLabel }))) {
       return;
     }
     try {
@@ -141,10 +144,10 @@ export function TranscriptionQueue({ refreshTrigger }: TranscriptionQueueProps) 
     return (
       <Card>
         <CardHeader>
-          <CardTitle>Transcription Queue</CardTitle>
+          <CardTitle>{intl.formatMessage({ id: "queue.title" })}</CardTitle>
         </CardHeader>
         <CardContent>
-          <p className="text-muted-foreground">Loading...</p>
+          <p className="text-muted-foreground">{intl.formatMessage({ id: "status.processing" })}</p>
         </CardContent>
       </Card>
     );
@@ -156,7 +159,7 @@ export function TranscriptionQueue({ refreshTrigger }: TranscriptionQueueProps) 
     <div className="space-y-4">
       {/* Draft Section */}
       <QueueSection
-        title="Draft"
+        title={intl.formatMessage({ id: "queue.section.draft" })}
         count={drafts.length}
         expanded={expandedSections.draft}
         onToggle={() => toggleSection("draft")}
@@ -169,14 +172,14 @@ export function TranscriptionQueue({ refreshTrigger }: TranscriptionQueueProps) 
                 disabled={selectedIds.size === 0 || isStarting}
                 onClick={handleStartSelected}
               >
-                {isStarting ? "Starting..." : "Start Selected"}
+                {isStarting ? intl.formatMessage({ id: "queue.button.starting" }) : intl.formatMessage({ id: "queue.button.startSelected" })}
               </Button>
               <Button
                 size="sm"
                 disabled={drafts.length === 0 || isStarting}
                 onClick={handleStartAll}
               >
-                {isStarting ? "Starting..." : "Start All"}
+                {isStarting ? intl.formatMessage({ id: "queue.button.starting" }) : intl.formatMessage({ id: "queue.button.startAll" })}
               </Button>
             </div>
           )
@@ -184,7 +187,7 @@ export function TranscriptionQueue({ refreshTrigger }: TranscriptionQueueProps) 
       >
         {drafts.length === 0 ? (
           <p className="text-muted-foreground text-sm py-2">
-            No files waiting. Drop files to upload.
+            {intl.formatMessage({ id: "queue.empty" })}
           </p>
         ) : (
           drafts.map((t) => (
@@ -202,31 +205,31 @@ export function TranscriptionQueue({ refreshTrigger }: TranscriptionQueueProps) 
 
       {/* Queued Section */}
       <QueueSection
-        title="Queued"
+        title={intl.formatMessage({ id: "queue.section.queued" })}
         count={queued.length}
         expanded={expandedSections.queued}
         onToggle={() => toggleSection("queued")}
       >
         {queued.map((t) => (
-          <QueuedItem key={t.id} transcription={t} />
+          <QueuedItem key={t.id} transcription={t} statusLabels={STATUS_LABELS} />
         ))}
       </QueueSection>
 
       {/* In Progress Section */}
       <QueueSection
-        title="In Progress"
+        title={intl.formatMessage({ id: "queue.section.inProgress" })}
         count={inProgress.length}
         expanded={expandedSections.inProgress}
         onToggle={() => toggleSection("inProgress")}
       >
         {inProgress.map((t) => (
-          <InProgressItem key={t.id} transcription={t} />
+          <InProgressItem key={t.id} transcription={t} statusLabels={STATUS_LABELS} />
         ))}
       </QueueSection>
 
       {/* Completed Section */}
       <QueueSection
-        title="Completed"
+        title={intl.formatMessage({ id: "queue.section.completed" })}
         count={completed.length}
         expanded={expandedSections.completed}
         onToggle={() => toggleSection("completed")}
@@ -239,7 +242,7 @@ export function TranscriptionQueue({ refreshTrigger }: TranscriptionQueueProps) 
                   size="sm"
                   onClick={() => handleClearHistory("failed")}
                 >
-                  Clear Failed
+                  {intl.formatMessage({ id: "queue.button.clearFailed" })}
                 </Button>
               )}
               <Button
@@ -247,7 +250,7 @@ export function TranscriptionQueue({ refreshTrigger }: TranscriptionQueueProps) 
                 size="sm"
                 onClick={() => handleClearHistory("all")}
               >
-                Clear All
+                {intl.formatMessage({ id: "queue.button.clearAll" })}
               </Button>
             </div>
           )
@@ -373,7 +376,7 @@ function DraftItem({
 }
 
 // Queued item (read-only)
-function QueuedItem({ transcription }: { transcription: Transcription }) {
+function QueuedItem({ transcription, statusLabels }: { transcription: Transcription; statusLabels: Record<string, string> }) {
   const fileSizeMB = transcription.file_size
     ? (transcription.file_size / 1024 / 1024).toFixed(1) + " MB"
     : null;
@@ -385,7 +388,7 @@ function QueuedItem({ transcription }: { transcription: Transcription }) {
         <div className="flex items-center gap-2">
           <span className="text-xs text-muted-foreground">{transcription.engine}/{transcription.model}</span>
           {fileSizeMB && <span className="text-sm text-muted-foreground">{fileSizeMB}</span>}
-          <Badge variant="secondary">{STATUS_LABELS[transcription.status]}</Badge>
+          <Badge variant="secondary">{statusLabels[transcription.status]}</Badge>
         </div>
       </div>
       {transcription.initial_prompt && (
@@ -398,7 +401,7 @@ function QueuedItem({ transcription }: { transcription: Transcription }) {
 }
 
 // In Progress item with progress bar
-function InProgressItem({ transcription }: { transcription: Transcription }) {
+function InProgressItem({ transcription, statusLabels }: { transcription: Transcription; statusLabels: Record<string, string> }) {
   return (
     <div className="border rounded-lg p-3 space-y-2">
       <div className="flex items-center justify-between">
@@ -406,7 +409,7 @@ function InProgressItem({ transcription }: { transcription: Transcription }) {
           <span className="font-medium">{transcription.filename}</span>
           <span className="text-xs text-muted-foreground">{transcription.engine}/{transcription.model}</span>
         </div>
-        <Badge>{STATUS_LABELS[transcription.status]} {Math.round(transcription.progress)}%</Badge>
+        <Badge>{statusLabels[transcription.status]} {Math.round(transcription.progress)}%</Badge>
       </div>
       <Progress value={transcription.progress} className="h-2" />
       {transcription.initial_prompt && (
@@ -420,6 +423,7 @@ function InProgressItem({ transcription }: { transcription: Transcription }) {
 
 // Completed item
 function CompletedItem({ transcription }: { transcription: Transcription }) {
+  const intl = useIntl();
   const isCompleted = transcription.status === "completed";
   const isFailed = transcription.status === "failed";
 
@@ -490,7 +494,7 @@ function CompletedItem({ transcription }: { transcription: Transcription }) {
           </span>
         </div>
         <Badge variant={isFailed ? "destructive" : "outline"}>
-          {isFailed ? "Failed" : "Completed"}
+          {isFailed ? intl.formatMessage({ id: "status.failed" }) : intl.formatMessage({ id: "status.completed" })}
         </Badge>
       </div>
 

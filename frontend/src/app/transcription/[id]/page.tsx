@@ -4,6 +4,7 @@
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
+import { useIntl } from "react-intl";
 import { Header } from "@/components/Header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -37,6 +38,7 @@ type ViewMode = "cleaned" | "original" | "comparison";
 export default function TranscriptionPage() {
   const params = useParams();
   const id = params.id as string;
+  const intl = useIntl();
 
   const [transcription, setTranscription] = useState<TranscriptionDetail | null>(null);
   const [transcript, setTranscript] = useState<TranscriptData | null>(null);
@@ -103,7 +105,7 @@ export default function TranscriptionPage() {
   if (isLoading) {
     return (
       <main className="container mx-auto py-8 px-4 max-w-4xl">
-        <p>Loading...</p>
+        <p>{intl.formatMessage({ id: "status.loading" })}</p>
       </main>
     );
   }
@@ -111,7 +113,7 @@ export default function TranscriptionPage() {
   if (error || !transcription || !transcript) {
     return (
       <main className="container mx-auto py-8 px-4 max-w-4xl">
-        <p className="text-destructive">{error || "Transcription not found"}</p>
+        <p className="text-destructive">{error || intl.formatMessage({ id: "transcription.notFound" })}</p>
         <Link href="/" className="text-primary hover:underline">
           ← Back
         </Link>
@@ -266,10 +268,10 @@ export default function TranscriptionPage() {
         <CardContent>
           <div className="flex gap-4 text-sm text-muted-foreground mb-6">
             <span>
-              Duration: {formatDuration(transcript.metadata.duration_seconds)}
+              {intl.formatMessage({ id: "transcription.meta.duration" })} {formatDuration(transcript.metadata.duration_seconds)}
             </span>
-            <span>Speakers: {transcript.stats.speakers_count}</span>
-            <span>Language: {transcript.metadata.language}</span>
+            <span>{intl.formatMessage({ id: "transcription.meta.speakers" })} {transcript.stats.speakers_count}</span>
+            <span>{intl.formatMessage({ id: "transcription.meta.language" })} {transcript.metadata.language}</span>
           </div>
 
           {/* Speaker Editor */}
@@ -282,13 +284,13 @@ export default function TranscriptionPage() {
 
           {/* Post-Processing Controls */}
           <div className="mt-6 pt-6 border-t">
-            <h3 className="text-lg font-medium mb-2">LLM Post-Processing</h3>
+            <h3 className="text-lg font-medium mb-2">{intl.formatMessage({ id: "transcription.postProcessing.title" })}</h3>
 
             {/* Step 1 */}
             <div className="mb-6">
               <div className="flex items-center gap-2 mb-1">
                 <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-primary/10 text-primary text-sm font-medium">1</span>
-                <span className="font-medium">LLM Cleanup</span>
+                <span className="font-medium">{intl.formatMessage({ id: "transcription.postProcessing.cleanup.title" })}</span>
                 <span className="text-xs text-muted-foreground">(optional)</span>
               </div>
               <p className="text-sm text-muted-foreground ml-8 mb-3">
@@ -308,7 +310,7 @@ export default function TranscriptionPage() {
             <div className="pt-4 border-t border-dashed">
               <div className="flex items-center gap-2 mb-1">
                 <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-primary/10 text-primary text-sm font-medium">2</span>
-                <span className="font-medium">AI Insights</span>
+                <span className="font-medium">{intl.formatMessage({ id: "transcription.postProcessing.insights.title" })}</span>
               </div>
               <p className="text-sm text-muted-foreground ml-8 mb-3">
                 Extracts key decisions, action items, creates structured summary and mindmap based on meeting type
@@ -331,7 +333,7 @@ export default function TranscriptionPage() {
       {insights && (
         <Card className="mb-6">
           <CardHeader>
-            <CardTitle>AI Insights</CardTitle>
+            <CardTitle>{intl.formatMessage({ id: "transcription.postProcessing.insights.title" })}</CardTitle>
           </CardHeader>
           <CardContent>
             <InsightsPanel
@@ -362,7 +364,7 @@ export default function TranscriptionPage() {
                   <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
-                  Cleaned
+                  {intl.formatMessage({ id: "transcription.tabs.cleaned" })}
                 </Button>
                 <Button
                   variant={viewMode === "original" ? "default" : "ghost"}
@@ -373,7 +375,7 @@ export default function TranscriptionPage() {
                   <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                   </svg>
-                  Original
+                  {intl.formatMessage({ id: "transcription.tabs.original" })}
                 </Button>
                 <Button
                   variant={viewMode === "comparison" ? "default" : "ghost"}
@@ -384,7 +386,7 @@ export default function TranscriptionPage() {
                   <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
                   </svg>
-                  Comparison
+                  {intl.formatMessage({ id: "transcription.tabs.comparison" })}
                 </Button>
               </div>
             </div>

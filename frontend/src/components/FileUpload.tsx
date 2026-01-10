@@ -1,7 +1,7 @@
-// components/FileUpload.tsx
-"use client";
+'use client';
 
 import { useState, useCallback, useEffect, useMemo } from "react";
+import { useIntl } from "react-intl";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -28,6 +28,7 @@ interface FileUploadProps {
 }
 
 export function FileUpload({ onUploadComplete }: FileUploadProps) {
+  const intl = useIntl();
   const [isDragging, setIsDragging] = useState(false);
   const [files, setFiles] = useState<File[]>([]);
   const [engines, setEngines] = useState<Engine[]>([]);
@@ -37,9 +38,7 @@ export function FileUpload({ onUploadComplete }: FileUploadProps) {
   const [uploadProgress, setUploadProgress] = useState(0);
   const [error, setError] = useState<string | null>(null);
 
-  // Fetch available engines and default settings
   useEffect(() => {
-    // Fetch engines
     fetch(`${API_BASE}/api/engines`)
       .then((res) => res.json())
       .then((data) => {
@@ -49,7 +48,6 @@ export function FileUpload({ onUploadComplete }: FileUploadProps) {
       })
       .catch(() => {});
 
-    // Fetch default settings
     fetch(`${API_BASE}/api/settings`)
       .then((res) => res.json())
       .then((settings) => {
@@ -59,14 +57,12 @@ export function FileUpload({ onUploadComplete }: FileUploadProps) {
       .catch(() => {});
   }, []);
 
-  // Get models for current engine
   const currentEngine = engines.find((e) => e.id === engine);
   const availableModels = useMemo(
     () => currentEngine?.models || [],
     [currentEngine]
   );
 
-  // Reset model if not available for current engine
   useEffect(() => {
     if (availableModels.length > 0 && !availableModels.includes(model)) {
       setModel(availableModels[0]);
@@ -92,9 +88,9 @@ export function FileUpload({ onUploadComplete }: FileUploadProps) {
       setFiles((prev) => [...prev, ...droppedFiles]);
       setError(null);
     } else {
-      setError("Please select audio files (mp3, m4a, wav, ogg, flac, webm)");
+      setError(intl.formatMessage({ id: 'upload.error.invalidType' }));
     }
-  }, []);
+  }, [intl]);
 
   const handleFileSelect = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFiles = Array.from(e.target.files || []).filter(isAudioFile);
@@ -102,11 +98,10 @@ export function FileUpload({ onUploadComplete }: FileUploadProps) {
       setFiles((prev) => [...prev, ...selectedFiles]);
       setError(null);
     } else {
-      setError("Please select audio files");
+      setError(intl.formatMessage({ id: 'upload.error.noFiles' }));
     }
-    // Reset input so same files can be selected again
     e.target.value = "";
-  }, []);
+  }, [intl]);
 
   const removeFile = useCallback((index: number) => {
     setFiles((prev) => prev.filter((_, i) => i !== index));
@@ -131,7 +126,7 @@ export function FileUpload({ onUploadComplete }: FileUploadProps) {
       setFiles([]);
       onUploadComplete?.();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Upload error");
+      setError(err instanceof Error ? err.message : intl.formatMessage({ id: 'error.uploadFailed' }));
     } finally {
       setIsUploading(false);
       setUploadProgress(0);
@@ -139,14 +134,14 @@ export function FileUpload({ onUploadComplete }: FileUploadProps) {
   };
 
   const totalSize = files.reduce((sum, f) => sum + f.size, 0);
+  const totalSizeMB = (totalSize / 1024 / 1024).toFixed(2);
 
   return (
     <Card>
       <CardHeader>
-        <CardTitle>New Transcription</CardTitle>
+        <CardTitle>{intl.formatMessage({ id: 'upload.title' })}</CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
-        {/* Drop zone */}
         <div
           className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors ${
             isDragging
@@ -164,7 +159,7 @@ export function FileUpload({ onUploadComplete }: FileUploadProps) {
                   <div key={index} className="flex items-center justify-between text-sm bg-muted/50 rounded px-2 py-1">
                     <span className="truncate flex-1 text-left">{file.name}</span>
                     <span className="text-muted-foreground mx-2">
-                      {(file.size / 1024 / 1024).toFixed(1)} MB
+                      {(file.size / 1024 / 1024).toFixed(1)} {intl.formatMessage({ id: 'units.mb' })}
                     </span>
                     <button
                       onClick={() => removeFile(index)}
@@ -176,7 +171,7 @@ export function FileUpload({ onUploadComplete }: FileUploadProps) {
                 ))}
               </div>
               <p className="text-sm text-muted-foreground">
-                {files.length} file{files.length > 1 ? "s" : ""} ({(totalSize / 1024 / 1024).toFixed(2)} MB total)
+                {intl.formatMessage({ id: 'upload.files.total' }, { count: files.length, size: totalSizeMB })}
               </p>
               <div className="flex gap-2 justify-center">
                 <label>
@@ -188,17 +183,17 @@ export function FileUpload({ onUploadComplete }: FileUploadProps) {
                     onChange={handleFileSelect}
                   />
                   <Button variant="outline" size="sm" asChild>
-                    <span>Add more</span>
+                    <span>{intl.formatMessage({ id: 'button.addMore' })}</span>
                   </Button>
                 </label>
                 <Button variant="outline" size="sm" onClick={clearAllFiles}>
-                  Clear all
+                  {intl.formatMessage({ id: 'button.clearAll' })}
                 </Button>
               </div>
             </div>
           ) : (
             <div className="space-y-2">
-              <p>Drag and drop files here or</p>
+              <p>{intl.formatMessage({ id: 'upload.dropzone.hint' })}</p>
               <label>
                 <input
                   type="file"
@@ -208,17 +203,16 @@ export function FileUpload({ onUploadComplete }: FileUploadProps) {
                   onChange={handleFileSelect}
                 />
                 <Button variant="outline" asChild>
-                  <span>Select file(s)</span>
+                  <span>{intl.formatMessage({ id: 'upload.dropzone.button' })}</span>
                 </Button>
               </label>
             </div>
           )}
         </div>
 
-        {/* Settings */}
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-2">
-            <Label>Engine</Label>
+            <Label>{intl.formatMessage({ id: 'label.engine' })}</Label>
             <Select value={engine} onValueChange={setEngine}>
               <SelectTrigger>
                 <SelectValue />
@@ -231,14 +225,14 @@ export function FileUpload({ onUploadComplete }: FileUploadProps) {
                     </SelectItem>
                   ))
                 ) : (
-                  <SelectItem value="mlx-whisper">MLX Local</SelectItem>
+                  <SelectItem value="mlx-whisper">{intl.formatMessage({ id: 'upload.fallback.engine' })}</SelectItem>
                 )}
               </SelectContent>
             </Select>
           </div>
 
           <div className="space-y-2">
-            <Label>Model</Label>
+            <Label>{intl.formatMessage({ id: 'label.model' })}</Label>
             <Select value={model} onValueChange={setModel}>
               <SelectTrigger>
                 <SelectValue />
@@ -251,29 +245,27 @@ export function FileUpload({ onUploadComplete }: FileUploadProps) {
                     </SelectItem>
                   ))
                 ) : (
-                  <SelectItem value="large-v3-turbo">large-v3-turbo</SelectItem>
+                  <SelectItem value="large-v3-turbo">{intl.formatMessage({ id: 'upload.fallback.model' })}</SelectItem>
                 )}
               </SelectContent>
             </Select>
           </div>
         </div>
 
-        {/* Error message */}
         {error && (
           <p className="text-sm text-destructive">{error}</p>
         )}
 
-        {/* Upload button */}
         <Button
           className="w-full"
           disabled={files.length === 0 || isUploading}
           onClick={handleUpload}
         >
           {isUploading
-            ? `Adding... ${Math.round(uploadProgress)}%`
+            ? intl.formatMessage({ id: 'upload.button.adding' }, { progress: Math.round(uploadProgress) })
             : files.length > 1
-            ? `Add ${files.length} files`
-            : "Add"}
+            ? intl.formatMessage({ id: 'upload.button.addFiles' }, { count: files.length })
+            : intl.formatMessage({ id: 'button.add' })}
         </Button>
       </CardContent>
     </Card>

@@ -2,6 +2,7 @@
 "use client";
 
 import { useEffect, useState, useMemo } from "react";
+import { useIntl } from "react-intl";
 import { toast } from "sonner";
 import { Header } from "@/components/Header";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -25,11 +26,6 @@ interface Engine {
   models: string[];
   available: boolean;
 }
-
-const LLM_PROVIDERS = [
-  { value: "gemini", label: "Google Gemini" },
-  { value: "openrouter", label: "OpenRouter" },
-];
 
 interface Settings {
   default_engine: string;
@@ -67,6 +63,7 @@ interface Settings {
 }
 
 export default function SettingsPage() {
+  const intl = useIntl();
   const [settings, setSettings] = useState<Settings | null>(null);
   const [engines, setEngines] = useState<Engine[]>([]);
   const [isSaving, setIsSaving] = useState(false);
@@ -103,6 +100,12 @@ export default function SettingsPage() {
   const [yandexKey, setYandexKey] = useState("");
   const [geminiKey, setGeminiKey] = useState("");
   const [openrouterKey, setOpenrouterKey] = useState("");
+
+  // LLM Providers with translated labels
+  const LLM_PROVIDERS = useMemo(() => [
+    { value: "gemini", label: intl.formatMessage({ id: "settings.llm.provider.gemini" }) },
+    { value: "openrouter", label: intl.formatMessage({ id: "settings.llm.provider.openrouter" }) },
+  ], [intl]);
 
   useEffect(() => {
     fetchSettings();
@@ -231,7 +234,7 @@ export default function SettingsPage() {
   if (!settings) {
     return (
       <main className="container mx-auto py-8 px-4 max-w-4xl">
-        <p>Loading...</p>
+        <p>{intl.formatMessage({ id: "status.loading" })}</p>
       </main>
     );
   }
@@ -241,9 +244,11 @@ export default function SettingsPage() {
       <Header showSettings={false} showBack={true} />
 
       <div className="flex items-center justify-between mb-8">
-        <h1 className="text-3xl font-bold">Settings</h1>
+        <h1 className="text-3xl font-bold">{intl.formatMessage({ id: "settings.title" })}</h1>
         <Button onClick={saveSettings} disabled={isSaving}>
-          {isSaving ? "Saving..." : "Save Changes"}
+          {isSaving
+            ? intl.formatMessage({ id: "button.saving" })
+            : intl.formatMessage({ id: "button.save" })}
         </Button>
       </div>
 
@@ -252,13 +257,13 @@ export default function SettingsPage() {
         {/* Transcription Settings (ASR) */}
         <Card>
           <CardHeader>
-            <CardTitle>Transcription (ASR)</CardTitle>
-            <CardDescription>Speech-to-text engine settings</CardDescription>
+            <CardTitle>{intl.formatMessage({ id: "settings.asr.title" })}</CardTitle>
+            <CardDescription>{intl.formatMessage({ id: "settings.asr.description" })}</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label>Engine</Label>
+                <Label>{intl.formatMessage({ id: "label.engine" })}</Label>
                 <Select value={defaultEngine} onValueChange={setDefaultEngine}>
                   <SelectTrigger>
                     <SelectValue />
@@ -277,7 +282,7 @@ export default function SettingsPage() {
                 </Select>
               </div>
               <div className="space-y-2">
-                <Label>Model</Label>
+                <Label>{intl.formatMessage({ id: "label.model" })}</Label>
                 <Select value={defaultModel} onValueChange={setDefaultModel}>
                   <SelectTrigger>
                     <SelectValue />
@@ -298,7 +303,7 @@ export default function SettingsPage() {
             </div>
             {defaultEngine === "mlx-whisper" && (
               <p className="text-xs text-muted-foreground">
-                MLX Whisper runs on Apple Silicon GPU (Metal). No CPU option available.
+                {intl.formatMessage({ id: "settings.asr.help.mlx" })}
               </p>
             )}
           </CardContent>
@@ -307,15 +312,15 @@ export default function SettingsPage() {
         {/* Speaker Diarization Settings */}
         <Card>
           <CardHeader>
-            <CardTitle>Speaker Diarization</CardTitle>
-            <CardDescription>Identify who said what in recordings</CardDescription>
+            <CardTitle>{intl.formatMessage({ id: "settings.diarization.title" })}</CardTitle>
+            <CardDescription>{intl.formatMessage({ id: "settings.diarization.description" })}</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             {/* Only show for local engine */}
             {defaultEngine === "mlx-whisper" && (
               <>
                 <div className="space-y-2">
-                  <Label>Compute Device</Label>
+                  <Label>{intl.formatMessage({ id: "settings.diarization.device.label" })}</Label>
                   <Select
                     value={computeDevice}
                     onValueChange={(value) => {
@@ -330,34 +335,34 @@ export default function SettingsPage() {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="auto">Auto - Detect best device (GPU preferred)</SelectItem>
-                      <SelectItem value="mps">GPU (MPS) - Faster, may heat up</SelectItem>
-                      <SelectItem value="cpu">CPU - Stable, slower, more methods</SelectItem>
+                      <SelectItem value="auto">{intl.formatMessage({ id: "settings.diarization.device.auto" })}</SelectItem>
+                      <SelectItem value="mps">{intl.formatMessage({ id: "settings.diarization.device.gpu" })}</SelectItem>
+                      <SelectItem value="cpu">{intl.formatMessage({ id: "settings.diarization.device.cpu" })}</SelectItem>
                     </SelectContent>
                   </Select>
                   <p className="text-xs text-muted-foreground">
-                    MacBook Air users: Consider CPU for long files to avoid thermal throttling.
+                    {intl.formatMessage({ id: "settings.diarization.device.help" })}
                   </p>
                 </div>
 
                 <div className="space-y-2">
-                  <Label>Method</Label>
+                  <Label>{intl.formatMessage({ id: "settings.diarization.method.label" })}</Label>
                   <Select value={diarizationMethod} onValueChange={setDiarizationMethod}>
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="none">None - No diarization</SelectItem>
-                      <SelectItem value="fast">Fast - Pyannote speaker detection</SelectItem>
+                      <SelectItem value="none">{intl.formatMessage({ id: "settings.diarization.method.none" })}</SelectItem>
+                      <SelectItem value="fast">{intl.formatMessage({ id: "settings.diarization.method.fast" })}</SelectItem>
                       {computeDevice === "cpu" && (
-                        <SelectItem value="accurate">Accurate - WhisperX word-level (CPU only)</SelectItem>
+                        <SelectItem value="accurate">{intl.formatMessage({ id: "settings.diarization.method.accurate" })}</SelectItem>
                       )}
                     </SelectContent>
                   </Select>
                   <p className="text-xs text-muted-foreground">
                     {computeDevice === "cpu"
-                      ? "Fast: Quick detection. Accurate: Word-level alignment (slower, CPU only)."
-                      : "Fast: Quick speaker detection on GPU."
+                      ? intl.formatMessage({ id: "settings.diarization.method.help.cpu" })
+                      : intl.formatMessage({ id: "settings.diarization.method.help.gpu" })
                     }
                   </p>
                 </div>
@@ -366,7 +371,7 @@ export default function SettingsPage() {
                 {diarizationMethod !== "none" && (
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label>Min Speakers</Label>
+                      <Label>{intl.formatMessage({ id: "settings.diarization.speakers.min" })}</Label>
                       <Input
                         type="number"
                         min={1}
@@ -376,7 +381,7 @@ export default function SettingsPage() {
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label>Max Speakers</Label>
+                      <Label>{intl.formatMessage({ id: "settings.diarization.speakers.max" })}</Label>
                       <Input
                         type="number"
                         min={1}
@@ -390,20 +395,22 @@ export default function SettingsPage() {
 
                 {diarizationMethod !== "none" && (
                   <div className="space-y-2">
-                    <Label>HuggingFace Token</Label>
+                    <Label>{intl.formatMessage({ id: "settings.diarization.token.label" })}</Label>
                     <div className="flex items-center gap-2">
                       <Badge variant={settings.has_hf_token ? "outline" : "destructive"}>
-                        {settings.has_hf_token ? "Configured" : "Required"}
+                        {settings.has_hf_token
+                          ? intl.formatMessage({ id: "badge.configured" })
+                          : intl.formatMessage({ id: "badge.required" })}
                       </Badge>
                     </div>
                     <Input
                       type="password"
-                      placeholder={settings.has_hf_token ? "********" : "Enter HuggingFace token"}
+                      placeholder={settings.has_hf_token ? "********" : intl.formatMessage({ id: "settings.diarization.token.label" })}
                       value={hfToken}
                       onChange={(e) => setHfToken(e.target.value)}
                     />
                     <p className="text-xs text-muted-foreground">
-                      Required for diarization. Get token from{" "}
+                      {intl.formatMessage({ id: "settings.diarization.token.help" })}{" "}
                       <a href="https://huggingface.co/settings/tokens" target="_blank" className="underline">
                         huggingface.co/settings/tokens
                       </a>
@@ -417,11 +424,11 @@ export default function SettingsPage() {
             {defaultEngine !== "mlx-whisper" && (
               <>
                 <p className="text-sm text-muted-foreground">
-                  Cloud engines handle speaker detection automatically.
+                  {intl.formatMessage({ id: "settings.asr.help.cloud" })}
                 </p>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label>Min Speakers</Label>
+                    <Label>{intl.formatMessage({ id: "settings.diarization.speakers.min" })}</Label>
                     <Input
                       type="number"
                       min={1}
@@ -431,7 +438,7 @@ export default function SettingsPage() {
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label>Max Speakers</Label>
+                    <Label>{intl.formatMessage({ id: "settings.diarization.speakers.max" })}</Label>
                     <Input
                       type="number"
                       min={1}
@@ -449,15 +456,15 @@ export default function SettingsPage() {
         {/* Whisper Anti-Hallucination Settings */}
         <Card>
           <CardHeader>
-            <CardTitle>Whisper Quality Settings</CardTitle>
+            <CardTitle>{intl.formatMessage({ id: "settings.whisper.title" })}</CardTitle>
             <CardDescription>
-              Prevent hallucinations like &quot;Субтитры сделал DimaTorzok&quot; during silence
+              {intl.formatMessage({ id: "settings.whisper.description" })}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
             <div className="grid grid-cols-2 gap-6">
               <div className="space-y-2">
-                <Label>No Speech Threshold</Label>
+                <Label>{intl.formatMessage({ id: "settings.whisper.noSpeech.label" })}</Label>
                 <Input
                   type="number"
                   step="0.05"
@@ -467,15 +474,15 @@ export default function SettingsPage() {
                   onChange={(e) => setNoSpeechThreshold(parseFloat(e.target.value) || 0.6)}
                 />
                 <div className="text-xs text-muted-foreground space-y-1">
-                  <p><strong>Диапазон:</strong> 0.0 — 1.0</p>
-                  <p><strong>Default:</strong> 0.6</p>
-                  <p>Если Whisper думает, что в сегменте нет речи с вероятностью выше этого порога — сегмент пропускается.</p>
-                  <p className="text-amber-600">↑ Выше (0.7-0.9) = меньше галлюцинаций, но может пропустить тихую речь</p>
-                  <p className="text-blue-600">↓ Ниже (0.3-0.5) = больше текста, но больше мусора</p>
+                  <p><strong>{intl.formatMessage({ id: "settings.whisper.noSpeech.range" })}</strong></p>
+                  <p><strong>{intl.formatMessage({ id: "settings.whisper.noSpeech.default" })}</strong></p>
+                  <p>{intl.formatMessage({ id: "settings.whisper.noSpeech.help" })}</p>
+                  <p className="text-amber-600">{intl.formatMessage({ id: "settings.whisper.noSpeech.helpHigh" })}</p>
+                  <p className="text-blue-600">{intl.formatMessage({ id: "settings.whisper.noSpeech.helpLow" })}</p>
                 </div>
               </div>
               <div className="space-y-2">
-                <Label>Log Probability Threshold</Label>
+                <Label>{intl.formatMessage({ id: "settings.whisper.logProb.label" })}</Label>
                 <Input
                   type="number"
                   step="0.1"
@@ -485,18 +492,18 @@ export default function SettingsPage() {
                   onChange={(e) => setLogprobThreshold(parseFloat(e.target.value) || -1.0)}
                 />
                 <div className="text-xs text-muted-foreground space-y-1">
-                  <p><strong>Диапазон:</strong> -10.0 — 0.0 (всегда отрицательное!)</p>
-                  <p><strong>Default:</strong> -1.0</p>
-                  <p>Средняя уверенность модели в сегменте. Чем ближе к 0, тем увереннее.</p>
-                  <p className="text-amber-600">↑ Ближе к 0 (-0.5) = только уверенные сегменты, может потерять текст</p>
-                  <p className="text-blue-600">↓ Дальше от 0 (-2.0) = больше текста, больше галлюцинаций</p>
+                  <p><strong>{intl.formatMessage({ id: "settings.whisper.logProb.range" })}</strong></p>
+                  <p><strong>{intl.formatMessage({ id: "settings.whisper.logProb.default" })}</strong></p>
+                  <p>{intl.formatMessage({ id: "settings.whisper.logProb.help" })}</p>
+                  <p className="text-amber-600">{intl.formatMessage({ id: "settings.whisper.logProb.helpHigh" })}</p>
+                  <p className="text-blue-600">{intl.formatMessage({ id: "settings.whisper.logProb.helpLow" })}</p>
                 </div>
               </div>
             </div>
 
             <div className="grid grid-cols-2 gap-6">
               <div className="space-y-2">
-                <Label>Compression Ratio Threshold</Label>
+                <Label>{intl.formatMessage({ id: "settings.whisper.compression.label" })}</Label>
                 <Input
                   type="number"
                   step="0.1"
@@ -506,15 +513,15 @@ export default function SettingsPage() {
                   onChange={(e) => setCompressionRatioThreshold(parseFloat(e.target.value) || 2.4)}
                 />
                 <div className="text-xs text-muted-foreground space-y-1">
-                  <p><strong>Диапазон:</strong> 1.0 — 10.0</p>
-                  <p><strong>Default:</strong> 2.4</p>
-                  <p>Фильтрует повторяющийся/зацикленный текст (типа &quot;да да да да да&quot;).</p>
-                  <p className="text-amber-600">↓ Ниже (1.5-2.0) = строже фильтрует повторы</p>
-                  <p className="text-blue-600">↑ Выше (3.0-5.0) = пропускает больше повторов</p>
+                  <p><strong>{intl.formatMessage({ id: "settings.whisper.compression.range" })}</strong></p>
+                  <p><strong>{intl.formatMessage({ id: "settings.whisper.compression.default" })}</strong></p>
+                  <p>{intl.formatMessage({ id: "settings.whisper.compression.help" })}</p>
+                  <p className="text-amber-600">{intl.formatMessage({ id: "settings.whisper.compression.helpLow" })}</p>
+                  <p className="text-blue-600">{intl.formatMessage({ id: "settings.whisper.compression.helpHigh" })}</p>
                 </div>
               </div>
               <div className="space-y-2">
-                <Label>Hallucination Silence Threshold (сек)</Label>
+                <Label>{intl.formatMessage({ id: "settings.whisper.silence.label" })}</Label>
                 <Input
                   type="number"
                   step="0.5"
@@ -525,33 +532,33 @@ export default function SettingsPage() {
                     const val = e.target.value;
                     setHallucinationSilenceThreshold(val ? parseFloat(val) : null);
                   }}
-                  placeholder="Пусто = выключено"
+                  placeholder={intl.formatMessage({ id: "settings.whisper.silence.placeholder" })}
                 />
                 <div className="text-xs text-muted-foreground space-y-1">
-                  <p><strong>Диапазон:</strong> 0.5 — 30.0 секунд (или пусто)</p>
-                  <p><strong>Default:</strong> 2.0</p>
-                  <p>Пропускает текст, который появляется после длинной паузы (главный фильтр галлюцинаций!).</p>
-                  <p className="text-amber-600">↓ Ниже (0.5-1.0) = агрессивнее, может отрезать реальную речь после пауз</p>
-                  <p className="text-blue-600">↑ Выше (3.0-5.0) = мягче, пропустит короткие галлюцинации</p>
+                  <p><strong>{intl.formatMessage({ id: "settings.whisper.silence.range" })}</strong></p>
+                  <p><strong>{intl.formatMessage({ id: "settings.whisper.silence.default" })}</strong></p>
+                  <p>{intl.formatMessage({ id: "settings.whisper.silence.help" })}</p>
+                  <p className="text-amber-600">{intl.formatMessage({ id: "settings.whisper.silence.helpLow" })}</p>
+                  <p className="text-blue-600">{intl.formatMessage({ id: "settings.whisper.silence.helpHigh" })}</p>
                 </div>
               </div>
             </div>
 
             <div className="space-y-2 p-3 bg-muted/50 rounded-lg">
               <div className="flex items-center gap-4">
-                <Label>Use Previous Context</Label>
+                <Label>{intl.formatMessage({ id: "settings.whisper.context.label" })}</Label>
                 <Button
                   variant={conditionOnPreviousText ? "default" : "outline"}
                   size="sm"
                   onClick={() => setConditionOnPreviousText(!conditionOnPreviousText)}
                 >
-                  {conditionOnPreviousText ? "Включено" : "Выключено"}
+                  {conditionOnPreviousText
+                    ? intl.formatMessage({ id: "settings.whisper.context.enabled" })
+                    : intl.formatMessage({ id: "settings.whisper.context.disabled" })}
                 </Button>
               </div>
               <p className="text-xs text-muted-foreground">
-                Использует предыдущий распознанный текст как контекст для следующего сегмента.
-                Помогает с консистентностью, но может &quot;застрять&quot; на ошибке.
-                <strong> Рекомендуется оставить включённым.</strong>
+                {intl.formatMessage({ id: "settings.whisper.context.help" })}
               </p>
             </div>
 
@@ -561,37 +568,41 @@ export default function SettingsPage() {
         {/* Cloud ASR Providers */}
         <Card>
           <CardHeader>
-            <CardTitle>Cloud ASR Providers</CardTitle>
-            <CardDescription>Configure API keys for cloud transcription services</CardDescription>
+            <CardTitle>{intl.formatMessage({ id: "settings.cloudAsr.title" })}</CardTitle>
+            <CardDescription>{intl.formatMessage({ id: "settings.cloudAsr.description" })}</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <ApiKeyInput
-              label="AssemblyAI"
+              label={intl.formatMessage({ id: "settings.cloudAsr.assemblyai" })}
               hasKey={settings.has_assemblyai_key}
               value={assemblyaiKey}
               onChange={setAssemblyaiKey}
               status={settings.features.assemblyai?.status}
+              intl={intl}
             />
             <ApiKeyInput
-              label="Deepgram"
+              label={intl.formatMessage({ id: "settings.cloudAsr.deepgram" })}
               hasKey={settings.has_deepgram_key}
               value={deepgramKey}
               onChange={setDeepgramKey}
               status={settings.features.deepgram?.status}
+              intl={intl}
             />
             <ApiKeyInput
-              label="ElevenLabs Scribe"
+              label={intl.formatMessage({ id: "settings.cloudAsr.elevenlabs" })}
               hasKey={settings.has_elevenlabs_key}
               value={elevenlabsKey}
               onChange={setElevenlabsKey}
               status={settings.features.elevenlabs?.status}
+              intl={intl}
             />
             <ApiKeyInput
-              label="Yandex SpeechKit"
+              label={intl.formatMessage({ id: "settings.cloudAsr.yandex" })}
               hasKey={settings.has_yandex_key}
               value={yandexKey}
               onChange={setYandexKey}
               status={settings.features.yandex?.status}
+              intl={intl}
             />
           </CardContent>
         </Card>
@@ -599,13 +610,13 @@ export default function SettingsPage() {
         {/* LLM Settings */}
         <Card>
           <CardHeader>
-            <CardTitle>LLM Post-Processing</CardTitle>
-            <CardDescription>AI-powered transcript cleanup and summarization</CardDescription>
+            <CardTitle>{intl.formatMessage({ id: "settings.llm.title" })}</CardTitle>
+            <CardDescription>{intl.formatMessage({ id: "settings.llm.description" })}</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label>Post-Processing Provider</Label>
+                <Label>{intl.formatMessage({ id: "settings.llm.provider.label" })}</Label>
                 <Select value={postprocessingProvider} onValueChange={setPostprocessingProvider}>
                   <SelectTrigger>
                     <SelectValue />
@@ -620,7 +631,7 @@ export default function SettingsPage() {
                 </Select>
               </div>
               <div className="space-y-2">
-                <Label>Default Model</Label>
+                <Label>{intl.formatMessage({ id: "settings.llm.model.label" })}</Label>
                 <Select value={postprocessingModel} onValueChange={setPostprocessingModel}>
                   <SelectTrigger>
                     <SelectValue />
@@ -628,16 +639,16 @@ export default function SettingsPage() {
                   <SelectContent>
                     {postprocessingProvider === "gemini" ? (
                       <>
-                        <SelectItem value="gemini-2.5-flash">Gemini 2.5 Flash</SelectItem>
-                        <SelectItem value="gemini-2.5-flash-lite">Gemini 2.5 Flash Lite</SelectItem>
-                        <SelectItem value="gemini-3-flash-preview">Gemini 3 Flash Preview</SelectItem>
+                        <SelectItem value="gemini-2.5-flash">{intl.formatMessage({ id: "settings.llm.model.gemini25flash" })}</SelectItem>
+                        <SelectItem value="gemini-2.5-flash-lite">{intl.formatMessage({ id: "settings.llm.model.gemini25flashLite" })}</SelectItem>
+                        <SelectItem value="gemini-3-flash-preview">{intl.formatMessage({ id: "settings.llm.model.gemini3flashPreview" })}</SelectItem>
                       </>
                     ) : (
                       <>
-                        <SelectItem value="openai/gpt-4o-mini">GPT-4o Mini</SelectItem>
-                        <SelectItem value="anthropic/claude-3.5-haiku">Claude 3.5 Haiku</SelectItem>
-                        <SelectItem value="deepseek/deepseek-r1">DeepSeek R1</SelectItem>
-                        <SelectItem value="google/gemini-2.5-flash">Gemini 2.5 Flash (via OR)</SelectItem>
+                        <SelectItem value="openai/gpt-4o-mini">{intl.formatMessage({ id: "settings.llm.model.gpt4oMini" })}</SelectItem>
+                        <SelectItem value="anthropic/claude-3.5-haiku">{intl.formatMessage({ id: "settings.llm.model.claude35haiku" })}</SelectItem>
+                        <SelectItem value="deepseek/deepseek-r1">{intl.formatMessage({ id: "settings.llm.model.deepseekR1" })}</SelectItem>
+                        <SelectItem value="google/gemini-2.5-flash">{intl.formatMessage({ id: "settings.llm.model.gemini25flashViaOr" })}</SelectItem>
                       </>
                     )}
                   </SelectContent>
@@ -646,7 +657,7 @@ export default function SettingsPage() {
             </div>
 
             <div className="space-y-2">
-              <Label>Default LLM Provider (Legacy)</Label>
+              <Label>{intl.formatMessage({ id: "settings.llm.legacy.label" })}</Label>
               <Select value={defaultLlmProvider} onValueChange={setDefaultLlmProvider}>
                 <SelectTrigger>
                   <SelectValue />
@@ -659,22 +670,24 @@ export default function SettingsPage() {
                   ))}
                 </SelectContent>
               </Select>
-              <p className="text-xs text-muted-foreground">Used by legacy features</p>
+              <p className="text-xs text-muted-foreground">{intl.formatMessage({ id: "settings.llm.legacy.help" })}</p>
             </div>
 
             <ApiKeyInput
-              label="Google Gemini"
+              label={intl.formatMessage({ id: "settings.llm.provider.gemini" })}
               hasKey={settings.has_gemini_key}
               value={geminiKey}
               onChange={setGeminiKey}
               status={settings.features.gemini_llm?.status}
+              intl={intl}
             />
             <ApiKeyInput
-              label="OpenRouter"
+              label={intl.formatMessage({ id: "settings.llm.provider.openrouter" })}
               hasKey={settings.has_openrouter_key}
               value={openrouterKey}
               onChange={setOpenrouterKey}
               status={settings.features.openrouter_llm?.status}
+              intl={intl}
             />
           </CardContent>
         </Card>
@@ -682,15 +695,15 @@ export default function SettingsPage() {
         {/* AI Insights Settings */}
         <Card>
           <CardHeader>
-            <CardTitle>AI Insights</CardTitle>
+            <CardTitle>{intl.formatMessage({ id: "settings.insights.title" })}</CardTitle>
             <CardDescription>
-              Level 2 post-processing for extracting structured insights from transcripts
+              {intl.formatMessage({ id: "settings.insights.description" })}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label>Provider</Label>
+                <Label>{intl.formatMessage({ id: "label.provider" })}</Label>
                 <Select value={insightsProvider} onValueChange={setInsightsProvider}>
                   <SelectTrigger>
                     <SelectValue />
@@ -705,7 +718,7 @@ export default function SettingsPage() {
                 </Select>
               </div>
               <div className="space-y-2">
-                <Label>Model</Label>
+                <Label>{intl.formatMessage({ id: "label.model" })}</Label>
                 <Select value={insightsModel} onValueChange={setInsightsModel}>
                   <SelectTrigger>
                     <SelectValue />
@@ -713,16 +726,16 @@ export default function SettingsPage() {
                   <SelectContent>
                     {insightsProvider === "gemini" ? (
                       <>
-                        <SelectItem value="gemini-2.5-flash">Gemini 2.5 Flash</SelectItem>
-                        <SelectItem value="gemini-2.5-flash-lite">Gemini 2.5 Flash Lite</SelectItem>
-                        <SelectItem value="gemini-3-flash-preview">Gemini 3 Flash Preview</SelectItem>
+                        <SelectItem value="gemini-2.5-flash">{intl.formatMessage({ id: "settings.llm.model.gemini25flash" })}</SelectItem>
+                        <SelectItem value="gemini-2.5-flash-lite">{intl.formatMessage({ id: "settings.llm.model.gemini25flashLite" })}</SelectItem>
+                        <SelectItem value="gemini-3-flash-preview">{intl.formatMessage({ id: "settings.llm.model.gemini3flashPreview" })}</SelectItem>
                       </>
                     ) : (
                       <>
-                        <SelectItem value="openai/gpt-4o-mini">GPT-4o Mini</SelectItem>
-                        <SelectItem value="anthropic/claude-3.5-haiku">Claude 3.5 Haiku</SelectItem>
-                        <SelectItem value="deepseek/deepseek-r1">DeepSeek R1</SelectItem>
-                        <SelectItem value="google/gemini-2.5-flash">Gemini 2.5 Flash (via OR)</SelectItem>
+                        <SelectItem value="openai/gpt-4o-mini">{intl.formatMessage({ id: "settings.llm.model.gpt4oMini" })}</SelectItem>
+                        <SelectItem value="anthropic/claude-3.5-haiku">{intl.formatMessage({ id: "settings.llm.model.claude35haiku" })}</SelectItem>
+                        <SelectItem value="deepseek/deepseek-r1">{intl.formatMessage({ id: "settings.llm.model.deepseekR1" })}</SelectItem>
+                        <SelectItem value="google/gemini-2.5-flash">{intl.formatMessage({ id: "settings.llm.model.gemini25flashViaOr" })}</SelectItem>
                       </>
                     )}
                   </SelectContent>
@@ -730,7 +743,7 @@ export default function SettingsPage() {
               </div>
             </div>
             <p className="text-xs text-muted-foreground">
-              AI Insights extracts structured data like action items, decisions, and mindmaps from meeting transcripts.
+              {intl.formatMessage({ id: "settings.insights.help" })}
             </p>
           </CardContent>
         </Card>
@@ -738,8 +751,8 @@ export default function SettingsPage() {
         {/* Feature Status */}
         <Card>
           <CardHeader>
-            <CardTitle>Feature Status</CardTitle>
-            <CardDescription>Implementation status of features</CardDescription>
+            <CardTitle>{intl.formatMessage({ id: "settings.features.title" })}</CardTitle>
+            <CardDescription>{intl.formatMessage({ id: "settings.features.description" })}</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-2 gap-3">
@@ -747,7 +760,9 @@ export default function SettingsPage() {
                 <div key={key} className="flex items-center justify-between p-2 bg-muted/50 rounded">
                   <span className="text-sm">{feature.description}</span>
                   <Badge variant={feature.status === "implemented" ? "default" : "secondary"}>
-                    {feature.status === "implemented" ? "Ready" : "TBD"}
+                    {feature.status === "implemented"
+                      ? intl.formatMessage({ id: "badge.ready" })
+                      : intl.formatMessage({ id: "badge.tbd" })}
                   </Badge>
                 </div>
               ))}
@@ -765,22 +780,26 @@ function ApiKeyInput({
   value,
   onChange,
   status,
+  intl,
 }: {
   label: string;
   hasKey: boolean;
   value: string;
   onChange: (value: string) => void;
   status?: string;
+  intl: ReturnType<typeof useIntl>;
 }) {
   return (
     <div className="space-y-2">
       <div className="flex items-center gap-2">
         <Label>{label}</Label>
         <Badge variant={hasKey ? "outline" : "secondary"}>
-          {hasKey ? "Configured" : "Not set"}
+          {hasKey
+            ? intl.formatMessage({ id: "badge.configured" })
+            : intl.formatMessage({ id: "badge.notSet" })}
         </Badge>
         {status === "tbd" && (
-          <Badge variant="secondary" className="text-xs">TBD</Badge>
+          <Badge variant="secondary" className="text-xs">{intl.formatMessage({ id: "badge.tbd" })}</Badge>
         )}
       </div>
       <Input
