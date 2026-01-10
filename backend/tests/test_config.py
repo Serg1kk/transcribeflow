@@ -75,3 +75,12 @@ def test_settings_postprocessing_default_template():
     """Test postprocessing_default_template defaults to None."""
     settings = Settings()
     assert settings.postprocessing_default_template is None
+
+
+def test_insights_settings_exist():
+    """Test that AI Insights settings exist in config."""
+    settings = Settings()
+    assert hasattr(settings, 'insights_provider')
+    assert hasattr(settings, 'insights_model')
+    assert hasattr(settings, 'insights_default_template')
+    assert hasattr(settings, 'insight_templates_path')

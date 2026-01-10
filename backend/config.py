@@ -105,6 +105,15 @@ class Settings(BaseSettings):
     postprocessing_model: str = "gemini-2.5-flash"
     postprocessing_default_template: Optional[str] = None  # None = always ask
 
+    # AI Insights (Level 2) settings
+    insights_provider: str = "gemini"  # "gemini" | "openrouter" | "anthropic"
+    insights_model: str = "gemini-2.5-flash"
+    insights_default_template: Optional[str] = None  # None = always ask
+
+    @property
+    def insight_templates_path(self) -> Path:
+        return self.base_path / "insight-templates"
+
     # Server
     backend_host: str = "127.0.0.1"
     backend_port: int = 8000
@@ -134,7 +143,8 @@ class Settings(BaseSettings):
     def ensure_directories(self):
         """Create all required directories."""
         for path in [self.uploads_path, self.transcribed_path,
-                     self.processing_path, self.templates_path]:
+                     self.processing_path, self.templates_path,
+                     self.insight_templates_path]:
             path.mkdir(parents=True, exist_ok=True)
 
 
