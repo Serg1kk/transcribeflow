@@ -180,7 +180,6 @@ Fine-tune to prevent hallucinations (e.g., "Субтитры сделал DimaTo
 - Log Probability Threshold
 - Compression Ratio Threshold
 - Hallucination Silence Threshold
-- Initial Prompt (context for better recognition)
 
 ### LLM Settings
 | Setting | Options | Description |

@@ -94,7 +94,6 @@ export default function SettingsPage() {
   const [compressionRatioThreshold, setCompressionRatioThreshold] = useState(2.4);
   const [hallucinationSilenceThreshold, setHallucinationSilenceThreshold] = useState<number | null>(2.0);
   const [conditionOnPreviousText, setConditionOnPreviousText] = useState(true);
-  const [initialPrompt, setInitialPrompt] = useState("");
 
   // API Keys (for input)
   const [hfToken, setHfToken] = useState("");
@@ -135,7 +134,6 @@ export default function SettingsPage() {
       setCompressionRatioThreshold(data.whisper_compression_ratio_threshold);
       setHallucinationSilenceThreshold(data.whisper_hallucination_silence_threshold);
       setConditionOnPreviousText(data.whisper_condition_on_previous_text);
-      setInitialPrompt(data.whisper_initial_prompt || "");
     } catch (error) {
       console.error("Failed to fetch settings:", error);
     }
@@ -190,7 +188,6 @@ export default function SettingsPage() {
       whisper_compression_ratio_threshold: compressionRatioThreshold,
       whisper_hallucination_silence_threshold: hallucinationSilenceThreshold,
       whisper_condition_on_previous_text: conditionOnPreviousText,
-      whisper_initial_prompt: initialPrompt || null,
     };
 
     // Only include API keys if they were entered
@@ -515,22 +512,6 @@ export default function SettingsPage() {
               </p>
             </div>
 
-            <div className="space-y-2">
-              <Label>Initial Prompt (опционально)</Label>
-              <Input
-                type="text"
-                placeholder="e.g., Это рабочий митинг о разработке..."
-                value={initialPrompt}
-                onChange={(e) => setInitialPrompt(e.target.value)}
-              />
-              <div className="text-xs text-muted-foreground space-y-1">
-                <p>Начальный контекст для модели. Помогает с терминологией и стилем.</p>
-                <p><strong>Примеры:</strong></p>
-                <p>• &quot;Это техническое интервью о программировании&quot;</p>
-                <p>• &quot;Разговор на русском языке о машинном обучении&quot;</p>
-                <p>• &quot;Подкаст о стартапах, участники: Иван и Мария&quot;</p>
-              </div>
-            </div>
           </CardContent>
         </Card>
 
