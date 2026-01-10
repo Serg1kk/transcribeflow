@@ -6,10 +6,7 @@ import { Check, ChevronDown, ChevronUp } from "lucide-react"
 
 import { cn } from "@/lib/utils"
 
-// Wrapper to disable modal behavior by default (prevents scroll lock and layout shift)
-const Select = ({ modal = false, ...props }: React.ComponentPropsWithoutRef<typeof SelectPrimitive.Root>) => (
-  <SelectPrimitive.Root modal={modal} {...props} />
-)
+const Select = SelectPrimitive.Root
 
 const SelectGroup = SelectPrimitive.Group
 

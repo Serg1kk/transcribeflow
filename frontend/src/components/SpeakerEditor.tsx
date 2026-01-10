@@ -1,7 +1,7 @@
-// components/SpeakerEditor.tsx
-"use client";
+'use client';
 
 import { useState, useEffect } from "react";
+import { useIntl } from "react-intl";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -34,6 +34,7 @@ export function SpeakerEditor({
   speakers: initialSpeakers,
   onUpdate,
 }: SpeakerEditorProps) {
+  const intl = useIntl();
   const [speakers, setSpeakers] = useState<Speaker[]>(
     Object.entries(initialSpeakers).map(([id, data]) => ({
       id,
@@ -220,7 +221,7 @@ export function SpeakerEditor({
     <TooltipProvider>
       <div className="space-y-4">
         <div className="flex items-center justify-between">
-          <h3 className="font-medium">Participants (click to edit)</h3>
+          <h3 className="font-medium">{intl.formatMessage({ id: 'transcription.speakers.title' })}</h3>
         </div>
         <div className="space-y-2">
           {speakers.map((speaker) => {
@@ -315,7 +316,9 @@ export function SpeakerEditor({
                 disabled={isApplyingAll}
                 className="text-sm text-muted-foreground hover:text-primary hover:underline disabled:opacity-50"
               >
-                {isApplyingAll ? "Applying..." : `Apply all ${suggestions.length} suggestions`}
+                {isApplyingAll
+                  ? intl.formatMessage({ id: 'transcription.speakers.applying' })
+                  : intl.formatMessage({ id: 'transcription.speakers.applyAll' }, { count: suggestions.length })}
               </button>
             </div>
           )}
