@@ -319,31 +319,33 @@ export default function SettingsPage() {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="none">None - No diarization</SelectItem>
-                      <SelectItem value="fast">Fast (GPU) - Pyannote on MPS</SelectItem>
+                      <SelectItem value="fast">Fast - Pyannote speaker detection</SelectItem>
                       <SelectItem value="accurate">Accurate - WhisperX word-level</SelectItem>
                     </SelectContent>
                   </Select>
                   <p className="text-xs text-muted-foreground">
-                    Fast: Quick speaker detection on GPU. Accurate: Precise word-level alignment (slower).
+                    Fast: Quick speaker detection. Accurate: Precise word-level alignment (slower).
                   </p>
                 </div>
 
-                <div className="space-y-2">
-                  <Label>Compute Device</Label>
-                  <Select value={computeDevice} onValueChange={setComputeDevice}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="auto">Auto - Detect best device</SelectItem>
-                      <SelectItem value="mps">GPU (MPS) - Faster, may heat up</SelectItem>
-                      <SelectItem value="cpu">CPU - Stable, slower</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <p className="text-xs text-muted-foreground">
-                    MacBook Air users: Consider CPU for long files to avoid thermal throttling.
-                  </p>
-                </div>
+                {diarizationMethod !== "none" && (
+                  <div className="space-y-2">
+                    <Label>Diarization Device</Label>
+                    <Select value={computeDevice} onValueChange={setComputeDevice}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="auto">Auto - Detect best device</SelectItem>
+                        <SelectItem value="mps">GPU (MPS) - Faster, may heat up</SelectItem>
+                        <SelectItem value="cpu">CPU - Stable, slower</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <p className="text-xs text-muted-foreground">
+                      MacBook Air users: Consider CPU for long files to avoid thermal throttling.
+                    </p>
+                  </div>
+                )}
               </>
             )}
 

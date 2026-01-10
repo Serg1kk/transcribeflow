@@ -118,8 +118,16 @@ class TranscriptionWorker:
             # Update status to processing and save settings used
             transcription.status = TranscriptionStatus.PROCESSING
             transcription.started_at = datetime.utcnow()
+            # Resolve "auto" to actual device
+            actual_device = self.settings.compute_device
+            if actual_device == "auto":
+                try:
+                    import torch
+                    actual_device = "mps" if torch.backends.mps.is_available() else "cpu"
+                except ImportError:
+                    actual_device = "cpu"
             # Save the actual settings used for this transcription
-            transcription.compute_device = self.settings.compute_device
+            transcription.compute_device = actual_device
             transcription.diarization_method = self.settings.diarization_method
             db.commit()
 
