@@ -74,12 +74,22 @@
   }
   html {
     overflow-y: scroll; /* Always show scrollbar to prevent layout shift */
+    scrollbar-gutter: stable; /* Reserve space for scrollbar */
   }
   body {
     @apply bg-background text-foreground;
     position: relative;
-    /* Prevent Radix UI from adding padding when opening dropdowns */
+  }
+  /* Prevent Radix UI from modifying body styles */
+  body[data-scroll-locked] {
+    overflow: auto !important;
     padding-right: 0 !important;
+    margin-right: 0 !important;
+  }
+  body[style*="padding-right"] {
+    padding-right: 0 !important;
+  }
+  body[style*="margin-right"] {
     margin-right: 0 !important;
   }
   body::before {
