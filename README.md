@@ -41,7 +41,7 @@ cp .env.example .env
 
 ### Step 4: Open Browser
 ```
-Frontend:  http://localhost:3001
+Frontend:  http://localhost:3000  (exact port shown in console)
 Backend:   http://localhost:8000
 API Docs:  http://localhost:8000/docs
 ```
@@ -153,7 +153,7 @@ Add your key in **Settings** page after starting the app.
 
 ## Settings (Available in UI)
 
-After starting the app, go to **http://localhost:3001/settings** to configure:
+After starting the app, go to **http://localhost:3000/settings** to configure:
 
 ### Transcription Settings
 | Setting | Options | Description |
@@ -340,7 +340,7 @@ pytest -v
 
 | Problem | Solution |
 |---------|----------|
-| Port in use | `lsof -ti:3001 \| xargs kill -9` |
+| Port in use | `lsof -ti:3000 \| xargs kill -9` |
 | Diarization fails | Check HF token, accept Pyannote license |
 | HuggingFace model errors | Visit model pages and click "Agree" to accept licenses |
 | Database issues | `rm ~/.transcribeflow/transcribeflow.db` |
