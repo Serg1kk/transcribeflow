@@ -127,34 +127,48 @@ export function MindmapViewer({ markdown, className = "" }: MindmapViewerProps) 
   }
 
   async function svgToPng(svgElement: SVGSVGElement): Promise<Blob> {
-    const svgData = new XMLSerializer().serializeToString(svgElement);
-    const svgBlob = new Blob([svgData], { type: "image/svg+xml;charset=utf-8" });
-    const url = URL.createObjectURL(svgBlob);
+    // Clone SVG to avoid modifying the original
+    const clonedSvg = svgElement.cloneNode(true) as SVGSVGElement;
+
+    // Set explicit dimensions
+    const rect = svgElement.getBoundingClientRect();
+    clonedSvg.setAttribute("width", String(rect.width));
+    clonedSvg.setAttribute("height", String(rect.height));
+
+    // Add white background
+    const bgRect = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+    bgRect.setAttribute("width", "100%");
+    bgRect.setAttribute("height", "100%");
+    bgRect.setAttribute("fill", "white");
+    clonedSvg.insertBefore(bgRect, clonedSvg.firstChild);
+
+    // Serialize with proper encoding
+    const svgData = new XMLSerializer().serializeToString(clonedSvg);
+    const encodedSvg = encodeURIComponent(svgData);
+    const dataUrl = `data:image/svg+xml;charset=utf-8,${encodedSvg}`;
 
     return new Promise((resolve, reject) => {
       const img = new window.Image();
+      img.crossOrigin = "anonymous";
       img.onload = () => {
         const canvas = document.createElement("canvas");
         const scale = 2; // Higher resolution
-        canvas.width = svgElement.clientWidth * scale;
-        canvas.height = svgElement.clientHeight * scale;
+        canvas.width = rect.width * scale;
+        canvas.height = rect.height * scale;
         const ctx = canvas.getContext("2d");
         if (!ctx) {
           reject(new Error("Failed to get canvas context"));
           return;
         }
-        ctx.fillStyle = "white";
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
         ctx.scale(scale, scale);
         ctx.drawImage(img, 0, 0);
-        URL.revokeObjectURL(url);
         canvas.toBlob((blob) => {
           if (blob) resolve(blob);
           else reject(new Error("Failed to create blob"));
         }, "image/png");
       };
       img.onerror = () => reject(new Error("Failed to load SVG"));
-      img.src = url;
+      img.src = dataUrl;
     });
   }
 
