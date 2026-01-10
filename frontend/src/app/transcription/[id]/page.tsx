@@ -53,6 +53,9 @@ export default function TranscriptionPage() {
   const [hasInsights, setHasInsights] = useState(false);
   const [isRegenerating, setIsRegenerating] = useState(false);
 
+  // Template sync state
+  const [cleaningTemplateId, setCleaningTemplateId] = useState<string>("");
+
   useEffect(() => {
     async function fetchData() {
       try {
@@ -279,23 +282,47 @@ export default function TranscriptionPage() {
 
           {/* Post-Processing Controls */}
           <div className="mt-6 pt-6 border-t">
-            <h3 className="text-lg font-medium mb-4">LLM Post-Processing</h3>
-            <PostProcessingControls
-              transcriptionId={id}
-              hasCleanedVersion={hasCleanedVersion}
-              onProcessingComplete={handleProcessingComplete}
-            />
-          </div>
+            <h3 className="text-lg font-medium mb-2">LLM Post-Processing</h3>
 
-          {/* AI Insights Controls */}
-          <div className="mt-6 pt-6 border-t">
-            <h3 className="text-lg font-medium mb-4">AI Insights</h3>
-            <InsightsControls
-              key={`insights-${hasCleanedVersion}`}
-              transcriptionId={id}
-              hasInsights={hasInsights}
-              onGenerationComplete={handleInsightsComplete}
-            />
+            {/* Step 1 */}
+            <div className="mb-6">
+              <div className="flex items-center gap-2 mb-1">
+                <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-primary/10 text-primary text-sm font-medium">1</span>
+                <span className="font-medium">LLM Cleanup</span>
+                <span className="text-xs text-muted-foreground">(optional)</span>
+              </div>
+              <p className="text-sm text-muted-foreground ml-8 mb-3">
+                Fixes ASR errors, removes repetitions, merges fragmented speech, identifies speakers
+              </p>
+              <div className="ml-8">
+                <PostProcessingControls
+                  transcriptionId={id}
+                  hasCleanedVersion={hasCleanedVersion}
+                  onProcessingComplete={handleProcessingComplete}
+                  onTemplateChange={setCleaningTemplateId}
+                />
+              </div>
+            </div>
+
+            {/* Step 2 */}
+            <div className="pt-4 border-t border-dashed">
+              <div className="flex items-center gap-2 mb-1">
+                <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-primary/10 text-primary text-sm font-medium">2</span>
+                <span className="font-medium">AI Insights</span>
+              </div>
+              <p className="text-sm text-muted-foreground ml-8 mb-3">
+                Extracts key decisions, action items, creates structured summary and mindmap based on meeting type
+              </p>
+              <div className="ml-8">
+                <InsightsControls
+                  key={`insights-${hasCleanedVersion}-${cleaningTemplateId}`}
+                  transcriptionId={id}
+                  hasInsights={hasInsights}
+                  onGenerationComplete={handleInsightsComplete}
+                  suggestedTemplateId={cleaningTemplateId}
+                />
+              </div>
+            </div>
           </div>
         </CardContent>
       </Card>

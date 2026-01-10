@@ -4,6 +4,11 @@
 
 ![TranscribeFlow Hero](./images/hero.png)
 
+<p align="center">
+  <a href="./README.md"><img src="https://img.shields.io/badge/lang-English-blue?style=flat-square" alt="English"></a>
+  <a href="./README.ru.md"><img src="https://img.shields.io/badge/lang-Русский-green?style=flat-square" alt="Русский"></a>
+</p>
+
 > **Local AI-powered meeting transcription with speaker diarization and intelligent insights — optimized for Apple Silicon.**
 
 Transform your audio recordings into structured, actionable knowledge without sending data to the cloud.

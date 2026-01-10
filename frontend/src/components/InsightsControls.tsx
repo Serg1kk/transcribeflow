@@ -23,12 +23,14 @@ interface InsightsControlsProps {
   transcriptionId: string;
   hasInsights: boolean;
   onGenerationComplete: (templateId: string) => void;
+  suggestedTemplateId?: string;
 }
 
 export function InsightsControls({
   transcriptionId,
   hasInsights,
   onGenerationComplete,
+  suggestedTemplateId,
 }: InsightsControlsProps) {
   const [templates, setTemplates] = useState<InsightTemplate[]>([]);
   const [selectedTemplate, setSelectedTemplate] = useState<string>("");
@@ -61,6 +63,16 @@ export function InsightsControls({
     }
     load();
   }, [transcriptionId, selectedTemplate]);
+
+  // Apply suggested template from parent (Step 1 selection)
+  useEffect(() => {
+    if (suggestedTemplateId && templates.length > 0) {
+      const matchingTemplate = templates.find(t => t.id === suggestedTemplateId);
+      if (matchingTemplate) {
+        setSelectedTemplate(suggestedTemplateId);
+      }
+    }
+  }, [suggestedTemplateId, templates]);
 
   async function handleGenerate() {
     if (hasInsights && !showConfirm) {

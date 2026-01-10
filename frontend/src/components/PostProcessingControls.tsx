@@ -21,12 +21,14 @@ interface PostProcessingControlsProps {
   transcriptionId: string;
   hasCleanedVersion: boolean;
   onProcessingComplete: () => void;
+  onTemplateChange?: (templateId: string) => void;
 }
 
 export function PostProcessingControls({
   transcriptionId,
   hasCleanedVersion,
   onProcessingComplete,
+  onTemplateChange,
 }: PostProcessingControlsProps) {
   const [templates, setTemplates] = useState<Template[]>([]);
   const [selectedTemplate, setSelectedTemplate] = useState<string>("");
@@ -47,6 +49,13 @@ export function PostProcessingControls({
     }
     loadTemplates();
   }, [selectedTemplate]);
+
+  // Notify parent when template selection changes
+  useEffect(() => {
+    if (selectedTemplate && onTemplateChange) {
+      onTemplateChange(selectedTemplate);
+    }
+  }, [selectedTemplate, onTemplateChange]);
 
   async function handleProcess() {
     // If there's already a cleaned version, ask for confirmation

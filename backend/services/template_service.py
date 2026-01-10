@@ -128,14 +128,44 @@ DEFAULT_TEMPLATES = [
         temperature=0.3
     ),
     Template(
-        id="business-call",
-        name="Business Call",
-        description="Client calls, sales meetings, professional discussions",
+        id="business-meeting",
+        name="Business Meeting",
+        description="Strategic discussions, planning sessions",
         system_prompt=BASELINE_PROMPT.format(
-            context="This is a professional business call or meeting. Preserve formal language and business terminology. Maintain professional tone.",
-            role_context="client, sales manager, account manager, consultant, CEO, CFO, director, partner"
+            context="Strategic business meeting. Preserve formal language and business terminology. Maintain professional tone.",
+            role_context="client, CEO, CFO, director, partner, account manager, consultant"
         ),
         temperature=0.2
+    ),
+    Template(
+        id="sales-call",
+        name="Sales Call",
+        description="Client calls, demos, sales meetings",
+        system_prompt=BASELINE_PROMPT.format(
+            context="Professional sales call with client. Preserve business terminology, product names, pricing discussions.",
+            role_context="client, prospect, sales manager, account executive, solution architect, presales"
+        ),
+        temperature=0.2
+    ),
+    Template(
+        id="retrospective",
+        name="Retrospective",
+        description="Sprint retros, post-mortems, team reviews",
+        system_prompt=BASELINE_PROMPT.format(
+            context="Sprint retrospective or team review. Preserve informal team discussions, feedback expressions.",
+            role_context="developer, QA, designer, scrum master, product owner, team lead, manager"
+        ),
+        temperature=0.3
+    ),
+    Template(
+        id="brainstorm",
+        name="Brainstorm",
+        description="Ideation sessions, creative discussions",
+        system_prompt=BASELINE_PROMPT.format(
+            context="Creative brainstorming session. Preserve all ideas even informal, keep natural flow of ideation.",
+            role_context="participant, facilitator, product owner, designer, developer, stakeholder"
+        ),
+        temperature=0.3
     ),
 ]
 
