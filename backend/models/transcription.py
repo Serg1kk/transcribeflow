@@ -33,6 +33,8 @@ class Transcription(Base):
     language = Column(String(10), nullable=True)  # None = auto-detect
     min_speakers = Column(Integer, nullable=True)
     max_speakers = Column(Integer, nullable=True)
+    compute_device = Column(String(20), nullable=True)  # "cpu" | "mps" | "auto"
+    diarization_method = Column(String(20), nullable=True)  # "none" | "fast" | "accurate"
 
     # Per-file transcription hint
     initial_prompt = Column(Text, nullable=True)

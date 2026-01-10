@@ -108,6 +108,8 @@ class TranscriptionResponse(BaseModel):
     error_message: Optional[str] = None
     file_size: Optional[int] = None  # File size in bytes
     duration_seconds: Optional[float] = None  # Audio duration
+    compute_device: Optional[str] = None  # "cpu" | "mps" | "auto"
+    diarization_method: Optional[str] = None  # "none" | "fast" | "accurate"
     # Timing breakdown
     processing_time_seconds: Optional[float] = None  # Total processing time
     transcription_time_seconds: Optional[float] = None  # ASR time only

@@ -115,9 +115,12 @@ class TranscriptionWorker:
             True if successful, False otherwise
         """
         try:
-            # Update status to processing
+            # Update status to processing and save settings used
             transcription.status = TranscriptionStatus.PROCESSING
             transcription.started_at = datetime.utcnow()
+            # Save the actual settings used for this transcription
+            transcription.compute_device = self.settings.compute_device
+            transcription.diarization_method = self.settings.diarization_method
             db.commit()
 
             total_start_time = time.time()

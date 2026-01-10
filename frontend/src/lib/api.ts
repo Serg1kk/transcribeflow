@@ -14,6 +14,8 @@ export interface Transcription {
   error_message: string | null;
   file_size: number | null;
   duration_seconds: number | null;
+  compute_device: string | null;  // "cpu" | "mps" | "auto"
+  diarization_method: string | null;  // "none" | "fast" | "accurate"
   // Timing breakdown
   processing_time_seconds: number | null;
   transcription_time_seconds: number | null;

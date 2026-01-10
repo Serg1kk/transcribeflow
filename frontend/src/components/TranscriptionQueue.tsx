@@ -298,7 +298,7 @@ function QueueSection({
   );
 }
 
-// Draft item with checkbox and editable prompt
+// Draft item with checkbox and editable context
 function DraftItem({
   transcription,
   selected,
@@ -316,7 +316,11 @@ function DraftItem({
   const [isSaving, setIsSaving] = useState(false);
   const [saved, setSaved] = useState(false);
 
-  const supportsPrompt = engineSupportsInitialPrompt(transcription.engine);
+  // Local engines use context for transcription + insights, cloud only for insights
+  const isLocalEngine = engineSupportsInitialPrompt(transcription.engine);
+  const placeholder = isLocalEngine
+    ? "Enter context for better transcription and AI insights..."
+    : "Enter context for better AI insights...";
 
   const handleSave = async () => {
     if (prompt === (transcription.initial_prompt || "")) return;
@@ -353,19 +357,17 @@ function DraftItem({
           🗑️
         </Button>
       </div>
-      {supportsPrompt && (
-        <div className="flex items-center gap-2 pl-7">
-          <Input
-            value={prompt}
-            onChange={(e) => setPrompt(e.target.value)}
-            onBlur={handleSave}
-            placeholder="Enter context for better transcription..."
-            className="h-8 text-sm"
-          />
-          {isSaving && <span className="text-xs text-muted-foreground">Saving...</span>}
-          {saved && <span className="text-xs text-green-600">Saved</span>}
-        </div>
-      )}
+      <div className="flex items-center gap-2 pl-7">
+        <Input
+          value={prompt}
+          onChange={(e) => setPrompt(e.target.value)}
+          onBlur={handleSave}
+          placeholder={placeholder}
+          className="h-8 text-sm"
+        />
+        {isSaving && <span className="text-xs text-muted-foreground">Saving...</span>}
+        {saved && <span className="text-xs text-green-600">Saved</span>}
+      </div>
     </div>
   );
 }
@@ -471,18 +473,34 @@ function CompletedItem({ transcription }: { transcription: Transcription }) {
       )}
 
       <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground bg-muted/50 rounded px-2 py-1">
-        <span>{transcription.engine}/{transcription.model}</span>
+        {/* Engine/Model info */}
+        {transcription.engine === "mlx-whisper" ? (
+          <>
+            <span>{transcription.model}</span>
+            {transcription.compute_device && (
+              <span className="uppercase">{transcription.compute_device === "mps" ? "GPU" : transcription.compute_device}</span>
+            )}
+          </>
+        ) : (
+          <span>{transcription.engine}</span>
+        )}
         {fileSizeMB && <span>{fileSizeMB}</span>}
         {transcription.duration_seconds && <span>{formatDuration(transcription.duration_seconds)}</span>}
+        {/* Timing info */}
         {isCompleted && transcription.processing_time_seconds && (
           <>
             <span className="text-muted-foreground/50">|</span>
             <span>Total: {formatTime(transcription.processing_time_seconds)}</span>
-            {transcription.transcription_time_seconds && (
-              <span>ASR: {formatTime(transcription.transcription_time_seconds)}</span>
-            )}
-            {transcription.diarization_time_seconds && (
-              <span>Diarization: {formatTime(transcription.diarization_time_seconds)}</span>
+            {/* Show ASR/Diarization breakdown only for local engine */}
+            {transcription.engine === "mlx-whisper" && (
+              <>
+                {transcription.transcription_time_seconds && (
+                  <span>ASR: {formatTime(transcription.transcription_time_seconds)}</span>
+                )}
+                {transcription.diarization_time_seconds && transcription.diarization_method !== "none" && (
+                  <span>Diarization: {formatTime(transcription.diarization_time_seconds)}</span>
+                )}
+              </>
             )}
           </>
         )}
