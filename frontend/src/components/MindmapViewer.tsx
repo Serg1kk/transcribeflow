@@ -1,7 +1,7 @@
 // components/MindmapViewer.tsx
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import { Transformer } from "markmap-lib";
 import { Markmap } from "markmap-view";
 import { toast } from "sonner";
@@ -14,54 +14,98 @@ interface MindmapViewerProps {
 
 export function MindmapViewer({ markdown, className = "" }: MindmapViewerProps) {
   const svgRef = useRef<SVGSVGElement>(null);
+  const fullscreenSvgRef = useRef<SVGSVGElement>(null);
   const markmapRef = useRef<Markmap | null>(null);
+  const fullscreenMarkmapRef = useRef<Markmap | null>(null);
   const [isReady, setIsReady] = useState(false);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const [zoom, setZoom] = useState(1);
+
+  const initMarkmapOnSvg = useCallback((svgElement: SVGSVGElement, markmapRefObj: React.MutableRefObject<Markmap | null>) => {
+    const rect = svgElement.getBoundingClientRect();
+    if (rect.width === 0 || rect.height === 0) {
+      requestAnimationFrame(() => initMarkmapOnSvg(svgElement, markmapRefObj));
+      return;
+    }
+
+    const transformer = new Transformer();
+    const { root } = transformer.transform(markdown);
+
+    if (markmapRefObj.current) {
+      markmapRefObj.current.setData(root);
+    } else {
+      try {
+        markmapRefObj.current = Markmap.create(svgElement, {
+          autoFit: true,
+          duration: 500,
+          maxWidth: 300,
+        }, root);
+      } catch (error) {
+        console.warn("Markmap init error, retrying:", error);
+        setTimeout(() => initMarkmapOnSvg(svgElement, markmapRefObj), 100);
+        return;
+      }
+    }
+  }, [markdown]);
 
   useEffect(() => {
     if (!svgRef.current || !markdown) return;
-
-    // Wait for SVG to be properly laid out before initializing Markmap
-    // D3 zoom requires the SVG to have computed dimensions
-    const initMarkmap = () => {
-      if (!svgRef.current) return;
-
-      const rect = svgRef.current.getBoundingClientRect();
-      if (rect.width === 0 || rect.height === 0) {
-        // SVG not ready yet, retry after a short delay
-        requestAnimationFrame(initMarkmap);
-        return;
+    requestAnimationFrame(() => {
+      if (svgRef.current) {
+        initMarkmapOnSvg(svgRef.current, markmapRef);
+        setIsReady(true);
       }
+    });
+  }, [markdown, initMarkmapOnSvg]);
 
-      const transformer = new Transformer();
-      const { root } = transformer.transform(markdown);
-
-      if (markmapRef.current) {
-        markmapRef.current.setData(root);
-      } else {
-        try {
-          markmapRef.current = Markmap.create(svgRef.current, {
-            autoFit: true,
-            duration: 500,
-            maxWidth: 300,
-          }, root);
-        } catch (error) {
-          console.warn("Markmap init error, retrying:", error);
-          // Retry once more after a delay
-          setTimeout(initMarkmap, 100);
-          return;
+  // Initialize fullscreen markmap when opened
+  useEffect(() => {
+    if (isFullscreen && fullscreenSvgRef.current && markdown) {
+      fullscreenMarkmapRef.current = null; // Reset to create new instance
+      requestAnimationFrame(() => {
+        if (fullscreenSvgRef.current) {
+          initMarkmapOnSvg(fullscreenSvgRef.current, fullscreenMarkmapRef);
         }
+      });
+    }
+  }, [isFullscreen, markdown, initMarkmapOnSvg]);
+
+  // Handle Escape key for fullscreen
+  useEffect(() => {
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && isFullscreen) {
+        setIsFullscreen(false);
       }
-
-      setIsReady(true);
     };
+    window.addEventListener("keydown", handleEscape);
+    return () => window.removeEventListener("keydown", handleEscape);
+  }, [isFullscreen]);
 
-    // Use requestAnimationFrame to ensure DOM is ready
-    requestAnimationFrame(initMarkmap);
+  const handleZoomIn = () => {
+    const mm = isFullscreen ? fullscreenMarkmapRef.current : markmapRef.current;
+    if (mm) {
+      const newZoom = Math.min(zoom * 1.3, 5);
+      setZoom(newZoom);
+      mm.rescale(newZoom);
+    }
+  };
 
-    return () => {
-      // Cleanup if needed
-    };
-  }, [markdown]);
+  const handleZoomOut = () => {
+    const mm = isFullscreen ? fullscreenMarkmapRef.current : markmapRef.current;
+    if (mm) {
+      const newZoom = Math.max(zoom / 1.3, 0.2);
+      setZoom(newZoom);
+      mm.rescale(newZoom);
+    }
+  };
+
+  const handleFit = () => {
+    const mm = isFullscreen ? fullscreenMarkmapRef.current : markmapRef.current;
+    if (mm) {
+      setZoom(1);
+      mm.fit();
+    }
+  };
 
   async function handleCopyMarkdown() {
     try {
@@ -94,7 +138,30 @@ export function MindmapViewer({ markdown, className = "" }: MindmapViewerProps) 
 
   return (
     <div className={className}>
-      <div className="border rounded-lg bg-white dark:bg-gray-900 p-4 min-h-[400px] overflow-hidden">
+      <div className="relative border rounded-lg bg-white dark:bg-gray-900 p-4 min-h-[400px] overflow-hidden">
+        {/* Zoom controls - top left */}
+        <div className="absolute top-2 left-2 z-10 flex gap-1">
+          <Button variant="outline" size="sm" onClick={handleZoomOut} className="w-8 h-8 p-0">
+            -
+          </Button>
+          <Button variant="outline" size="sm" onClick={handleFit} className="h-8 px-2 text-xs">
+            Fit
+          </Button>
+          <Button variant="outline" size="sm" onClick={handleZoomIn} className="w-8 h-8 p-0">
+            +
+          </Button>
+        </div>
+
+        {/* Fullscreen button - top right */}
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => setIsFullscreen(true)}
+          className="absolute top-2 right-2 z-10"
+        >
+          Fullscreen
+        </Button>
+
         <svg
           ref={svgRef}
           className="w-full h-[400px]"
@@ -113,6 +180,39 @@ export function MindmapViewer({ markdown, className = "" }: MindmapViewerProps) 
           <Button variant="outline" size="sm" onClick={handleDownloadMarkdown}>
             Download .md
           </Button>
+        </div>
+      )}
+
+      {/* Fullscreen modal */}
+      {isFullscreen && (
+        <div className="fixed inset-0 z-50 bg-white dark:bg-gray-900 flex flex-col">
+          {/* Header with controls */}
+          <div className="flex items-center justify-between p-4 border-b">
+            <div className="flex gap-2">
+              <Button variant="outline" size="sm" onClick={handleZoomOut} className="w-8 h-8 p-0">
+                -
+              </Button>
+              <Button variant="outline" size="sm" onClick={handleFit} className="h-8 px-2">
+                Fit
+              </Button>
+              <Button variant="outline" size="sm" onClick={handleZoomIn} className="w-8 h-8 p-0">
+                +
+              </Button>
+            </div>
+            <span className="text-sm text-muted-foreground">Press Escape to exit</span>
+            <Button variant="outline" size="sm" onClick={() => setIsFullscreen(false)}>
+              Close
+            </Button>
+          </div>
+
+          {/* Fullscreen SVG */}
+          <div className="flex-1 overflow-hidden p-4">
+            <svg
+              ref={fullscreenSvgRef}
+              className="w-full h-full"
+              style={{ minWidth: "100%", minHeight: "100%" }}
+            />
+          </div>
         </div>
       )}
     </div>
