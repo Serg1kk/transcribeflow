@@ -59,7 +59,6 @@ interface Settings {
   has_yandex_key: boolean;
   has_gemini_key: boolean;
   has_openrouter_key: boolean;
-  features: Record<string, { status: string; description: string }>;
 }
 
 export default function SettingsPage() {
@@ -577,7 +576,6 @@ export default function SettingsPage() {
               hasKey={settings.has_assemblyai_key}
               value={assemblyaiKey}
               onChange={setAssemblyaiKey}
-              status={settings.features.assemblyai?.status}
               intl={intl}
             />
             <ApiKeyInput
@@ -585,7 +583,6 @@ export default function SettingsPage() {
               hasKey={settings.has_deepgram_key}
               value={deepgramKey}
               onChange={setDeepgramKey}
-              status={settings.features.deepgram?.status}
               intl={intl}
             />
             <ApiKeyInput
@@ -593,7 +590,6 @@ export default function SettingsPage() {
               hasKey={settings.has_elevenlabs_key}
               value={elevenlabsKey}
               onChange={setElevenlabsKey}
-              status={settings.features.elevenlabs?.status}
               intl={intl}
             />
             <ApiKeyInput
@@ -601,7 +597,6 @@ export default function SettingsPage() {
               hasKey={settings.has_yandex_key}
               value={yandexKey}
               onChange={setYandexKey}
-              status={settings.features.yandex?.status}
               intl={intl}
             />
           </CardContent>
@@ -678,7 +673,6 @@ export default function SettingsPage() {
               hasKey={settings.has_gemini_key}
               value={geminiKey}
               onChange={setGeminiKey}
-              status={settings.features.gemini_llm?.status}
               intl={intl}
             />
             <ApiKeyInput
@@ -686,7 +680,6 @@ export default function SettingsPage() {
               hasKey={settings.has_openrouter_key}
               value={openrouterKey}
               onChange={setOpenrouterKey}
-              status={settings.features.openrouter_llm?.status}
               intl={intl}
             />
           </CardContent>
@@ -748,27 +741,6 @@ export default function SettingsPage() {
           </CardContent>
         </Card>
 
-        {/* Feature Status */}
-        <Card>
-          <CardHeader>
-            <CardTitle>{intl.formatMessage({ id: "settings.features.title" })}</CardTitle>
-            <CardDescription>{intl.formatMessage({ id: "settings.features.description" })}</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-2 gap-3">
-              {Object.entries(settings.features).map(([key, feature]) => (
-                <div key={key} className="flex items-center justify-between p-2 bg-muted/50 rounded">
-                  <span className="text-sm">{feature.description}</span>
-                  <Badge variant={feature.status === "implemented" ? "default" : "secondary"}>
-                    {feature.status === "implemented"
-                      ? intl.formatMessage({ id: "badge.ready" })
-                      : intl.formatMessage({ id: "badge.tbd" })}
-                  </Badge>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
       </div>
     </main>
   );
@@ -779,14 +751,12 @@ function ApiKeyInput({
   hasKey,
   value,
   onChange,
-  status,
   intl,
 }: {
   label: string;
   hasKey: boolean;
   value: string;
   onChange: (value: string) => void;
-  status?: string;
   intl: ReturnType<typeof useIntl>;
 }) {
   return (
@@ -798,16 +768,12 @@ function ApiKeyInput({
             ? intl.formatMessage({ id: "badge.configured" })
             : intl.formatMessage({ id: "badge.notSet" })}
         </Badge>
-        {status === "tbd" && (
-          <Badge variant="secondary" className="text-xs">{intl.formatMessage({ id: "badge.tbd" })}</Badge>
-        )}
       </div>
       <Input
         type="password"
         placeholder={hasKey ? "********" : `Enter ${label} API key`}
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        disabled={status === "tbd"}
       />
     </div>
   );

@@ -83,8 +83,5 @@
 
   "settings.insights.title": "AI Insights",
   "settings.insights.description": "Level 2 post-processing for extracting structured insights from transcripts",
-  "settings.insights.help": "AI Insights extracts structured data like action items, decisions, and mindmaps from meeting transcripts.",
-
-  "settings.features.title": "Feature Status",
-  "settings.features.description": "Implementation status of features"
+  "settings.insights.help": "AI Insights extracts structured data like action items, decisions, and mindmaps from meeting transcripts."
 }

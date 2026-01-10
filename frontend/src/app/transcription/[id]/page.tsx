@@ -22,14 +22,10 @@ import {
   checkCleanedExists,
   getInsights,
   listInsights,
-  getInsightTemplates,
-  generateInsights,
-  checkInsightSources,
   TranscriptionDetail,
   TranscriptData,
   CleanedTranscript,
   Insights,
-  InsightTemplate,
 } from "@/lib/api";
 import * as api from "@/lib/api";
 
@@ -51,9 +47,7 @@ export default function TranscriptionPage() {
 
   // AI Insights state
   const [insights, setInsights] = useState<Insights | null>(null);
-  const [insightTemplates, setInsightTemplates] = useState<InsightTemplate[]>([]);
   const [hasInsights, setHasInsights] = useState(false);
-  const [isRegenerating, setIsRegenerating] = useState(false);
 
   // Template sync state
   const [cleaningTemplateId, setCleaningTemplateId] = useState<string>("");
@@ -80,9 +74,6 @@ export default function TranscriptionPage() {
 
         // Load AI Insights
         try {
-          const templates = await getInsightTemplates();
-          setInsightTemplates(templates);
-
           const insightsList = await listInsights(id);
           if (insightsList.length > 0) {
             setHasInsights(true);
@@ -158,48 +149,6 @@ export default function TranscriptionPage() {
       setHasInsights(true);
     } catch (err) {
       console.error("Failed to load insights:", err);
-    }
-  };
-
-  const handleInsightsRegenerate = async (templateId: string) => {
-    setIsRegenerating(true);
-    try {
-      const sources = await checkInsightSources(id);
-      const source = sources.cleaned ? "cleaned" : "original";
-      await generateInsights(id, templateId, source);
-
-      // Poll for completion
-      const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
-      const startTime = new Date().toISOString();
-      let pollCount = 0;
-      const maxPolls = 60;
-
-      const pollInterval = setInterval(async () => {
-        pollCount++;
-        try {
-          const response = await fetch(
-            `${API_BASE}/api/insights/transcriptions/${id}/${templateId}?_t=${Date.now()}`
-          );
-          if (response.ok) {
-            const data = await response.json();
-            if (data.metadata?.created_at >= startTime) {
-              clearInterval(pollInterval);
-              setInsights(data);
-              setIsRegenerating(false);
-              return;
-            }
-          }
-          if (pollCount >= maxPolls) {
-            clearInterval(pollInterval);
-            setIsRegenerating(false);
-          }
-        } catch {
-          // Keep polling
-        }
-      }, 2000);
-    } catch (err) {
-      console.error("Failed to regenerate insights:", err);
-      setIsRegenerating(false);
     }
   };
 
@@ -302,6 +251,7 @@ export default function TranscriptionPage() {
                   hasCleanedVersion={hasCleanedVersion}
                   onProcessingComplete={handleProcessingComplete}
                   onTemplateChange={setCleaningTemplateId}
+                  usedTemplateId={cleanedTranscript?.metadata?.template}
                 />
               </div>
             </div>
@@ -322,6 +272,7 @@ export default function TranscriptionPage() {
                   hasInsights={hasInsights}
                   onGenerationComplete={handleInsightsComplete}
                   suggestedTemplateId={cleaningTemplateId}
+                  usedTemplateId={insights?.metadata?.template_id}
                 />
               </div>
             </div>
@@ -338,9 +289,6 @@ export default function TranscriptionPage() {
           <CardContent>
             <InsightsPanel
               insights={insights}
-              templates={insightTemplates}
-              onRegenerate={handleInsightsRegenerate}
-              isRegenerating={isRegenerating}
               filename={transcription.filename}
             />
           </CardContent>

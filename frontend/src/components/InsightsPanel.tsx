@@ -6,21 +6,11 @@ import ReactMarkdown from "react-markdown";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { MindmapViewer } from "@/components/MindmapViewer";
-import { Insights, InsightTemplate } from "@/lib/api";
+import { Insights } from "@/lib/api";
 
 interface InsightsPanelProps {
   insights: Insights;
-  templates: InsightTemplate[];
-  onRegenerate: (templateId: string) => void;
-  isRegenerating: boolean;
   filename?: string;
 }
 
@@ -28,18 +18,10 @@ type TabType = "mindmap" | "insights";
 
 export function InsightsPanel({
   insights,
-  templates,
-  onRegenerate,
-  isRegenerating,
   filename,
 }: InsightsPanelProps) {
   const hasMindmap = insights.mindmap !== null;
   const [activeTab, setActiveTab] = useState<TabType>(hasMindmap ? "mindmap" : "insights");
-  const [selectedTemplate, setSelectedTemplate] = useState(insights.metadata.template_id);
-
-  const handleRegenerate = () => {
-    onRegenerate(selectedTemplate);
-  };
 
   // Build markdown from all insights sections
   const buildInsightsMarkdown = () => {
@@ -163,40 +145,6 @@ export function InsightsPanel({
         </div>
       )}
 
-      {/* Re-generate controls */}
-      <div className="flex items-center gap-3 pt-4 border-t">
-        <Select
-          value={selectedTemplate}
-          onValueChange={setSelectedTemplate}
-          disabled={isRegenerating}
-        >
-          <SelectTrigger className="w-48">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            {templates.map((template) => (
-              <SelectItem key={template.id} value={template.id}>
-                {template.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-
-        <Button
-          variant="outline"
-          onClick={handleRegenerate}
-          disabled={isRegenerating}
-        >
-          {isRegenerating ? (
-            <>
-              <span className="animate-spin mr-2">&#8987;</span>
-              Regenerating...
-            </>
-          ) : (
-            "Re-generate"
-          )}
-        </Button>
-      </div>
     </div>
   );
 }

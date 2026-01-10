@@ -24,6 +24,7 @@ interface InsightsControlsProps {
   hasInsights: boolean;
   onGenerationComplete: (templateId: string) => void;
   suggestedTemplateId?: string;
+  usedTemplateId?: string; // Template that was previously used for insights
 }
 
 export function InsightsControls({
@@ -31,6 +32,7 @@ export function InsightsControls({
   hasInsights,
   onGenerationComplete,
   suggestedTemplateId,
+  usedTemplateId,
 }: InsightsControlsProps) {
   const [templates, setTemplates] = useState<InsightTemplate[]>([]);
   const [selectedTemplate, setSelectedTemplate] = useState<string>("");
@@ -50,7 +52,12 @@ export function InsightsControls({
         setSources(sourcesData);
 
         if (templatesData.length > 0 && !selectedTemplate) {
-          setSelectedTemplate(templatesData[0].id);
+          // Priority: usedTemplateId > suggestedTemplateId > first template
+          const templateToUse =
+            (usedTemplateId && templatesData.find(t => t.id === usedTemplateId) ? usedTemplateId : null) ||
+            (suggestedTemplateId && templatesData.find(t => t.id === suggestedTemplateId) ? suggestedTemplateId : null) ||
+            templatesData[0].id;
+          setSelectedTemplate(templateToUse);
         }
 
         // Default to cleaned if available
@@ -62,17 +69,17 @@ export function InsightsControls({
       }
     }
     load();
-  }, [transcriptionId, selectedTemplate]);
+  }, [transcriptionId, selectedTemplate, usedTemplateId, suggestedTemplateId]);
 
-  // Apply suggested template from parent (Step 1 selection)
+  // Apply suggested template from parent (Step 1 selection) - only if no usedTemplateId
   useEffect(() => {
-    if (suggestedTemplateId && templates.length > 0) {
+    if (suggestedTemplateId && !usedTemplateId && templates.length > 0) {
       const matchingTemplate = templates.find(t => t.id === suggestedTemplateId);
       if (matchingTemplate) {
         setSelectedTemplate(suggestedTemplateId);
       }
     }
-  }, [suggestedTemplateId, templates]);
+  }, [suggestedTemplateId, usedTemplateId, templates]);
 
   async function handleGenerate() {
     if (hasInsights && !showConfirm) {
@@ -164,6 +171,15 @@ export function InsightsControls({
 
   return (
     <div className="flex items-center gap-3 flex-wrap">
+      {/* Done indicator */}
+      {hasInsights && (
+        <span className="text-green-600 flex items-center gap-1" title="Insights generated">
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+        </span>
+      )}
+
       <Select
         value={selectedTemplate}
         onValueChange={setSelectedTemplate}
@@ -213,6 +229,7 @@ export function InsightsControls({
         <Button
           onClick={handleGenerate}
           disabled={isProcessing || !selectedTemplate}
+          variant={hasInsights ? "outline" : "default"}
         >
           {isProcessing ? (
             <>

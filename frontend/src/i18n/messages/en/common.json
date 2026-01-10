@@ -42,8 +42,6 @@
   "badge.configured": "Configured",
   "badge.required": "Required",
   "badge.notSet": "Not set",
-  "badge.ready": "Ready",
-  "badge.tbd": "TBD",
   "badge.optional": "(optional)",
 
   "confirm.replaceExisting": "Replace existing?",

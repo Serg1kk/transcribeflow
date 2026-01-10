@@ -22,6 +22,7 @@ interface PostProcessingControlsProps {
   hasCleanedVersion: boolean;
   onProcessingComplete: () => void;
   onTemplateChange?: (templateId: string) => void;
+  usedTemplateId?: string; // Template that was previously used for cleanup
 }
 
 export function PostProcessingControls({
@@ -29,6 +30,7 @@ export function PostProcessingControls({
   hasCleanedVersion,
   onProcessingComplete,
   onTemplateChange,
+  usedTemplateId,
 }: PostProcessingControlsProps) {
   const [templates, setTemplates] = useState<Template[]>([]);
   const [selectedTemplate, setSelectedTemplate] = useState<string>("");
@@ -40,15 +42,19 @@ export function PostProcessingControls({
       try {
         const data = await getTemplates();
         setTemplates(data);
+        // If we have a previously used template, use that; otherwise use first template
         if (data.length > 0 && !selectedTemplate) {
-          setSelectedTemplate(data[0].id);
+          const templateToUse = usedTemplateId && data.find(t => t.id === usedTemplateId)
+            ? usedTemplateId
+            : data[0].id;
+          setSelectedTemplate(templateToUse);
         }
       } catch (error) {
         console.error("Failed to load templates:", error);
       }
     }
     loadTemplates();
-  }, [selectedTemplate]);
+  }, [selectedTemplate, usedTemplateId]);
 
   // Notify parent when template selection changes
   useEffect(() => {
@@ -137,6 +143,15 @@ export function PostProcessingControls({
 
   return (
     <div className="flex items-center gap-3">
+      {/* Done indicator */}
+      {hasCleanedVersion && (
+        <span className="text-green-600 flex items-center gap-1" title="Cleanup completed">
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+        </span>
+      )}
+
       <Select
         value={selectedTemplate}
         onValueChange={setSelectedTemplate}
@@ -170,6 +185,7 @@ export function PostProcessingControls({
         <Button
           onClick={handleProcess}
           disabled={isProcessing || !selectedTemplate}
+          variant={hasCleanedVersion ? "outline" : "default"}
         >
           {isProcessing ? (
             <>

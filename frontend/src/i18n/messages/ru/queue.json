@@ -30,7 +30,7 @@
   "queue.processing.insights": "AI Insights ({template}): {model}",
   "queue.processing.insights.notRun": "AI Insights: не выполнялась",
 
-  "queue.cost.note": "* Показаны результаты последнего запуска. Общая стоимость включает все {count} операции.",
+  "queue.cost.note": "×N = несколько запусков. Время/стоимость показаны для последнего. Итого включает все {count} LLM-вызова.",
 
   "queue.confirm.delete": "Удалить {type} транскрипции?",
   "queue.confirm.deleteType.all": "ВСЕ",

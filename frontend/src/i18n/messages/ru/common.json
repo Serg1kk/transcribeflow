@@ -42,8 +42,6 @@
   "badge.configured": "Настроен",
   "badge.required": "Обязательно",
   "badge.notSet": "Не задан",
-  "badge.ready": "Готово",
-  "badge.tbd": "TBD",
   "badge.optional": "(необязательно)",
 
   "confirm.replaceExisting": "Заменить существующий?",

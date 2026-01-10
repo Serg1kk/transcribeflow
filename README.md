@@ -226,41 +226,76 @@ Templates define what sections to extract and whether to generate a mindmap.
 ```
 transcribeflow/
 ├── backend/                      # FastAPI (Python 3.12)
+│   ├── main.py                   # App entry, CORS, lifespan
+│   ├── config.py                 # Settings management
 │   ├── api/
 │   │   ├── transcribe.py         # Upload, queue, history
 │   │   ├── postprocess.py        # Level 1: LLM cleanup
 │   │   ├── insights.py           # Level 2: AI insights
-│   │   └── settings.py           # Configuration API
+│   │   ├── settings.py           # Configuration API
+│   │   └── engines.py            # Available engines list
 │   ├── engines/
+│   │   ├── base.py               # Base ASR engine interface
+│   │   ├── registry.py           # Engine registry
 │   │   ├── mlx_whisper.py        # Apple Silicon ASR
 │   │   ├── elevenlabs.py         # Cloud ASR
 │   │   ├── deepgram.py           # Cloud ASR
 │   │   ├── assemblyai.py         # Cloud ASR
-│   │   └── yandex.py             # Cloud ASR
+│   │   └── yandex.py             # Cloud ASR (Russian)
 │   ├── services/
+│   │   ├── config_service.py     # Config file management
+│   │   ├── template_service.py   # Cleanup templates
 │   │   ├── postprocessing_service.py  # Cleanup logic
 │   │   ├── insight_service.py         # Insights extraction
-│   │   └── insight_template_service.py # Template management
+│   │   ├── insight_template_service.py # Insight templates
+│   │   ├── llm_models_service.py      # LLM model configs
+│   │   └── llm_providers/        # LLM provider integrations
+│   │       ├── base.py           # Base provider interface
+│   │       ├── gemini.py         # Google Gemini
+│   │       └── openrouter.py     # OpenRouter (multi-model)
 │   ├── workers/
-│   │   ├── transcription_worker.py    # ASR + diarization
-│   │   └── queue_processor.py         # Background processing
-│   └── models/
-│       ├── transcription.py      # SQLAlchemy models
-│       └── llm_operation.py      # LLM usage tracking
+│   │   ├── queue_processor.py    # Background job processor
+│   │   ├── transcription_worker.py    # ASR orchestration
+│   │   ├── diarization.py        # Pyannote speaker detection
+│   │   └── whisperx_diarization.py    # WhisperX integration
+│   ├── models/
+│   │   ├── database.py           # SQLite connection
+│   │   ├── transcription.py      # Transcription model
+│   │   └── llm_operation.py      # LLM usage tracking
+│   └── tests/                    # Pytest test suite
 │
 ├── frontend/                     # Next.js 14 (App Router)
 │   └── src/
 │       ├── app/
+│       │   ├── layout.tsx        # Root layout
 │       │   ├── page.tsx          # Upload & queue
 │       │   ├── settings/         # Configuration UI
 │       │   └── transcription/[id]/ # Results viewer
-│       └── components/
-│           ├── TranscriptPanel.tsx    # Transcript display
-│           ├── PostProcessingControls.tsx # Level 1 UI
-│           ├── InsightsControls.tsx   # Level 2 UI
-│           ├── InsightsPanel.tsx      # Insights display
-│           └── MindmapViewer.tsx      # Interactive mindmap
+│       ├── components/
+│       │   ├── Header.tsx        # Navigation header
+│       │   ├── LanguageSwitcher.tsx  # EN/RU toggle
+│       │   ├── FileUpload.tsx    # Drag-drop upload
+│       │   ├── TranscriptionQueue.tsx # Queue display
+│       │   ├── SpeakerEditor.tsx # Rename speakers
+│       │   ├── TranscriptPanel.tsx    # Transcript display
+│       │   ├── TranscriptComparison.tsx # Diff view
+│       │   ├── PostProcessingControls.tsx # Level 1 UI
+│       │   ├── InsightsControls.tsx   # Level 2 UI
+│       │   ├── InsightsPanel.tsx      # Insights display
+│       │   ├── MindmapViewer.tsx      # Interactive mindmap
+│       │   └── ui/               # shadcn/ui components
+│       ├── i18n/                 # Internationalization
+│       │   ├── messages/
+│       │   │   ├── en/           # English translations
+│       │   │   └── ru/           # Russian translations
+│       │   ├── config.ts         # i18n configuration
+│       │   ├── provider.tsx      # React-Intl provider
+│       │   └── useLocale.ts      # Locale hook
+│       └── lib/
+│           └── api.ts            # API client
 │
+├── templates/                    # LLM prompt templates
+├── images/                       # Logo and screenshots
 └── start.sh                      # One-command startup
 ```
 

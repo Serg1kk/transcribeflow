@@ -83,8 +83,5 @@
 
   "settings.insights.title": "AI Insights",
   "settings.insights.description": "Извлечение структурированных выводов из транскриптов",
-  "settings.insights.help": "AI Insights извлекает структурированные данные — задачи, решения и майндмапы — из транскриптов встреч.",
-
-  "settings.features.title": "Статус функций",
-  "settings.features.description": "Статус реализации функций"
+  "settings.insights.help": "AI Insights извлекает структурированные данные — задачи, решения и майндмапы — из транскриптов встреч."
 }

@@ -30,7 +30,7 @@
   "queue.processing.insights": "AI Insights ({template}): {model}",
   "queue.processing.insights.notRun": "AI Insights: not run",
 
-  "queue.cost.note": "* Shows latest run only. Total cost includes all {count} operations.",
+  "queue.cost.note": "×N = multiple runs. Time/cost shown for latest run. Total includes all {count} LLM calls.",
 
   "queue.confirm.delete": "Delete {type} transcriptions?",
   "queue.confirm.deleteType.all": "ALL",

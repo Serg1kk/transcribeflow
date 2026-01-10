@@ -545,8 +545,7 @@ function CompletedItem({ transcription }: { transcription: Transcription }) {
             {latestCleanup ? (
               <>
                 <span>
-                  <span className="text-green-600">✓</span> Clean ({latestCleanup.template_id}): {latestCleanup.model} ({formatTokens(latestCleanup.input_tokens, latestCleanup.output_tokens)})
-                  {cleanupOps.length > 1 && <span className="text-muted-foreground/60"> *</span>}
+                  <span className="text-green-600">✓</span> Clean ({latestCleanup.template_id}){cleanupOps.length > 1 && <span className="text-orange-500"> ×{cleanupOps.length}</span>}: {latestCleanup.model} ({formatTokens(latestCleanup.input_tokens, latestCleanup.output_tokens)})
                 </span>
                 <span>{formatTime(latestCleanup.processing_time_seconds)} • {formatCost(latestCleanup.cost_usd)}</span>
               </>
@@ -563,8 +562,7 @@ function CompletedItem({ transcription }: { transcription: Transcription }) {
             {latestInsights ? (
               <>
                 <span>
-                  <span className="text-green-600">✓</span> AI Insights ({latestInsights.template_id}): {latestInsights.model} ({formatTokens(latestInsights.input_tokens, latestInsights.output_tokens)})
-                  {insightsOps.length > 1 && <span className="text-muted-foreground/60"> *</span>}
+                  <span className="text-green-600">✓</span> AI Insights ({latestInsights.template_id}){insightsOps.length > 1 && <span className="text-orange-500"> ×{insightsOps.length}</span>}: {latestInsights.model} ({formatTokens(latestInsights.input_tokens, latestInsights.output_tokens)})
                 </span>
                 <span>{formatTime(latestInsights.processing_time_seconds)} • {formatCost(latestInsights.cost_usd)}</span>
               </>
@@ -588,7 +586,12 @@ function CompletedItem({ transcription }: { transcription: Transcription }) {
           {/* Note about multiple runs */}
           {(cleanupOps.length > 1 || insightsOps.length > 1) && (
             <div className="text-[10px] text-muted-foreground/60 pt-1">
-              * Shows latest run only. Total cost includes all {cleanupOps.length + insightsOps.length} operations.
+              {intl.formatMessage(
+                { id: "queue.cost.note" },
+                { count: cleanupOps.length + insightsOps.length }
+              ).split("×N").map((part, i) =>
+                i === 0 ? part : <span key={i}><span className="text-orange-500">×N</span>{part}</span>
+              )}
             </div>
           )}
         </div>

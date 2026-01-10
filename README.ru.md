@@ -227,41 +227,76 @@ API документация:  http://localhost:8000/docs
 ```
 transcribeflow/
 ├── backend/                      # FastAPI (Python 3.12)
+│   ├── main.py                   # Точка входа, CORS, lifespan
+│   ├── config.py                 # Управление настройками
 │   ├── api/
 │   │   ├── transcribe.py         # Загрузка, очередь, история
 │   │   ├── postprocess.py        # Уровень 1: LLM очистка
 │   │   ├── insights.py           # Уровень 2: AI-анализ
-│   │   └── settings.py           # API настроек
+│   │   ├── settings.py           # API настроек
+│   │   └── engines.py            # Список доступных движков
 │   ├── engines/
+│   │   ├── base.py               # Базовый интерфейс ASR
+│   │   ├── registry.py           # Реестр движков
 │   │   ├── mlx_whisper.py        # Apple Silicon ASR
 │   │   ├── elevenlabs.py         # Облачное ASR
 │   │   ├── deepgram.py           # Облачное ASR
 │   │   ├── assemblyai.py         # Облачное ASR
-│   │   └── yandex.py             # Облачное ASR
+│   │   └── yandex.py             # Облачное ASR (русский язык)
 │   ├── services/
+│   │   ├── config_service.py     # Управление конфигом
+│   │   ├── template_service.py   # Шаблоны очистки
 │   │   ├── postprocessing_service.py  # Логика очистки
 │   │   ├── insight_service.py         # Извлечение анализа
-│   │   └── insight_template_service.py # Управление шаблонами
+│   │   ├── insight_template_service.py # Шаблоны анализа
+│   │   ├── llm_models_service.py      # Конфиги LLM моделей
+│   │   └── llm_providers/        # Интеграции LLM провайдеров
+│   │       ├── base.py           # Базовый интерфейс
+│   │       ├── gemini.py         # Google Gemini
+│   │       └── openrouter.py     # OpenRouter (мульти-модель)
 │   ├── workers/
-│   │   ├── transcription_worker.py    # ASR + диаризация
-│   │   └── queue_processor.py         # Фоновая обработка
-│   └── models/
-│       ├── transcription.py      # SQLAlchemy модели
-│       └── llm_operation.py      # Отслеживание LLM операций
+│   │   ├── queue_processor.py    # Обработчик фоновых задач
+│   │   ├── transcription_worker.py    # Оркестрация ASR
+│   │   ├── diarization.py        # Pyannote диаризация
+│   │   └── whisperx_diarization.py    # WhisperX интеграция
+│   ├── models/
+│   │   ├── database.py           # SQLite подключение
+│   │   ├── transcription.py      # Модель транскрипции
+│   │   └── llm_operation.py      # Отслеживание LLM операций
+│   └── tests/                    # Pytest тесты
 │
 ├── frontend/                     # Next.js 14 (App Router)
 │   └── src/
 │       ├── app/
+│       │   ├── layout.tsx        # Корневой layout
 │       │   ├── page.tsx          # Загрузка и очередь
 │       │   ├── settings/         # UI настроек
 │       │   └── transcription/[id]/ # Просмотр результатов
-│       └── components/
-│           ├── TranscriptPanel.tsx    # Отображение транскрипта
-│           ├── PostProcessingControls.tsx # UI Уровня 1
-│           ├── InsightsControls.tsx   # UI Уровня 2
-│           ├── InsightsPanel.tsx      # Отображение анализа
-│           └── MindmapViewer.tsx      # Интерактивная mindmap
+│       ├── components/
+│       │   ├── Header.tsx        # Навигация
+│       │   ├── LanguageSwitcher.tsx  # Переключатель EN/RU
+│       │   ├── FileUpload.tsx    # Drag-drop загрузка
+│       │   ├── TranscriptionQueue.tsx # Отображение очереди
+│       │   ├── SpeakerEditor.tsx # Переименование спикеров
+│       │   ├── TranscriptPanel.tsx    # Отображение транскрипта
+│       │   ├── TranscriptComparison.tsx # Сравнение версий
+│       │   ├── PostProcessingControls.tsx # UI Уровня 1
+│       │   ├── InsightsControls.tsx   # UI Уровня 2
+│       │   ├── InsightsPanel.tsx      # Отображение анализа
+│       │   ├── MindmapViewer.tsx      # Интерактивная mindmap
+│       │   └── ui/               # shadcn/ui компоненты
+│       ├── i18n/                 # Интернационализация
+│       │   ├── messages/
+│       │   │   ├── en/           # Английские переводы
+│       │   │   └── ru/           # Русские переводы
+│       │   ├── config.ts         # Конфигурация i18n
+│       │   ├── provider.tsx      # React-Intl провайдер
+│       │   └── useLocale.ts      # Хук локали
+│       └── lib/
+│           └── api.ts            # API клиент
 │
+├── templates/                    # LLM шаблоны промптов
+├── images/                       # Логотип и скриншоты
 └── start.sh                      # Запуск одной командой
 ```
 
