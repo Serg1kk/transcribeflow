@@ -29,7 +29,10 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        {children}
+        {/* Fixed-width wrapper prevents layout shift from Radix scroll lock */}
+        <div className="content-wrapper">
+          {children}
+        </div>
         <Toaster richColors position="top-right" />
       </body>
     </html>
