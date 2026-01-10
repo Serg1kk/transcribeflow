@@ -61,7 +61,7 @@ export function MindmapViewer({ markdown, className = "", filename = "mindmap" }
     });
   }, [markdown, initMarkmapOnSvg]);
 
-  // Initialize fullscreen markmap when opened
+  // Initialize fullscreen markmap when opened, cleanup when closed
   useEffect(() => {
     if (isFullscreen && fullscreenSvgRef.current && markdown) {
       fullscreenMarkmapRef.current = null; // Reset to create new instance
@@ -71,6 +71,18 @@ export function MindmapViewer({ markdown, className = "", filename = "mindmap" }
         }
       });
     }
+
+    // Cleanup when closing fullscreen
+    return () => {
+      if (fullscreenMarkmapRef.current) {
+        try {
+          fullscreenMarkmapRef.current.destroy();
+        } catch {
+          // Ignore cleanup errors
+        }
+        fullscreenMarkmapRef.current = null;
+      }
+    };
   }, [isFullscreen, markdown, initMarkmapOnSvg]);
 
   // Handle Escape key for fullscreen
