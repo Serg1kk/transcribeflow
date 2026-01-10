@@ -51,6 +51,10 @@ interface Settings {
   postprocessing_provider: string;
   postprocessing_model: string;
   postprocessing_default_template: string | null;
+  // AI Insights
+  insights_provider: string;
+  insights_model: string;
+  insights_default_template: string | null;
   // API keys
   has_hf_token: boolean;
   has_assemblyai_key: boolean;
@@ -79,6 +83,10 @@ export default function SettingsPage() {
   // Post-processing state
   const [postprocessingProvider, setPostprocessingProvider] = useState("gemini");
   const [postprocessingModel, setPostprocessingModel] = useState("gemini-2.5-flash");
+
+  // AI Insights state
+  const [insightsProvider, setInsightsProvider] = useState("gemini");
+  const [insightsModel, setInsightsModel] = useState("gemini-2.5-flash");
 
   // Whisper Anti-Hallucination state
   const [noSpeechThreshold, setNoSpeechThreshold] = useState(0.6);
@@ -118,6 +126,9 @@ export default function SettingsPage() {
       // Post-processing settings
       setPostprocessingProvider(data.postprocessing_provider);
       setPostprocessingModel(data.postprocessing_model);
+      // AI Insights settings
+      setInsightsProvider(data.insights_provider || "gemini");
+      setInsightsModel(data.insights_model || "gemini-2.5-flash");
       // Whisper settings
       setNoSpeechThreshold(data.whisper_no_speech_threshold);
       setLogprobThreshold(data.whisper_logprob_threshold);
@@ -170,6 +181,9 @@ export default function SettingsPage() {
       // Post-processing settings
       postprocessing_provider: postprocessingProvider,
       postprocessing_model: postprocessingModel,
+      // AI Insights settings
+      insights_provider: insightsProvider,
+      insights_model: insightsModel,
       // Whisper Anti-Hallucination settings
       whisper_no_speech_threshold: noSpeechThreshold,
       whisper_logprob_threshold: logprobThreshold,
@@ -638,6 +652,62 @@ export default function SettingsPage() {
               onChange={setOpenrouterKey}
               status={settings.features.openrouter_llm?.status}
             />
+          </CardContent>
+        </Card>
+
+        {/* AI Insights Settings */}
+        <Card>
+          <CardHeader>
+            <CardTitle>AI Insights</CardTitle>
+            <CardDescription>
+              Level 2 post-processing for extracting structured insights from transcripts
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Provider</Label>
+                <Select value={insightsProvider} onValueChange={setInsightsProvider}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {LLM_PROVIDERS.map((p) => (
+                      <SelectItem key={p.value} value={p.value}>
+                        {p.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>Model</Label>
+                <Select value={insightsModel} onValueChange={setInsightsModel}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {insightsProvider === "gemini" ? (
+                      <>
+                        <SelectItem value="gemini-2.5-flash">Gemini 2.5 Flash</SelectItem>
+                        <SelectItem value="gemini-2.5-flash-lite">Gemini 2.5 Flash Lite</SelectItem>
+                        <SelectItem value="gemini-3-flash-preview">Gemini 3 Flash Preview</SelectItem>
+                      </>
+                    ) : (
+                      <>
+                        <SelectItem value="openai/gpt-4o-mini">GPT-4o Mini</SelectItem>
+                        <SelectItem value="anthropic/claude-3.5-haiku">Claude 3.5 Haiku</SelectItem>
+                        <SelectItem value="deepseek/deepseek-r1">DeepSeek R1</SelectItem>
+                        <SelectItem value="google/gemini-2.5-flash">Gemini 2.5 Flash (via OR)</SelectItem>
+                      </>
+                    )}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              AI Insights extracts structured data like action items, decisions, and mindmaps from meeting transcripts.
+            </p>
           </CardContent>
         </Card>
 
