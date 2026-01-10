@@ -10,12 +10,10 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { Lightbulb, Check, X } from "lucide-react";
+import { Lightbulb, Check, X, Loader2 } from "lucide-react";
 import {
   updateSpeakerNames,
   getSpeakerSuggestions,
-  applySpeakerSuggestion,
-  applyAllSpeakerSuggestions,
   SpeakerSuggestion,
 } from "@/lib/api";
 
@@ -125,34 +123,48 @@ export function SpeakerEditor({
   };
 
   const handleApplyAll = async () => {
+    if (suggestions.length === 0) return;
+
     setIsApplyingAll(true);
     try {
-      await applyAllSpeakerSuggestions(transcriptionId);
-
-      // Update local state with all suggestions
+      // Build map of suggestions
       const suggestionMap = new Map(
         suggestions.map((s) => [s.speaker_id, s.display_name])
       );
 
-      setSpeakers((prev) =>
-        prev.map((s) => ({
-          ...s,
-          name: suggestionMap.get(s.id) || s.name,
-        }))
+      // Update all speakers with suggestions
+      const updatedSpeakers = speakers.map((s) => ({
+        ...s,
+        name: suggestionMap.get(s.id) || s.name,
+      }));
+      setSpeakers(updatedSpeakers);
+
+      // Build names object for API call
+      const speakerNames = Object.fromEntries(
+        updatedSpeakers
+          .filter((s) => suggestionMap.has(s.id))
+          .map((s) => [s.id, s.name])
       );
+
+      // Save all at once
+      await updateSpeakerNames(transcriptionId, speakerNames);
+
+      // Update saved state
+      setSavedNames(prev => ({ ...prev, ...speakerNames }));
+
+      // Flash all saved speakers
+      const savedIds = new Set(suggestionMap.keys());
+      setJustSavedIds(savedIds);
+      setTimeout(() => setJustSavedIds(new Set()), 300);
+
+      // Clear suggestions
       setSuggestions([]);
 
       // Notify parent
-      const updatedSpeakers = Object.fromEntries(
-        speakers.map((s) => [
-          s.id,
-          {
-            name: suggestionMap.get(s.id) || s.name,
-            color: s.color,
-          },
-        ])
+      const speakersRecord = Object.fromEntries(
+        updatedSpeakers.map((s) => [s.id, { name: s.name, color: s.color }])
       );
-      onUpdate?.(updatedSpeakers);
+      onUpdate?.(speakersRecord);
     } catch (error) {
       console.error("Failed to apply all suggestions:", error);
     } finally {
@@ -162,6 +174,17 @@ export function SpeakerEditor({
 
   const getSuggestionForSpeaker = (speakerId: string) => {
     return suggestions.find((s) => s.speaker_id === speakerId);
+  };
+
+  const isDirty = (speakerId: string, currentName: string) => {
+    return currentName !== savedNames[speakerId];
+  };
+
+  const handleManualSave = async (speakerId: string) => {
+    const speaker = speakers.find(s => s.id === speakerId);
+    if (speaker) {
+      await saveSpeaker(speakerId, speaker.name);
+    }
   };
 
   const handleDismissSuggestion = (speakerId: string) => {
@@ -193,23 +216,11 @@ export function SpeakerEditor({
     return lines.join("\n");
   };
 
-  const pendingSuggestionsCount = suggestions.length;
-
   return (
     <TooltipProvider>
       <div className="space-y-4">
         <div className="flex items-center justify-between">
           <h3 className="font-medium">Participants (click to edit)</h3>
-          {pendingSuggestionsCount > 0 && (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleApplyAll}
-              disabled={isApplyingAll}
-            >
-              {isApplyingAll ? "Applying..." : `Apply All (${pendingSuggestionsCount})`}
-            </Button>
-          )}
         </div>
         <div className="space-y-2">
           {speakers.map((speaker) => {
@@ -224,11 +235,32 @@ export function SpeakerEditor({
                   {speaker.id}
                 </span>
                 <span className="text-muted-foreground">→</span>
-                <Input
-                  value={speaker.name}
-                  onChange={(e) => handleNameChange(speaker.id, e.target.value)}
-                  className="w-40"
-                />
+                <div className="flex items-center gap-1">
+                  <Input
+                    value={speaker.name}
+                    onChange={(e) => handleNameChange(speaker.id, e.target.value)}
+                    disabled={savingIds.has(speaker.id)}
+                    className={`w-40 transition-colors duration-200 ${
+                      justSavedIds.has(speaker.id) ? "border-green-500" : ""
+                    }`}
+                  />
+                  {isDirty(speaker.id, speaker.name) && (
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 text-primary"
+                      onClick={() => handleManualSave(speaker.id)}
+                      disabled={savingIds.has(speaker.id)}
+                      title="Save name"
+                    >
+                      {savingIds.has(speaker.id) ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <Check className="h-4 w-4" />
+                      )}
+                    </Button>
+                  )}
+                </div>
                 {suggestion && (
                   <div
                     className={`flex items-center gap-2 px-2 py-1 rounded border ${getConfidenceBgColor(
@@ -275,10 +307,19 @@ export function SpeakerEditor({
               </div>
             );
           })}
+          {/* Apply all link - inline after speakers */}
+          {suggestions.length > 0 && (
+            <div className="flex justify-end pt-2">
+              <button
+                onClick={handleApplyAll}
+                disabled={isApplyingAll}
+                className="text-sm text-muted-foreground hover:text-primary hover:underline disabled:opacity-50"
+              >
+                {isApplyingAll ? "Applying..." : `Apply all ${suggestions.length} suggestions`}
+              </button>
+            </div>
+          )}
         </div>
-        <Button onClick={handleSave} disabled={isSaving}>
-          {isSaving ? "Saving..." : "Apply Names"}
-        </Button>
       </div>
     </TooltipProvider>
   );
