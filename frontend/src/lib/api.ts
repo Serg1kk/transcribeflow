@@ -461,3 +461,148 @@ export async function applyAllSpeakerSuggestions(
   }
   return response.json();
 }
+
+// AI Insights types
+export interface InsightSection {
+  id: string;
+  title: string;
+  description: string;
+}
+
+export interface InsightTemplate {
+  id: string;
+  name: string;
+  description: string;
+  include_mindmap: boolean;
+  sections: InsightSection[];
+  temperature: number;
+}
+
+export interface InsightMindmap {
+  format: string;
+  content: string;
+}
+
+export interface InsightSectionContent {
+  id: string;
+  title: string;
+  content: string;
+}
+
+export interface Insights {
+  metadata: {
+    id: string;
+    transcription_id: string;
+    template_id: string;
+    template_name: string;
+    source: string;
+    created_at: string;
+    provider: string;
+    model: string;
+  };
+  description: string;
+  sections: InsightSectionContent[];
+  mindmap: InsightMindmap | null;
+  stats: {
+    input_tokens: number;
+    output_tokens: number;
+    cost_usd: number | null;
+    processing_time_seconds: number;
+  };
+}
+
+export interface SourceAvailability {
+  original: boolean;
+  cleaned: boolean;
+}
+
+export interface InsightMetadata {
+  template_id: string;
+  template_name: string;
+  created_at: string;
+}
+
+// AI Insights API functions
+export async function getInsightTemplates(): Promise<InsightTemplate[]> {
+  const response = await fetch(`${API_BASE}/api/insights/templates`);
+  if (!response.ok) throw new Error("Failed to fetch insight templates");
+  return response.json();
+}
+
+export async function getInsightTemplate(templateId: string): Promise<InsightTemplate> {
+  const response = await fetch(`${API_BASE}/api/insights/templates/${templateId}`);
+  if (!response.ok) throw new Error("Insight template not found");
+  return response.json();
+}
+
+export async function generateInsights(
+  transcriptionId: string,
+  templateId: string,
+  source: "original" | "cleaned" = "original",
+  provider?: string,
+  model?: string
+): Promise<{ status: string; transcription_id: string }> {
+  const response = await fetch(
+    `${API_BASE}/api/insights/transcriptions/${transcriptionId}`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        template_id: templateId,
+        source,
+        provider,
+        model,
+      }),
+    }
+  );
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.detail || "Failed to generate insights");
+  }
+  return response.json();
+}
+
+export async function getInsights(
+  transcriptionId: string,
+  templateId: string
+): Promise<Insights> {
+  const response = await fetch(
+    `${API_BASE}/api/insights/transcriptions/${transcriptionId}/${templateId}`
+  );
+  if (!response.ok) throw new Error("Insights not found");
+  return response.json();
+}
+
+export async function listInsights(
+  transcriptionId: string
+): Promise<InsightMetadata[]> {
+  const response = await fetch(
+    `${API_BASE}/api/insights/transcriptions/${transcriptionId}`
+  );
+  if (!response.ok) throw new Error("Failed to list insights");
+  return response.json();
+}
+
+export async function checkInsightSources(
+  transcriptionId: string
+): Promise<SourceAvailability> {
+  const response = await fetch(
+    `${API_BASE}/api/insights/transcriptions/${transcriptionId}/sources`
+  );
+  if (!response.ok) throw new Error("Failed to check sources");
+  return response.json();
+}
+
+export async function checkInsightsExist(
+  transcriptionId: string,
+  templateId: string
+): Promise<boolean> {
+  try {
+    const response = await fetch(
+      `${API_BASE}/api/insights/transcriptions/${transcriptionId}/${templateId}`
+    );
+    return response.ok;
+  } catch {
+    return false;
+  }
+}
