@@ -120,10 +120,20 @@ DEFAULT_TEMPLATES = [
     Template(
         id="interview",
         name="Interview",
-        description="Job interviews, podcasts, Q&A sessions",
+        description="Job interviews, Q&A sessions",
         system_prompt=BASELINE_PROMPT.format(
             context="This is an interview or Q&A session. Preserve the natural back-and-forth flow between interviewer and interviewee. Maintain question-answer structure.",
             role_context="interviewer, candidate, HR manager, recruiter, host, guest"
+        ),
+        temperature=0.3
+    ),
+    Template(
+        id="podcast",
+        name="Podcast",
+        description="Audio shows, conversations, long-form discussions",
+        system_prompt=BASELINE_PROMPT.format(
+            context="This is a podcast or audio show. Preserve natural conversational flow, humor, storytelling elements. Keep host/guest dynamics clear. Maintain informal but coherent speech patterns.",
+            role_context="host, co-host, guest, expert, caller, listener"
         ),
         temperature=0.3
     ),
