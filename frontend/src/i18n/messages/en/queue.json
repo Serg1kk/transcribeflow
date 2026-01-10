@@ -1,0 +1,38 @@
+{
+  "queue.title": "Transcription Queue",
+
+  "queue.section.draft": "Draft",
+  "queue.section.queued": "Queued",
+  "queue.section.inProgress": "In Progress",
+  "queue.section.completed": "Completed",
+
+  "queue.button.startSelected": "Start Selected",
+  "queue.button.startAll": "Start All",
+  "queue.button.starting": "Starting...",
+  "queue.button.clearFailed": "Clear Failed",
+  "queue.button.clearAll": "Clear All",
+
+  "queue.empty": "No files waiting. Drop files to upload.",
+
+  "queue.prompt.placeholder.withAsr": "Enter context for better transcription and AI insights...",
+  "queue.prompt.placeholder.withoutAsr": "Enter context for AI insights...",
+  "queue.prompt.label": "Initial prompt: \"{text}\"",
+  "queue.context.label": "Context: \"{text}\"",
+
+  "queue.progress": "{status} {progress}%",
+
+  "queue.processing.asr": "ASR: {model} (GPU)",
+  "queue.processing.diarization.fast": "Diarization: Fast ({device})",
+  "queue.processing.diarization.accurate": "Diarization: Accurate ({device})",
+  "queue.processing.diarization.notRun": "Diarization: not run",
+  "queue.processing.clean": "Clean ({template}): {model}",
+  "queue.processing.clean.notRun": "Clean: not run",
+  "queue.processing.insights": "AI Insights ({template}): {model}",
+  "queue.processing.insights.notRun": "AI Insights: not run",
+
+  "queue.cost.note": "* Shows latest run only. Total cost includes all {count} operations.",
+
+  "queue.confirm.delete": "Delete {type} transcriptions?",
+  "queue.confirm.deleteType.all": "ALL",
+  "queue.confirm.deleteType.failed": "failed"
+}

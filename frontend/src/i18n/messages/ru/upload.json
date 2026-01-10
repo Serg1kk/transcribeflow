@@ -1,0 +1,18 @@
+{
+  "upload.title": "Новая транскрипция",
+  "upload.dropzone.hint": "Перетащите файлы сюда или",
+  "upload.dropzone.button": "Выбрать файл(ы)",
+
+  "upload.files.count": "{count, plural, one {# файл} few {# файла} many {# файлов} other {# файла}}",
+  "upload.files.total": "{count, plural, one {# файл} few {# файла} many {# файлов} other {# файла}} ({size} МБ всего)",
+
+  "upload.button.add": "Добавить",
+  "upload.button.addFiles": "Добавить {count, plural, one {# файл} few {# файла} many {# файлов} other {# файла}}",
+  "upload.button.adding": "Добавление... {progress}%",
+
+  "upload.error.invalidType": "Выберите аудиофайлы (mp3, m4a, wav, ogg, flac, webm)",
+  "upload.error.noFiles": "Выберите аудиофайлы",
+
+  "upload.fallback.engine": "MLX Local",
+  "upload.fallback.model": "large-v3-turbo"
+}

@@ -44,7 +44,15 @@ export function SpeakerEditor({
     }))
   );
   const [suggestions, setSuggestions] = useState<SpeakerSuggestion[]>([]);
-  const [isSaving, setIsSaving] = useState(false);
+  // Track saved values for dirty detection
+  const [savedNames, setSavedNames] = useState<Record<string, string>>(() =>
+    Object.fromEntries(Object.entries(initialSpeakers).map(([id, data]) => [id, data.name]))
+  );
+  // Track which speakers are currently saving
+  const [savingIds, setSavingIds] = useState<Set<string>>(new Set());
+  // Track which speakers just saved (for green flash)
+  const [justSavedIds, setJustSavedIds] = useState<Set<string>>(new Set());
+  // Track if applying all suggestions
   const [isApplyingAll, setIsApplyingAll] = useState(false);
 
   // Load suggestions on mount
@@ -64,54 +72,56 @@ export function SpeakerEditor({
     );
   };
 
-  const handleSave = async () => {
-    setIsSaving(true);
+  const saveSpeaker = async (speakerId: string, name: string) => {
+    setSavingIds(prev => new Set(prev).add(speakerId));
     try {
-      const speakerNames = Object.fromEntries(
-        speakers.map((s) => [s.id, s.name])
-      );
-      await updateSpeakerNames(transcriptionId, speakerNames);
+      await updateSpeakerNames(transcriptionId, { [speakerId]: name });
+      setSavedNames(prev => ({ ...prev, [speakerId]: name }));
 
+      // Flash green for 300ms
+      setJustSavedIds(prev => new Set(prev).add(speakerId));
+      setTimeout(() => {
+        setJustSavedIds(prev => {
+          const next = new Set(prev);
+          next.delete(speakerId);
+          return next;
+        });
+      }, 300);
+
+      // Notify parent
       const updatedSpeakers = Object.fromEntries(
-        speakers.map((s) => [s.id, { name: s.name, color: s.color }])
+        speakers.map((s) => [
+          s.id,
+          { name: s.id === speakerId ? name : s.name, color: s.color },
+        ])
       );
       onUpdate?.(updatedSpeakers);
     } catch (error) {
-      console.error("Failed to save speaker names:", error);
+      console.error("Failed to save speaker name:", error);
     } finally {
-      setIsSaving(false);
+      setSavingIds(prev => {
+        const next = new Set(prev);
+        next.delete(speakerId);
+        return next;
+      });
     }
   };
 
   const handleApplySuggestion = async (speakerId: string) => {
-    try {
-      await applySpeakerSuggestion(transcriptionId, speakerId);
+    const suggestion = suggestions.find((s) => s.speaker_id === speakerId);
+    if (!suggestion) return;
 
-      // Update local state
-      const suggestion = suggestions.find((s) => s.speaker_id === speakerId);
-      if (suggestion) {
-        setSpeakers((prev) =>
-          prev.map((s) =>
-            s.id === speakerId ? { ...s, name: suggestion.display_name } : s
-          )
-        );
-        setSuggestions((prev) => prev.filter((s) => s.speaker_id !== speakerId));
+    // Update input value
+    setSpeakers((prev) =>
+      prev.map((s) =>
+        s.id === speakerId ? { ...s, name: suggestion.display_name } : s
+      )
+    );
+    // Remove suggestion from list
+    setSuggestions((prev) => prev.filter((s) => s.speaker_id !== speakerId));
 
-        // Notify parent
-        const updatedSpeakers = Object.fromEntries(
-          speakers.map((s) => [
-            s.id,
-            {
-              name: s.id === speakerId ? suggestion.display_name : s.name,
-              color: s.color,
-            },
-          ])
-        );
-        onUpdate?.(updatedSpeakers);
-      }
-    } catch (error) {
-      console.error("Failed to apply suggestion:", error);
-    }
+    // Save immediately
+    await saveSpeaker(speakerId, suggestion.display_name);
   };
 
   const handleApplyAll = async () => {

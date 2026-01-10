@@ -1,0 +1,38 @@
+{
+  "queue.title": "Очередь транскрипций",
+
+  "queue.section.draft": "Черновики",
+  "queue.section.queued": "В очереди",
+  "queue.section.inProgress": "Обрабатываются",
+  "queue.section.completed": "Завершённые",
+
+  "queue.button.startSelected": "Запустить выбранные",
+  "queue.button.startAll": "Запустить все",
+  "queue.button.starting": "Запуск...",
+  "queue.button.clearFailed": "Удалить с ошибками",
+  "queue.button.clearAll": "Удалить все",
+
+  "queue.empty": "Нет файлов в очереди. Перетащите файлы для загрузки.",
+
+  "queue.prompt.placeholder.withAsr": "Введите контекст для улучшения транскрипции и AI-анализа...",
+  "queue.prompt.placeholder.withoutAsr": "Введите контекст для AI-анализа...",
+  "queue.prompt.label": "Промпт: \"{text}\"",
+  "queue.context.label": "Контекст: \"{text}\"",
+
+  "queue.progress": "{status} {progress}%",
+
+  "queue.processing.asr": "ASR: {model} (GPU)",
+  "queue.processing.diarization.fast": "Диаризация: Fast ({device})",
+  "queue.processing.diarization.accurate": "Диаризация: Accurate ({device})",
+  "queue.processing.diarization.notRun": "Диаризация: не выполнялась",
+  "queue.processing.clean": "Очистка ({template}): {model}",
+  "queue.processing.clean.notRun": "Очистка: не выполнялась",
+  "queue.processing.insights": "AI Insights ({template}): {model}",
+  "queue.processing.insights.notRun": "AI Insights: не выполнялась",
+
+  "queue.cost.note": "* Показаны результаты последнего запуска. Общая стоимость включает все {count} операции.",
+
+  "queue.confirm.delete": "Удалить {type} транскрипции?",
+  "queue.confirm.deleteType.all": "ВСЕ",
+  "queue.confirm.deleteType.failed": "неудавшиеся"
+}

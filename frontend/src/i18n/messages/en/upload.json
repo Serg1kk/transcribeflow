@@ -1,0 +1,18 @@
+{
+  "upload.title": "New Transcription",
+  "upload.dropzone.hint": "Drag and drop files here or",
+  "upload.dropzone.button": "Select file(s)",
+
+  "upload.files.count": "{count, plural, one {# file} other {# files}}",
+  "upload.files.total": "{count, plural, one {# file} other {# files}} ({size} MB total)",
+
+  "upload.button.add": "Add",
+  "upload.button.addFiles": "Add {count, plural, one {# file} other {# files}}",
+  "upload.button.adding": "Adding... {progress}%",
+
+  "upload.error.invalidType": "Please select audio files (mp3, m4a, wav, ogg, flac, webm)",
+  "upload.error.noFiles": "Please select audio files",
+
+  "upload.fallback.engine": "MLX Local",
+  "upload.fallback.model": "large-v3-turbo"
+}

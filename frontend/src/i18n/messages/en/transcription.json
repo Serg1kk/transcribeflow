@@ -1,0 +1,42 @@
+{
+  "transcription.notFound": "Transcription not found",
+
+  "transcription.meta.duration": "Duration:",
+  "transcription.meta.speakers": "Speakers:",
+  "transcription.meta.language": "Language:",
+  "transcription.meta.durationFormat": "{minutes}m {seconds}s",
+
+  "transcription.speakers.title": "Participants (click to edit)",
+  "transcription.speakers.applyAll": "Apply All ({count})",
+  "transcription.speakers.applyNames": "Apply Names",
+  "transcription.speakers.applying": "Applying...",
+  "transcription.speakers.applySuggestion": "Apply suggestion",
+  "transcription.speakers.dismissSuggestion": "Dismiss suggestion",
+
+  "transcription.postProcessing.title": "LLM Post-Processing",
+  "transcription.postProcessing.cleanup.title": "LLM Cleanup",
+  "transcription.postProcessing.cleanup.description": "Fixes ASR errors, removes repetitions, merges fragmented speech, identifies speakers",
+  "transcription.postProcessing.insights.title": "AI Insights",
+  "transcription.postProcessing.insights.description": "Extracts key decisions, action items, creates structured summary and mindmap based on meeting type",
+
+  "transcription.tabs.cleaned": "Cleaned",
+  "transcription.tabs.original": "Original",
+  "transcription.tabs.comparison": "Comparison",
+
+  "transcription.panel.title.original": "Original",
+  "transcription.panel.title.cleaned": "Cleaned",
+  "transcription.panel.segments": "{title} ({count} segments)",
+
+  "transcription.export.txt": "TXT",
+  "transcription.export.json": "JSON",
+  "transcription.export.raw": "Raw",
+  "transcription.export.copyText": "Copy as text",
+  "transcription.export.downloadTxt": "Download .txt",
+  "transcription.export.copyJson": "Copy JSON",
+  "transcription.export.downloadJson": "Download .json",
+  "transcription.export.copyRaw": "Copy raw API response",
+  "transcription.export.downloadRaw": "Download raw API response",
+
+  "transcription.comparison.syncScroll": "Sync scroll",
+  "transcription.comparison.cleanedWith": "Cleaned with {template}"
+}

@@ -1,0 +1,42 @@
+{
+  "transcription.notFound": "Транскрипция не найдена",
+
+  "transcription.meta.duration": "Длительность:",
+  "transcription.meta.speakers": "Спикеры:",
+  "transcription.meta.language": "Язык:",
+  "transcription.meta.durationFormat": "{minutes}м {seconds}с",
+
+  "transcription.speakers.title": "Участники (нажмите для редактирования)",
+  "transcription.speakers.applyAll": "Применить все ({count})",
+  "transcription.speakers.applyNames": "Применить имена",
+  "transcription.speakers.applying": "Применение...",
+  "transcription.speakers.applySuggestion": "Применить предложение",
+  "transcription.speakers.dismissSuggestion": "Отклонить предложение",
+
+  "transcription.postProcessing.title": "LLM постобработка",
+  "transcription.postProcessing.cleanup.title": "LLM очистка",
+  "transcription.postProcessing.cleanup.description": "Исправляет ошибки ASR, удаляет повторы, объединяет фрагментированную речь, определяет спикеров",
+  "transcription.postProcessing.insights.title": "AI Insights",
+  "transcription.postProcessing.insights.description": "Извлекает ключевые решения, задачи, создаёт структурированное саммари и майндмап по типу встречи",
+
+  "transcription.tabs.cleaned": "Очищенный",
+  "transcription.tabs.original": "Оригинал",
+  "transcription.tabs.comparison": "Сравнение",
+
+  "transcription.panel.title.original": "Оригинал",
+  "transcription.panel.title.cleaned": "Очищенный",
+  "transcription.panel.segments": "{title} ({count} сегментов)",
+
+  "transcription.export.txt": "TXT",
+  "transcription.export.json": "JSON",
+  "transcription.export.raw": "Raw",
+  "transcription.export.copyText": "Копировать текст",
+  "transcription.export.downloadTxt": "Скачать .txt",
+  "transcription.export.copyJson": "Копировать JSON",
+  "transcription.export.downloadJson": "Скачать .json",
+  "transcription.export.copyRaw": "Копировать сырой ответ API",
+  "transcription.export.downloadRaw": "Скачать сырой ответ API",
+
+  "transcription.comparison.syncScroll": "Синхронная прокрутка",
+  "transcription.comparison.cleanedWith": "Очищено с {template}"
+}

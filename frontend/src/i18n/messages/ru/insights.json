@@ -1,0 +1,46 @@
+{
+  "insights.title": "AI Insights",
+  "insights.tabs.mindmap": "Майндмап",
+  "insights.tabs.insights": "Выводы",
+
+  "insights.button.regenerate": "Перегенерировать",
+  "insights.button.generate": "Сгенерировать AI Insights",
+  "insights.button.regenerateInsights": "Перегенерировать AI Insights",
+
+  "insights.cost.na": "Н/Д",
+
+  "insights.controls.selectTemplate": "Выберите шаблон",
+  "insights.controls.source.cleaned": "Очищенный",
+  "insights.controls.source.original": "Оригинал",
+
+  "insights.toast.selectTemplate": "Выберите шаблон",
+  "insights.toast.generating": "Генерация insights...",
+  "insights.toast.generated": "Insights сгенерированы!",
+  "insights.toast.failed": "Ошибка: {error}",
+  "insights.toast.timeout": "Таймаут генерации",
+  "insights.toast.generationFailed": "Не удалось сгенерировать insights",
+
+  "postProcessing.button.clean": "Очистить с LLM",
+  "postProcessing.button.reclean": "Переочистить с LLM",
+
+  "postProcessing.toast.selectTemplate": "Выберите шаблон",
+  "postProcessing.toast.started": "Постобработка запущена",
+  "postProcessing.toast.complete": "Постобработка завершена!",
+  "postProcessing.toast.failed": "Ошибка постобработки: {error}",
+  "postProcessing.toast.timeout": "Таймаут постобработки",
+
+  "mindmap.button.fit": "Вписать",
+  "mindmap.button.fullscreen": "Во весь экран",
+  "mindmap.button.copyPng": "Копировать PNG",
+  "mindmap.button.downloadPng": "Скачать PNG",
+  "mindmap.button.copyMarkdown": "Копировать Markdown",
+  "mindmap.button.downloadMd": "Скачать .md",
+  "mindmap.hint.escape": "Нажмите Escape для выхода",
+
+  "mindmap.toast.markdownCopied": "Markdown скопирован!",
+  "mindmap.toast.copyFailed": "Не удалось скопировать",
+  "mindmap.toast.pngDownloaded": "PNG скачан!",
+  "mindmap.toast.pngCopied": "PNG скопирован в буфер!",
+  "mindmap.toast.pngExportFailed": "Не удалось экспортировать PNG",
+  "mindmap.toast.pngCopyFailed": "Не удалось скопировать PNG"
+}

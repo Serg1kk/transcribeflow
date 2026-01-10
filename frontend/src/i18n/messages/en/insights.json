@@ -1,0 +1,46 @@
+{
+  "insights.title": "AI Insights",
+  "insights.tabs.mindmap": "Mindmap",
+  "insights.tabs.insights": "Insights",
+
+  "insights.button.regenerate": "Re-generate",
+  "insights.button.generate": "Generate AI Insights",
+  "insights.button.regenerateInsights": "Re-generate AI Insights",
+
+  "insights.cost.na": "N/A",
+
+  "insights.controls.selectTemplate": "Select template",
+  "insights.controls.source.cleaned": "Cleaned",
+  "insights.controls.source.original": "Original",
+
+  "insights.toast.selectTemplate": "Please select a template",
+  "insights.toast.generating": "Generating insights...",
+  "insights.toast.generated": "Insights generated!",
+  "insights.toast.failed": "Failed: {error}",
+  "insights.toast.timeout": "Generation timed out",
+  "insights.toast.generationFailed": "Failed to generate insights",
+
+  "postProcessing.button.clean": "Clean with LLM",
+  "postProcessing.button.reclean": "Re-clean with LLM",
+
+  "postProcessing.toast.selectTemplate": "Please select a template",
+  "postProcessing.toast.started": "Post-processing started",
+  "postProcessing.toast.complete": "Post-processing complete!",
+  "postProcessing.toast.failed": "Post-processing failed: {error}",
+  "postProcessing.toast.timeout": "Post-processing timed out",
+
+  "mindmap.button.fit": "Fit",
+  "mindmap.button.fullscreen": "Fullscreen",
+  "mindmap.button.copyPng": "Copy PNG",
+  "mindmap.button.downloadPng": "Download PNG",
+  "mindmap.button.copyMarkdown": "Copy Markdown",
+  "mindmap.button.downloadMd": "Download .md",
+  "mindmap.hint.escape": "Press Escape to exit",
+
+  "mindmap.toast.markdownCopied": "Markdown copied!",
+  "mindmap.toast.copyFailed": "Failed to copy",
+  "mindmap.toast.pngDownloaded": "PNG downloaded!",
+  "mindmap.toast.pngCopied": "PNG copied to clipboard!",
+  "mindmap.toast.pngExportFailed": "Failed to export PNG",
+  "mindmap.toast.pngCopyFailed": "Failed to copy PNG"
+}

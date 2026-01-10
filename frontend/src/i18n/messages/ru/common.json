@@ -1,0 +1,55 @@
+{
+  "app.title": "TranscribeFlow",
+  "app.description": "Локальная AI-транскрипция встреч с определением спикеров и интеллектуальным анализом",
+
+  "nav.back": "Назад",
+  "nav.settings": "Настройки",
+
+  "button.save": "Сохранить",
+  "button.saving": "Сохранение...",
+  "button.cancel": "Отмена",
+  "button.add": "Добавить",
+  "button.addMore": "Добавить ещё",
+  "button.clearAll": "Очистить всё",
+  "button.yes": "Да",
+  "button.no": "Нет",
+  "button.close": "Закрыть",
+  "button.apply": "Применить",
+
+  "status.loading": "Загрузка...",
+  "status.draft": "Черновик",
+  "status.queued": "В очереди",
+  "status.transcribing": "Транскрибируется...",
+  "status.diarizing": "Определяются спикеры...",
+  "status.completed": "Завершено",
+  "status.failed": "Ошибка",
+  "status.processing": "Обработка...",
+  "status.generating": "Генерация...",
+  "status.regenerating": "Перегенерация...",
+  "status.saved": "Сохранено",
+
+  "error.generic": "Произошла ошибка",
+  "error.uploadFailed": "Ошибка загрузки",
+  "error.notFound": "Не найдено",
+
+  "time.hours": "{hours}ч",
+  "time.minutes": "{minutes}м",
+  "time.seconds": "{seconds}с",
+
+  "units.mb": "МБ",
+  "units.tokens": "{input} вх / {output} вых",
+
+  "badge.configured": "Настроен",
+  "badge.required": "Обязательно",
+  "badge.notSet": "Не задан",
+  "badge.ready": "Готово",
+  "badge.tbd": "TBD",
+  "badge.optional": "(необязательно)",
+
+  "confirm.replaceExisting": "Заменить существующий?",
+
+  "label.engine": "Движок",
+  "label.model": "Модель",
+  "label.provider": "Провайдер",
+  "label.total": "Итого"
+}

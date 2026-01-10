@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import localFont from "next/font/local";
 import { Toaster } from "sonner";
+import { LocaleProvider } from "@/i18n";
 import "./globals.css";
 
 const geistSans = localFont({
@@ -25,15 +26,17 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        {/* Fixed-width wrapper prevents layout shift from Radix scroll lock */}
-        <div className="content-wrapper">
-          {children}
-        </div>
-        <Toaster richColors position="top-right" />
+        <LocaleProvider>
+          {/* Fixed-width wrapper prevents layout shift from Radix scroll lock */}
+          <div className="content-wrapper">
+            {children}
+          </div>
+          <Toaster richColors position="top-right" />
+        </LocaleProvider>
       </body>
     </html>
   );

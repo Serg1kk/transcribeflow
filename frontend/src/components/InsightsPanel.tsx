@@ -3,6 +3,7 @@
 
 import { useState } from "react";
 import ReactMarkdown from "react-markdown";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -39,6 +40,39 @@ export function InsightsPanel({
   const handleRegenerate = () => {
     onRegenerate(selectedTemplate);
   };
+
+  // Build markdown from all insights sections
+  const buildInsightsMarkdown = () => {
+    let md = `# ${insights.metadata.template_name} Insights\n\n`;
+    if (insights.description) {
+      md += `*${insights.description}*\n\n`;
+    }
+    for (const section of insights.sections) {
+      md += `## ${section.title}\n\n${section.content}\n\n`;
+    }
+    return md.trim();
+  };
+
+  const exportName = filename?.replace(/\.[^/.]+$/, "").replace(/[^a-zA-Z0-9-_]/g, "_") || "insights";
+
+  async function handleCopyInsightsMarkdown() {
+    try {
+      await navigator.clipboard.writeText(buildInsightsMarkdown());
+      toast.success("Insights copied!");
+    } catch {
+      toast.error("Failed to copy");
+    }
+  }
+
+  function handleDownloadInsightsMarkdown() {
+    const blob = new Blob([buildInsightsMarkdown()], { type: "text/markdown" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `insights-${exportName}.md`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
 
   const formatCost = (cost: number | null) => {
     if (cost === null) return "N/A";
@@ -117,6 +151,15 @@ export function InsightsPanel({
               </div>
             </div>
           ))}
+          {/* Copy/Download buttons */}
+          <div className="flex flex-wrap gap-2 pt-4 border-t">
+            <Button variant="outline" size="sm" onClick={handleCopyInsightsMarkdown}>
+              Copy Markdown
+            </Button>
+            <Button variant="outline" size="sm" onClick={handleDownloadInsightsMarkdown}>
+              Download .md
+            </Button>
+          </div>
         </div>
       )}
 

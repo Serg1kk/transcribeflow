@@ -1,0 +1,55 @@
+{
+  "app.title": "TranscribeFlow",
+  "app.description": "Local AI-powered meeting transcription with speaker diarization and intelligent insights",
+
+  "nav.back": "Back",
+  "nav.settings": "Settings",
+
+  "button.save": "Save Changes",
+  "button.saving": "Saving...",
+  "button.cancel": "Cancel",
+  "button.add": "Add",
+  "button.addMore": "Add more",
+  "button.clearAll": "Clear all",
+  "button.yes": "Yes",
+  "button.no": "No",
+  "button.close": "Close",
+  "button.apply": "Apply",
+
+  "status.loading": "Loading...",
+  "status.draft": "Draft",
+  "status.queued": "Queued",
+  "status.transcribing": "Transcribing...",
+  "status.diarizing": "Identifying speakers...",
+  "status.completed": "Completed",
+  "status.failed": "Failed",
+  "status.processing": "Processing...",
+  "status.generating": "Generating...",
+  "status.regenerating": "Regenerating...",
+  "status.saved": "Saved",
+
+  "error.generic": "An error occurred",
+  "error.uploadFailed": "Upload failed",
+  "error.notFound": "Not found",
+
+  "time.hours": "{hours}h",
+  "time.minutes": "{minutes}m",
+  "time.seconds": "{seconds}s",
+
+  "units.mb": "MB",
+  "units.tokens": "{input} in / {output} out",
+
+  "badge.configured": "Configured",
+  "badge.required": "Required",
+  "badge.notSet": "Not set",
+  "badge.ready": "Ready",
+  "badge.tbd": "TBD",
+  "badge.optional": "(optional)",
+
+  "confirm.replaceExisting": "Replace existing?",
+
+  "label.engine": "Engine",
+  "label.model": "Model",
+  "label.provider": "Provider",
+  "label.total": "Total"
+}

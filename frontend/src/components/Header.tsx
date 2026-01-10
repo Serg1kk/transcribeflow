@@ -1,8 +1,9 @@
-// components/Header.tsx
-"use client";
+'use client';
 
 import Link from "next/link";
 import Image from "next/image";
+import { useIntl } from "react-intl";
+import { LanguageSwitcher } from "./LanguageSwitcher";
 
 interface HeaderProps {
   showSettings?: boolean;
@@ -10,6 +11,8 @@ interface HeaderProps {
 }
 
 export function Header({ showSettings = true, showBack = false }: HeaderProps) {
+  const intl = useIntl();
+
   return (
     <header className="bg-white border border-gray-200 rounded-lg px-6 py-3 mb-6 flex items-center justify-between">
       <Link href="/" className="flex items-center gap-3 hover:opacity-80 transition-opacity">
@@ -20,14 +23,15 @@ export function Header({ showSettings = true, showBack = false }: HeaderProps) {
         </span>
       </Link>
       <div className="flex items-center gap-4">
+        <LanguageSwitcher />
         {showBack && (
           <Link href="/" className="text-sm text-gray-600 hover:text-gray-900">
-            &larr; Back
+            &larr; {intl.formatMessage({ id: 'nav.back' })}
           </Link>
         )}
         {showSettings && (
           <Link href="/settings" className="text-sm text-gray-600 hover:text-gray-900">
-            Settings
+            {intl.formatMessage({ id: 'nav.settings' })}
           </Link>
         )}
       </div>
