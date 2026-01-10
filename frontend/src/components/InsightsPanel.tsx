@@ -20,6 +20,7 @@ interface InsightsPanelProps {
   templates: InsightTemplate[];
   onRegenerate: (templateId: string) => void;
   isRegenerating: boolean;
+  filename?: string;
 }
 
 type TabType = "mindmap" | "insights";
@@ -29,6 +30,7 @@ export function InsightsPanel({
   templates,
   onRegenerate,
   isRegenerating,
+  filename,
 }: InsightsPanelProps) {
   const hasMindmap = insights.mindmap !== null;
   const [activeTab, setActiveTab] = useState<TabType>(hasMindmap ? "mindmap" : "insights");
@@ -94,7 +96,7 @@ export function InsightsPanel({
 
       {/* Tab content */}
       {activeTab === "mindmap" && insights.mindmap ? (
-        <MindmapViewer markdown={insights.mindmap.content} />
+        <MindmapViewer markdown={insights.mindmap.content} filename={filename} />
       ) : (
         <div className="space-y-6">
           {insights.sections.map((section) => (

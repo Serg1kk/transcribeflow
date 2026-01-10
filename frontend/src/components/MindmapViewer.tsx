@@ -10,9 +10,12 @@ import { Button } from "@/components/ui/button";
 interface MindmapViewerProps {
   markdown: string;
   className?: string;
+  filename?: string;  // Original audio filename for export naming
 }
 
-export function MindmapViewer({ markdown, className = "" }: MindmapViewerProps) {
+export function MindmapViewer({ markdown, className = "", filename = "mindmap" }: MindmapViewerProps) {
+  // Clean filename for export (remove extension, sanitize)
+  const exportName = filename.replace(/\.[^/.]+$/, "").replace(/[^a-zA-Z0-9-_]/g, "_");
   const svgRef = useRef<SVGSVGElement>(null);
   const fullscreenSvgRef = useRef<SVGSVGElement>(null);
   const markmapRef = useRef<Markmap | null>(null);
@@ -121,7 +124,7 @@ export function MindmapViewer({ markdown, className = "" }: MindmapViewerProps) 
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = "mindmap.md";
+    a.download = `mindmap-${exportName}.md`;
     a.click();
     URL.revokeObjectURL(url);
   }
@@ -173,14 +176,20 @@ export function MindmapViewer({ markdown, className = "" }: MindmapViewerProps) 
   }
 
   async function handleDownloadPng() {
+    const mm = isFullscreen ? fullscreenMarkmapRef.current : markmapRef.current;
     const svgElement = isFullscreen ? fullscreenSvgRef.current : svgRef.current;
-    if (!svgElement) return;
+    if (!svgElement || !mm) return;
     try {
+      // Fit to show full content before export
+      mm.fit();
+      // Wait for animation to complete
+      await new Promise(resolve => setTimeout(resolve, 600));
+
       const blob = await svgToPng(svgElement);
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = "mindmap.png";
+      a.download = `mindmap-${exportName}.png`;
       a.click();
       URL.revokeObjectURL(url);
       toast.success("PNG downloaded!");
@@ -190,9 +199,15 @@ export function MindmapViewer({ markdown, className = "" }: MindmapViewerProps) 
   }
 
   async function handleCopyPng() {
+    const mm = isFullscreen ? fullscreenMarkmapRef.current : markmapRef.current;
     const svgElement = isFullscreen ? fullscreenSvgRef.current : svgRef.current;
-    if (!svgElement) return;
+    if (!svgElement || !mm) return;
     try {
+      // Fit to show full content before export
+      mm.fit();
+      // Wait for animation to complete
+      await new Promise(resolve => setTimeout(resolve, 600));
+
       const blob = await svgToPng(svgElement);
       await navigator.clipboard.write([
         new ClipboardItem({ "image/png": blob })

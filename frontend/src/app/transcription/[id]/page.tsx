@@ -312,6 +312,7 @@ export default function TranscriptionPage() {
               templates={insightTemplates}
               onRegenerate={handleInsightsRegenerate}
               isRegenerating={isRegenerating}
+              filename={transcription.filename}
             />
           </CardContent>
         </Card>
