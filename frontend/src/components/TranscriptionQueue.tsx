@@ -472,33 +472,36 @@ function CompletedItem({ transcription }: { transcription: Transcription }) {
         </p>
       )}
 
-      <div className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground bg-muted/50 rounded px-2 py-1">
-        {/* ASR info */}
-        {transcription.engine === "mlx-whisper" ? (
-          <span>ASR: {transcription.model} (GPU)</span>
-        ) : (
-          <span>ASR: {transcription.engine}</span>
-        )}
+      <div className="text-xs text-muted-foreground bg-muted/50 rounded px-2 py-1 space-y-0.5">
+        {/* Line 1: File info + Processing settings */}
+        <div className="flex flex-wrap gap-x-3">
+          {/* File info first */}
+          {fileSizeMB && <span>Size: {fileSizeMB}</span>}
+          {transcription.duration_seconds && <span>Duration: {formatDuration(transcription.duration_seconds)}</span>}
 
-        {/* Diarization info - only show if method is set and not "none" */}
-        {transcription.diarization_method && transcription.diarization_method !== "none" && (
-          <>
-            <span className="text-muted-foreground/40">•</span>
-            <span>
-              Diarization: {transcription.diarization_method === "fast" ? "Fast" : "Accurate"} ({transcription.compute_device === "cpu" ? "CPU" : "GPU"})
-            </span>
-          </>
-        )}
+          <span className="text-muted-foreground/40">•</span>
 
-        {/* File info */}
-        <span className="text-muted-foreground/40">•</span>
-        {fileSizeMB && <span>Size: {fileSizeMB}</span>}
-        {transcription.duration_seconds && <span>Duration: {formatDuration(transcription.duration_seconds)}</span>}
+          {/* ASR info */}
+          {transcription.engine === "mlx-whisper" ? (
+            <span>ASR: {transcription.model} (GPU)</span>
+          ) : (
+            <span>ASR: {transcription.engine}</span>
+          )}
 
-        {/* Timing info - only for completed */}
+          {/* Diarization info */}
+          {transcription.diarization_method && transcription.diarization_method !== "none" && (
+            <>
+              <span className="text-muted-foreground/40">•</span>
+              <span>
+                Diarization: {transcription.diarization_method === "fast" ? "Fast" : "Accurate"} ({transcription.compute_device === "cpu" ? "CPU" : "GPU"})
+              </span>
+            </>
+          )}
+        </div>
+
+        {/* Line 2: Timing info - only for completed */}
         {isCompleted && transcription.processing_time_seconds && (
-          <>
-            <span className="text-muted-foreground/40">•</span>
+          <div className="flex flex-wrap gap-x-3">
             <span>Total: {formatTime(transcription.processing_time_seconds)}</span>
             {transcription.engine === "mlx-whisper" && (
               <>
@@ -510,7 +513,7 @@ function CompletedItem({ transcription }: { transcription: Transcription }) {
                 )}
               </>
             )}
-          </>
+          </div>
         )}
       </div>
     </div>
