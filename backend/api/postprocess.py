@@ -76,6 +76,7 @@ class OperationHistoryResponse(BaseModel):
     cost_usd: Optional[float]
     processing_time_seconds: float
     status: str
+    error_message: Optional[str] = None
 
 
 class SpeakerSuggestionResponse(BaseModel):
@@ -276,18 +277,45 @@ async def start_postprocessing(
     provider = request.provider or settings.postprocessing_provider
     model = request.model or settings.postprocessing_model
 
+    # Extract data needed for background task (session will be closed after request)
+    output_dir = transcription.output_dir
+    filename = transcription.filename
+
     # Start processing in background
     async def run_postprocessing():
-        service = PostProcessingService()
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.info(f"Background task started for transcription {transcription_id}")
+
+        from models import SessionLocal
+        # Create a new session for background task (request session is closed)
+        bg_db = SessionLocal()
         try:
+            # Re-fetch transcription in new session
+            bg_transcription = bg_db.query(Transcription).filter(
+                Transcription.id == transcription_id
+            ).first()
+
+            if not bg_transcription:
+                raise ValueError(f"Transcription {transcription_id} not found")
+
+            service = PostProcessingService()
             await service.process_transcript(
-                transcription=transcription,
+                transcription=bg_transcription,
                 template_id=request.template_id,
                 provider=request.provider,
                 model=request.model,
-                db=db,
+                db=bg_db,
             )
         except Exception as e:
+            import logging
+            import traceback
+            logger = logging.getLogger(__name__)
+            # Get full error details
+            error_msg = str(e) or repr(e) or type(e).__name__
+            full_traceback = traceback.format_exc()
+            logger.error(f"Post-processing failed: {error_msg}")
+            logger.error(f"Full traceback:\n{full_traceback}")
             # Log failed operation
             operation = LLMOperation(
                 transcription_id=transcription_id,
@@ -300,10 +328,12 @@ async def start_postprocessing(
                 cost_usd=None,
                 processing_time_seconds=0,
                 status=LLMOperationStatus.FAILED,
-                error_message=str(e),
+                error_message=error_msg if error_msg else f"Exception: {type(e).__name__}",
             )
-            db.add(operation)
-            db.commit()
+            bg_db.add(operation)
+            bg_db.commit()
+        finally:
+            bg_db.close()
 
     background_tasks.add_task(run_postprocessing)
 
@@ -365,6 +395,7 @@ async def list_operations(
             cost_usd=op.cost_usd,
             processing_time_seconds=op.processing_time_seconds,
             status=op.status.value,
+            error_message=op.error_message,
         )
         for op in operations
     ]

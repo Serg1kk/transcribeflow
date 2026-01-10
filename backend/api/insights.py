@@ -156,17 +156,38 @@ async def generate_insights(
 
     # Start processing in background
     async def run_insights():
-        service = InsightService()
+        import logging
+        import traceback
+        logger = logging.getLogger(__name__)
+        logger.info(f"Background insights task started for transcription {transcription_id}")
+
+        from models import SessionLocal
+        # Create a new session for background task (request session is closed)
+        bg_db = SessionLocal()
         try:
+            # Re-fetch transcription in new session
+            bg_transcription = bg_db.query(Transcription).filter(
+                Transcription.id == transcription_id
+            ).first()
+
+            if not bg_transcription:
+                raise ValueError(f"Transcription {transcription_id} not found")
+
+            service = InsightService()
             await service.generate_insights(
-                transcription=transcription,
+                transcription=bg_transcription,
                 template_id=request.template_id,
                 source=request.source,
                 provider=request.provider,
                 model=request.model,
-                db=db,
+                db=bg_db,
             )
         except Exception as e:
+            # Get full error details
+            error_msg = str(e) or repr(e) or type(e).__name__
+            full_traceback = traceback.format_exc()
+            logger.error(f"Insights generation failed: {error_msg}")
+            logger.error(f"Full traceback:\n{full_traceback}")
             # Log failed operation
             operation = LLMOperation(
                 transcription_id=transcription_id,
@@ -180,10 +201,12 @@ async def generate_insights(
                 cost_usd=None,
                 processing_time_seconds=0,
                 status=LLMOperationStatus.FAILED,
-                error_message=str(e),
+                error_message=error_msg if error_msg else f"Exception: {type(e).__name__}",
             )
-            db.add(operation)
-            db.commit()
+            bg_db.add(operation)
+            bg_db.commit()
+        finally:
+            bg_db.close()
 
     background_tasks.add_task(run_insights)
 

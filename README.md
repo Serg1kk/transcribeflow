@@ -1,6 +1,6 @@
 # TranscribeFlow
 
-![TranscribeFlow Hero](./docs/hero.png)
+![TranscribeFlow Hero](./images/hero.png)
 
 > **Local AI-powered meeting transcription with speaker diarization and intelligent insights — optimized for Apple Silicon.**
 

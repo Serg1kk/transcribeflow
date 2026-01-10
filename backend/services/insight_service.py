@@ -135,6 +135,14 @@ class InsightService:
         # Format transcript for LLM
         user_message = self._format_transcript(segments)
 
+        # Add user context if provided (from initial_prompt field)
+        if transcription.initial_prompt:
+            user_message = f"""USER CONTEXT:
+{transcription.initial_prompt}
+
+TRANSCRIPT:
+{user_message}"""
+
         # Call LLM
         client = self._get_client(provider)
         logger.info(f"Generating insights: provider={provider}, model={model}, template={template_id}")
@@ -203,6 +211,36 @@ class InsightService:
 
         return result
 
+    def _fix_json_errors(self, text: str) -> str:
+        """Try to fix common JSON errors from LLM responses."""
+        import re
+
+        # Remove trailing commas before } or ]
+        text = re.sub(r',\s*}', '}', text)
+        text = re.sub(r',\s*]', ']', text)
+
+        # Fix unescaped newlines in strings (common LLM mistake)
+        # This is tricky - we need to be inside a string
+        # Simple approach: replace literal newlines that aren't \n
+        lines = text.split('\n')
+        fixed_lines = []
+        in_string = False
+        for line in lines:
+            # Count unescaped quotes to track if we're in a string
+            quote_count = 0
+            for i, char in enumerate(line):
+                if char == '"' and (i == 0 or line[i-1] != '\\'):
+                    quote_count += 1
+            if quote_count % 2 == 1:
+                in_string = not in_string
+            if in_string and fixed_lines:
+                # We're continuing a string from previous line - join with space
+                fixed_lines[-1] = fixed_lines[-1] + ' ' + line.strip()
+            else:
+                fixed_lines.append(line)
+
+        return '\n'.join(fixed_lines)
+
     def _parse_llm_response(
         self,
         response_text: str,
@@ -210,6 +248,9 @@ class InsightService:
     ) -> Dict[str, Any]:
         """Parse LLM response into structured insights."""
         try:
+            # Log raw response for debugging (first 500 chars)
+            logger.debug(f"Raw LLM response (first 500 chars): {response_text[:500]}")
+
             # Handle potential markdown code blocks
             text = response_text.strip()
             if text.startswith("```json"):
@@ -219,7 +260,33 @@ class InsightService:
             if text.endswith("```"):
                 text = text[:-3]
 
-            data = json.loads(text.strip())
+            # Try to extract JSON object if there's extra content
+            text = text.strip()
+            if not text.startswith("{"):
+                # Find first { and last }
+                start = text.find("{")
+                end = text.rfind("}")
+                if start != -1 and end != -1 and end > start:
+                    text = text[start:end + 1]
+                    logger.debug(f"Extracted JSON from position {start} to {end}")
+
+            # First attempt: parse as-is
+            try:
+                data = json.loads(text)
+            except json.JSONDecodeError as first_error:
+                # Second attempt: try to fix common errors
+                logger.warning(f"First JSON parse failed: {first_error}, attempting repairs...")
+                fixed_text = self._fix_json_errors(text)
+                try:
+                    data = json.loads(fixed_text)
+                    logger.info("JSON repair successful")
+                except json.JSONDecodeError:
+                    # Log the problematic area
+                    error_pos = first_error.pos
+                    context_start = max(0, error_pos - 100)
+                    context_end = min(len(text), error_pos + 100)
+                    logger.error(f"JSON error near position {error_pos}: ...{text[context_start:context_end]}...")
+                    raise first_error
 
             # Validate required fields
             result = {
@@ -236,7 +303,9 @@ class InsightService:
             return result
 
         except (json.JSONDecodeError, KeyError, TypeError) as e:
+            # Log more context for debugging
             logger.error(f"Failed to parse LLM response: {e}")
+            logger.error(f"Response length: {len(response_text)}, first 1000 chars: {response_text[:1000]}")
             raise ValueError(f"Failed to parse LLM response: {e}")
 
     def _save_insights(

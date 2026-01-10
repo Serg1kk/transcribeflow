@@ -270,10 +270,10 @@ export function FileUpload({ onUploadComplete }: FileUploadProps) {
           onClick={handleUpload}
         >
           {isUploading
-            ? `Uploading... ${Math.round(uploadProgress)}%`
+            ? `Adding... ${Math.round(uploadProgress)}%`
             : files.length > 1
-            ? `Start Transcription (${files.length} files)`
-            : "Start Transcription"}
+            ? `Add ${files.length} files`
+            : "Add"}
         </Button>
       </CardContent>
     </Card>

@@ -20,20 +20,43 @@ export function MindmapViewer({ markdown, className = "" }: MindmapViewerProps) 
   useEffect(() => {
     if (!svgRef.current || !markdown) return;
 
-    const transformer = new Transformer();
-    const { root } = transformer.transform(markdown);
+    // Wait for SVG to be properly laid out before initializing Markmap
+    // D3 zoom requires the SVG to have computed dimensions
+    const initMarkmap = () => {
+      if (!svgRef.current) return;
 
-    if (markmapRef.current) {
-      markmapRef.current.setData(root);
-    } else {
-      markmapRef.current = Markmap.create(svgRef.current, {
-        autoFit: true,
-        duration: 500,
-        maxWidth: 300,
-      }, root);
-    }
+      const rect = svgRef.current.getBoundingClientRect();
+      if (rect.width === 0 || rect.height === 0) {
+        // SVG not ready yet, retry after a short delay
+        requestAnimationFrame(initMarkmap);
+        return;
+      }
 
-    setIsReady(true);
+      const transformer = new Transformer();
+      const { root } = transformer.transform(markdown);
+
+      if (markmapRef.current) {
+        markmapRef.current.setData(root);
+      } else {
+        try {
+          markmapRef.current = Markmap.create(svgRef.current, {
+            autoFit: true,
+            duration: 500,
+            maxWidth: 300,
+          }, root);
+        } catch (error) {
+          console.warn("Markmap init error, retrying:", error);
+          // Retry once more after a delay
+          setTimeout(initMarkmap, 100);
+          return;
+        }
+      }
+
+      setIsReady(true);
+    };
+
+    // Use requestAnimationFrame to ensure DOM is ready
+    requestAnimationFrame(initMarkmap);
 
     return () => {
       // Cleanup if needed

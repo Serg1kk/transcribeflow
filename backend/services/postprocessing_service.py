@@ -139,6 +139,14 @@ class PostProcessingService:
         # Format transcript for LLM
         user_message = format_transcript_for_llm(segments)
 
+        # Add user context if provided (from initial_prompt field)
+        if transcription.initial_prompt:
+            user_message = f"""USER CONTEXT:
+{transcription.initial_prompt}
+
+TRANSCRIPT:
+{user_message}"""
+
         # Call LLM
         client = self._get_client(provider)
         logger.info(f"Calling LLM: provider={provider}, model={model}, template={template_id}")

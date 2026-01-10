@@ -292,6 +292,7 @@ export default function TranscriptionPage() {
           <div className="mt-6 pt-6 border-t">
             <h3 className="text-lg font-medium mb-4">AI Insights</h3>
             <InsightsControls
+              key={`insights-${hasCleanedVersion}`}
               transcriptionId={id}
               hasInsights={hasInsights}
               onGenerationComplete={handleInsightsComplete}
