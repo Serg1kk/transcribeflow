@@ -13,6 +13,12 @@ class LLMOperationStatus(enum.Enum):
     FAILED = "failed"
 
 
+class LLMOperationType(enum.Enum):
+    """Type of LLM operation."""
+    CLEANUP = "cleanup"
+    INSIGHTS = "insights"
+
+
 class LLMOperation(Base):
     """LLM post-processing operation model."""
     __tablename__ = "llm_operations"
@@ -20,6 +26,13 @@ class LLMOperation(Base):
     id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     transcription_id = Column(String(36), ForeignKey("transcriptions.id"), nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+
+    # Operation type
+    operation_type = Column(
+        Enum(LLMOperationType),
+        nullable=False,
+        default=LLMOperationType.CLEANUP
+    )
 
     # LLM Configuration
     provider = Column(String(50), nullable=False)  # "gemini" | "openrouter"
