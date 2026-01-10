@@ -495,7 +495,7 @@ function CompletedItem({ transcription }: { transcription: Transcription }) {
             {transcription.engine === "mlx-whisper" && (
               <>
                 {transcription.transcription_time_seconds && (
-                  <span>ASR: {formatTime(transcription.transcription_time_seconds)}</span>
+                  <span>ASR (GPU): {formatTime(transcription.transcription_time_seconds)}</span>
                 )}
                 {transcription.diarization_time_seconds && transcription.diarization_method !== "none" && (
                   <span>
