@@ -498,7 +498,9 @@ function CompletedItem({ transcription }: { transcription: Transcription }) {
                   <span>ASR: {formatTime(transcription.transcription_time_seconds)}</span>
                 )}
                 {transcription.diarization_time_seconds && transcription.diarization_method !== "none" && (
-                  <span>Diarization: {formatTime(transcription.diarization_time_seconds)}</span>
+                  <span>
+                    Diarization ({transcription.compute_device === "mps" ? "GPU" : "CPU"}): {formatTime(transcription.diarization_time_seconds)}
+                  </span>
                 )}
               </>
             )}
