@@ -40,6 +40,11 @@ class SettingsResponse(BaseModel):
     postprocessing_model: str
     postprocessing_default_template: Optional[str]
 
+    # AI Insights (Level 2)
+    insights_provider: str
+    insights_model: str
+    insights_default_template: Optional[str]
+
     # API key presence (not actual keys for security)
     has_hf_token: bool
     has_assemblyai_key: bool
@@ -80,6 +85,11 @@ class SettingsUpdateRequest(BaseModel):
     postprocessing_provider: Optional[str] = None
     postprocessing_model: Optional[str] = None
     postprocessing_default_template: Optional[str] = None
+
+    # AI Insights (Level 2)
+    insights_provider: Optional[str] = None
+    insights_model: Optional[str] = None
+    insights_default_template: Optional[str] = None
 
     # API keys (can be updated)
     hf_token: Optional[str] = None
@@ -124,6 +134,9 @@ async def get_current_settings(settings: Settings = Depends(get_settings)):
         postprocessing_provider=settings.postprocessing_provider,
         postprocessing_model=settings.postprocessing_model,
         postprocessing_default_template=settings.postprocessing_default_template,
+        insights_provider=settings.insights_provider,
+        insights_model=settings.insights_model,
+        insights_default_template=settings.insights_default_template,
         has_hf_token=bool(settings.hf_token),
         has_assemblyai_key=bool(settings.assemblyai_api_key),
         has_elevenlabs_key=bool(settings.elevenlabs_api_key),
@@ -181,6 +194,9 @@ async def update_settings(update: SettingsUpdateRequest):
         postprocessing_provider=settings.postprocessing_provider,
         postprocessing_model=settings.postprocessing_model,
         postprocessing_default_template=settings.postprocessing_default_template,
+        insights_provider=settings.insights_provider,
+        insights_model=settings.insights_model,
+        insights_default_template=settings.insights_default_template,
         has_hf_token=bool(settings.hf_token),
         has_assemblyai_key=bool(settings.assemblyai_api_key),
         has_elevenlabs_key=bool(settings.elevenlabs_api_key),
