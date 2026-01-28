@@ -177,6 +177,46 @@ DEFAULT_TEMPLATES = [
         ),
         temperature=0.3
     ),
+    Template(
+        id="design-call",
+        name="Design Call",
+        description="UI/UX design reviews, mockup discussions, visual design decisions",
+        system_prompt=BASELINE_PROMPT.format(
+            context="This is a design review meeting between product manager and designer, possibly with a developer. Focus on preserving UI/UX terminology (mockups, wireframes, components, states, flows, Figma, spacing, typography). Maintain visual design vocabulary and references to specific UI elements.",
+            role_context="product manager, designer, UX researcher, frontend developer, stakeholder"
+        ),
+        temperature=0.2
+    ),
+    Template(
+        id="pre-grooming",
+        name="Pre-grooming",
+        description="Requirements clarification, TBD resolution, preliminary decomposition",
+        system_prompt=BASELINE_PROMPT.format(
+            context="This is a pre-grooming technical discussion between product manager and developers. Focus on preserving requirement discussions, technical alternatives, edge cases, TBD items resolution. Maintain references to tickets, user stories, acceptance criteria. Capture preliminary estimates and technical concerns.",
+            role_context="product manager, tech lead, backend developer, frontend developer, architect, designer"
+        ),
+        temperature=0.2
+    ),
+    Template(
+        id="grooming",
+        name="Grooming",
+        description="Sprint planning, story point estimation, backlog refinement",
+        system_prompt=BASELINE_PROMPT.format(
+            context="This is a grooming/backlog refinement session with the full team. Focus on preserving story point discussions, estimation rationale, planning poker votes, acceptance criteria reviews. Maintain references to user stories, epics, sprint scope. Capture team concerns about estimates and capacity.",
+            role_context="product manager, scrum master, project manager, tech lead, developer, QA engineer, designer"
+        ),
+        temperature=0.2
+    ),
+    Template(
+        id="feature-discussion",
+        name="Feature Discussion",
+        description="1-on-1 feature explanations with developers, QA, or stakeholders",
+        system_prompt=BASELINE_PROMPT.format(
+            context="This is a 1-on-1 or small group discussion where a product manager explains a feature to a developer, QA engineer, or stakeholder. Focus on preserving: feature scope explanations (what's included/excluded), business context and reasoning behind decisions, ticket/epic references, historical context (why things are done a certain way), answers to clarifying questions. Maintain informal but precise communication style.",
+            role_context="product manager, developer, QA engineer, tech lead, stakeholder, designer"
+        ),
+        temperature=0.2
+    ),
 ]
 
 

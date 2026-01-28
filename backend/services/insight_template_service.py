@@ -188,6 +188,66 @@ DEFAULT_INSIGHT_TEMPLATES = [
         system_prompt="",
         temperature=0.4
     ),
+    InsightTemplate(
+        id="design-call",
+        name="Design Call",
+        description="UI/UX design reviews, mockup discussions",
+        include_mindmap=True,
+        sections=[
+            {"id": "design_decisions", "title": "Design Decisions", "description": "UI/UX decisions made - layout choices, component selection, visual direction"},
+            {"id": "feedback", "title": "Feedback & Iterations", "description": "Comments on mockups, requested changes, alternative options discussed"},
+            {"id": "open_questions", "title": "Open Questions", "description": "Unresolved design questions, items needing user research or stakeholder input"},
+            {"id": "action_items", "title": "Action Items", "description": "Tasks for designer (@name) - mockup updates, new screens, asset preparation"},
+        ],
+        system_prompt="",
+        temperature=0.3
+    ),
+    InsightTemplate(
+        id="pre-grooming",
+        name="Pre-grooming",
+        description="Requirements clarification, technical feasibility",
+        include_mindmap=True,
+        sections=[
+            {"id": "clarified_requirements", "title": "Clarified Requirements", "description": "TBD items resolved, acceptance criteria defined, edge cases covered"},
+            {"id": "technical_approach", "title": "Technical Approach", "description": "Implementation options discussed, chosen approach with rationale"},
+            {"id": "decomposition", "title": "Preliminary Decomposition", "description": "High-level breakdown into subtasks, dependencies identified"},
+            {"id": "open_items", "title": "Open Items", "description": "Remaining TBDs, items needing stakeholder decision, blocked topics"},
+            {"id": "agreements", "title": "Agreements", "description": "Key decisions and consensus reached between PM and dev team"},
+        ],
+        system_prompt="",
+        temperature=0.3
+    ),
+    InsightTemplate(
+        id="grooming",
+        name="Grooming",
+        description="Story point estimation, sprint planning",
+        include_mindmap=True,
+        sections=[
+            {"id": "estimated_stories", "title": "Estimated Stories", "description": "User stories discussed with final story point estimates (e.g., 'US-123: 5 SP')"},
+            {"id": "estimation_rationale", "title": "Estimation Rationale", "description": "Key factors affecting estimates - complexity, unknowns, dependencies, tech debt"},
+            {"id": "scope_concerns", "title": "Scope Concerns", "description": "Stories flagged as too large, unclear, or needing decomposition"},
+            {"id": "qa_considerations", "title": "QA Considerations", "description": "Testing concerns, edge cases for QA, automation needs"},
+            {"id": "sprint_readiness", "title": "Sprint Readiness", "description": "Stories ready for sprint, blocked stories, missing acceptance criteria"},
+        ],
+        system_prompt="",
+        temperature=0.3
+    ),
+    InsightTemplate(
+        id="feature-discussion",
+        name="Feature Discussion",
+        description="1-on-1 feature explanations with developers or QA",
+        include_mindmap=True,
+        sections=[
+            {"id": "feature_scope", "title": "Feature Scope", "description": "What is included and excluded from the feature, boundaries, MVP vs future phases"},
+            {"id": "context_shared", "title": "Context & Background", "description": "Business reasoning, history of decisions, why things are done a certain way, stakeholder context"},
+            {"id": "requirements_clarified", "title": "Requirements Clarified", "description": "Specific requirements discussed, acceptance criteria mentioned, edge cases covered"},
+            {"id": "tickets_mentioned", "title": "Tickets & References", "description": "Epics, user stories, tickets, PRs mentioned with their context"},
+            {"id": "open_questions", "title": "Open Questions", "description": "Questions that remained unanswered or need further clarification from stakeholders"},
+            {"id": "action_items", "title": "Action Items", "description": "Tasks for participants (@name) after the call - testing, development, follow-ups"},
+        ],
+        system_prompt="",
+        temperature=0.3
+    ),
 ]
 
 
