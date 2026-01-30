@@ -284,39 +284,18 @@ async def start_postprocessing(
     # Start processing in background
     async def run_postprocessing():
         import logging
+        import time
         logger = logging.getLogger(__name__)
         logger.info(f"Background task started for transcription {transcription_id}")
 
         from models import SessionLocal
         # Create a new session for background task (request session is closed)
         bg_db = SessionLocal()
+        operation = None
+        start_time = time.time()
+        
         try:
-            # Re-fetch transcription in new session
-            bg_transcription = bg_db.query(Transcription).filter(
-                Transcription.id == transcription_id
-            ).first()
-
-            if not bg_transcription:
-                raise ValueError(f"Transcription {transcription_id} not found")
-
-            service = PostProcessingService()
-            await service.process_transcript(
-                transcription=bg_transcription,
-                template_id=request.template_id,
-                provider=request.provider,
-                model=request.model,
-                db=bg_db,
-            )
-        except Exception as e:
-            import logging
-            import traceback
-            logger = logging.getLogger(__name__)
-            # Get full error details
-            error_msg = str(e) or repr(e) or type(e).__name__
-            full_traceback = traceback.format_exc()
-            logger.error(f"Post-processing failed: {error_msg}")
-            logger.error(f"Full traceback:\n{full_traceback}")
-            # Log failed operation
+            # Create operation record with PROCESSING status at start
             operation = LLMOperation(
                 transcription_id=transcription_id,
                 provider=provider,
@@ -327,10 +306,66 @@ async def start_postprocessing(
                 output_tokens=0,
                 cost_usd=None,
                 processing_time_seconds=0,
-                status=LLMOperationStatus.FAILED,
-                error_message=error_msg if error_msg else f"Exception: {type(e).__name__}",
+                status=LLMOperationStatus.PROCESSING,
+                error_message=None,
             )
             bg_db.add(operation)
+            bg_db.commit()
+            bg_db.refresh(operation)
+            logger.info(f"Created operation {operation.id} with status PROCESSING")
+            
+            # Re-fetch transcription in new session
+            bg_transcription = bg_db.query(Transcription).filter(
+                Transcription.id == transcription_id
+            ).first()
+
+            if not bg_transcription:
+                raise ValueError(f"Transcription {transcription_id} not found")
+
+            service = PostProcessingService()
+            result = await service.process_transcript(
+                transcription=bg_transcription,
+                template_id=request.template_id,
+                provider=request.provider,
+                model=request.model,
+                db=bg_db,
+                existing_operation=operation,  # Pass operation to update instead of create new
+            )
+            
+            # Update operation to SUCCESS (service already updated tokens/cost)
+            operation.status = LLMOperationStatus.SUCCESS
+            operation.processing_time_seconds = time.time() - start_time
+            bg_db.commit()
+            logger.info(f"Operation {operation.id} completed successfully")
+            
+        except Exception as e:
+            import traceback
+            # Get full error details
+            error_msg = str(e) or repr(e) or type(e).__name__
+            full_traceback = traceback.format_exc()
+            logger.error(f"Post-processing failed: {error_msg}")
+            logger.error(f"Full traceback:\n{full_traceback}")
+            
+            # Update existing operation to FAILED or create new if none exists
+            if operation:
+                operation.status = LLMOperationStatus.FAILED
+                operation.error_message = error_msg if error_msg else f"Exception: {type(e).__name__}"
+                operation.processing_time_seconds = time.time() - start_time
+            else:
+                operation = LLMOperation(
+                    transcription_id=transcription_id,
+                    provider=provider,
+                    model=model,
+                    template_id=request.template_id,
+                    temperature=0.2,
+                    input_tokens=0,
+                    output_tokens=0,
+                    cost_usd=None,
+                    processing_time_seconds=time.time() - start_time,
+                    status=LLMOperationStatus.FAILED,
+                    error_message=error_msg if error_msg else f"Exception: {type(e).__name__}",
+                )
+                bg_db.add(operation)
             bg_db.commit()
         finally:
             bg_db.close()

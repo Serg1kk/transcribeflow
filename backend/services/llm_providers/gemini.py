@@ -13,7 +13,7 @@ class GeminiClient(BaseLLMClient):
     """Client for Google Gemini API."""
 
     BASE_URL = "https://generativelanguage.googleapis.com/v1beta"
-    TIMEOUT = 300.0  # 5 minutes for long transcripts
+    TIMEOUT = 900.0  # 15 minutes for very long transcripts (93K+ tokens)
     MAX_RETRIES = 2
 
     async def complete(
@@ -39,6 +39,7 @@ class GeminiClient(BaseLLMClient):
             "generationConfig": {
                 "temperature": temperature,
                 "responseMimeType": "application/json",
+                "maxOutputTokens": 100000,  # Required for full output, default ~8K cuts response
             }
         }
 

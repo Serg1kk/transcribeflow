@@ -9,6 +9,7 @@ from models.database import Base
 
 class LLMOperationStatus(enum.Enum):
     """Status of an LLM operation."""
+    PROCESSING = "processing"
     SUCCESS = "success"
     FAILED = "failed"
 

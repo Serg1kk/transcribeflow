@@ -7,6 +7,19 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Set, Tuple
 
+# Workaround for PyTorch 2.6 weights_only=True default change
+# Pyannote models need weights_only=False to load properly
+try:
+    import torch
+    _original_torch_load = torch.load
+    def _patched_torch_load(*args, **kwargs):
+        if 'weights_only' not in kwargs:
+            kwargs['weights_only'] = False
+        return _original_torch_load(*args, **kwargs)
+    torch.load = _patched_torch_load
+except ImportError:
+    pass
+
 # Formats that torchaudio/soundfile can read directly
 NATIVE_FORMATS = {'.wav', '.flac', '.ogg', '.mp3', '.aiff', '.au'}
 
@@ -37,6 +50,31 @@ class WhisperXDiarizationWorker:
         self._diarize_model = None
         self._current_language = None
 
+    def unload_models(self):
+        """Unload all cached models to free memory."""
+        import gc
+        
+        if self._align_model is not None:
+            del self._align_model
+            self._align_model = None
+            self._align_metadata = None
+            self._current_language = None
+        
+        if self._diarize_model is not None:
+            del self._diarize_model
+            self._diarize_model = None
+        
+        # Force garbage collection
+        gc.collect()
+        
+        # Clear PyTorch cache if available
+        try:
+            import torch
+            if torch.backends.mps.is_available():
+                torch.mps.empty_cache()
+        except Exception:
+            pass
+
     def is_available(self) -> bool:
         """Check if whisperx is installed and token is set."""
         try:
@@ -62,7 +100,7 @@ class WhisperXDiarizationWorker:
             from pyannote.audio import Pipeline
             self._diarize_model = Pipeline.from_pretrained(
                 "pyannote/speaker-diarization-3.1",
-                token=self.hf_token,  # New API uses 'token' not 'use_auth_token'
+                use_auth_token=self.hf_token,
             )
             # Keep on CPU for accurate mode
         return self._diarize_model

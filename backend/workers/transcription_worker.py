@@ -1,6 +1,8 @@
 # workers/transcription_worker.py
 """Main transcription processing worker."""
+import gc
 import json
+import os
 import shutil
 import time
 from datetime import datetime
@@ -42,6 +44,45 @@ class TranscriptionWorker:
         self._diarization_worker = None
         self._whisperx_worker = None
         self._engines = {}
+
+    def unload_models(self):
+        """Unload all cached models to free memory."""
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.info("Unloading models to free memory...")
+        
+        # Unload WhisperX diarization models
+        if self._whisperx_worker is not None:
+            self._whisperx_worker.unload_models()
+            self._whisperx_worker = None
+        
+        # Unload pyannote diarization worker
+        if self._diarization_worker is not None:
+            self._diarization_worker = None
+        
+        # Clear engines (MLX Whisper caches internally)
+        self._engines = {}
+        
+        # Clear MLX cache if possible
+        try:
+            import mlx.core as mx
+            mx.metal.clear_cache()
+        except Exception:
+            pass
+        
+        # Force garbage collection
+        gc.collect()
+        
+        logger.info("Models unloaded, memory freed")
+
+    def cleanup_upload(self, original_path: Path):
+        """Delete the original upload file after successful processing."""
+        try:
+            if original_path.exists():
+                original_path.unlink()
+        except Exception as e:
+            import logging
+            logging.getLogger(__name__).warning(f"Failed to cleanup upload {original_path}: {e}")
 
     def get_engine(self, engine_name: str) -> TranscriptionEngine:
         """Get or create a transcription engine by name."""
@@ -273,12 +314,20 @@ class TranscriptionWorker:
             transcription.progress = 100.0
             db.commit()
 
+            # Cleanup: delete original upload file (it's now copied to output_dir)
+            self.cleanup_upload(audio_path)
+            
+            # Free memory after processing
+            gc.collect()
+
             return True
 
         except Exception as e:
             transcription.status = TranscriptionStatus.FAILED
             transcription.error_message = str(e)
             db.commit()
+            # Still try to free memory on error
+            gc.collect()
             return False
 
     def _create_output_directory(

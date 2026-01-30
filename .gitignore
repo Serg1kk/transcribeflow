@@ -21,3 +21,11 @@ out/
 *.db
 ~/Transcriptions/
 session-history/
+
+# Local-only components (system monitoring widget)
+frontend/src/components/SystemMonitor.tsx
+backend/api/system.py
+frontend/.env.local
+
+# Local logs
+logs/

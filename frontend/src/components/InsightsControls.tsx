@@ -103,7 +103,7 @@ export function InsightsControls({
       // Poll for completion
       const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
       let pollCount = 0;
-      const maxPolls = 60;
+      const maxPolls = 500; // ~16 minutes at 2s intervals
 
       const pollInterval = setInterval(async () => {
         pollCount++;

@@ -634,16 +634,25 @@ export default function SettingsPage() {
                   <SelectContent>
                     {postprocessingProvider === "gemini" ? (
                       <>
+                        <SelectItem value="gemini-3-pro-preview">{intl.formatMessage({ id: "settings.llm.model.gemini3proPreview" })}</SelectItem>
+                        <SelectItem value="gemini-3-flash-preview">{intl.formatMessage({ id: "settings.llm.model.gemini3flashPreview" })}</SelectItem>
+                        <SelectItem value="gemini-2.5-pro">{intl.formatMessage({ id: "settings.llm.model.gemini25pro" })}</SelectItem>
                         <SelectItem value="gemini-2.5-flash">{intl.formatMessage({ id: "settings.llm.model.gemini25flash" })}</SelectItem>
                         <SelectItem value="gemini-2.5-flash-lite">{intl.formatMessage({ id: "settings.llm.model.gemini25flashLite" })}</SelectItem>
-                        <SelectItem value="gemini-3-flash-preview">{intl.formatMessage({ id: "settings.llm.model.gemini3flashPreview" })}</SelectItem>
                       </>
                     ) : (
                       <>
-                        <SelectItem value="openai/gpt-4o-mini">{intl.formatMessage({ id: "settings.llm.model.gpt4oMini" })}</SelectItem>
-                        <SelectItem value="anthropic/claude-3.5-haiku">{intl.formatMessage({ id: "settings.llm.model.claude35haiku" })}</SelectItem>
-                        <SelectItem value="deepseek/deepseek-r1">{intl.formatMessage({ id: "settings.llm.model.deepseekR1" })}</SelectItem>
-                        <SelectItem value="google/gemini-2.5-flash">{intl.formatMessage({ id: "settings.llm.model.gemini25flashViaOr" })}</SelectItem>
+                        <SelectItem value="x-ai/grok-4.1-fast">{intl.formatMessage({ id: "settings.llm.model.or.grok41fast" })}</SelectItem>
+                        <SelectItem value="google/gemini-3-pro-preview">{intl.formatMessage({ id: "settings.llm.model.or.gemini3pro" })}</SelectItem>
+                        <SelectItem value="google/gemini-3-flash-preview">{intl.formatMessage({ id: "settings.llm.model.or.gemini3flash" })}</SelectItem>
+                        <SelectItem value="google/gemini-2.5-pro">{intl.formatMessage({ id: "settings.llm.model.or.gemini25pro" })}</SelectItem>
+                        <SelectItem value="google/gemini-2.5-flash">{intl.formatMessage({ id: "settings.llm.model.or.gemini25flash" })}</SelectItem>
+                        <SelectItem value="google/gemini-2.5-flash-lite">{intl.formatMessage({ id: "settings.llm.model.or.gemini25flashLite" })}</SelectItem>
+                        <SelectItem value="anthropic/claude-sonnet-4">{intl.formatMessage({ id: "settings.llm.model.or.claudeSonnet4" })}</SelectItem>
+                        <SelectItem value="openai/gpt-4.1-mini">{intl.formatMessage({ id: "settings.llm.model.or.gpt41mini" })}</SelectItem>
+                        <SelectItem value="meta-llama/llama-4-maverick">{intl.formatMessage({ id: "settings.llm.model.or.llama4maverick" })}</SelectItem>
+                        <SelectItem value="qwen/qwen-turbo">{intl.formatMessage({ id: "settings.llm.model.or.qwenTurbo" })}</SelectItem>
+                        <SelectItem value="deepseek/deepseek-r1">{intl.formatMessage({ id: "settings.llm.model.or.deepseekR1" })}</SelectItem>
                       </>
                     )}
                   </SelectContent>
@@ -719,16 +728,25 @@ export default function SettingsPage() {
                   <SelectContent>
                     {insightsProvider === "gemini" ? (
                       <>
+                        <SelectItem value="gemini-3-pro-preview">{intl.formatMessage({ id: "settings.llm.model.gemini3proPreview" })}</SelectItem>
+                        <SelectItem value="gemini-3-flash-preview">{intl.formatMessage({ id: "settings.llm.model.gemini3flashPreview" })}</SelectItem>
+                        <SelectItem value="gemini-2.5-pro">{intl.formatMessage({ id: "settings.llm.model.gemini25pro" })}</SelectItem>
                         <SelectItem value="gemini-2.5-flash">{intl.formatMessage({ id: "settings.llm.model.gemini25flash" })}</SelectItem>
                         <SelectItem value="gemini-2.5-flash-lite">{intl.formatMessage({ id: "settings.llm.model.gemini25flashLite" })}</SelectItem>
-                        <SelectItem value="gemini-3-flash-preview">{intl.formatMessage({ id: "settings.llm.model.gemini3flashPreview" })}</SelectItem>
                       </>
                     ) : (
                       <>
-                        <SelectItem value="openai/gpt-4o-mini">{intl.formatMessage({ id: "settings.llm.model.gpt4oMini" })}</SelectItem>
-                        <SelectItem value="anthropic/claude-3.5-haiku">{intl.formatMessage({ id: "settings.llm.model.claude35haiku" })}</SelectItem>
-                        <SelectItem value="deepseek/deepseek-r1">{intl.formatMessage({ id: "settings.llm.model.deepseekR1" })}</SelectItem>
-                        <SelectItem value="google/gemini-2.5-flash">{intl.formatMessage({ id: "settings.llm.model.gemini25flashViaOr" })}</SelectItem>
+                        <SelectItem value="x-ai/grok-4.1-fast">{intl.formatMessage({ id: "settings.llm.model.or.grok41fast" })}</SelectItem>
+                        <SelectItem value="google/gemini-3-pro-preview">{intl.formatMessage({ id: "settings.llm.model.or.gemini3pro" })}</SelectItem>
+                        <SelectItem value="google/gemini-3-flash-preview">{intl.formatMessage({ id: "settings.llm.model.or.gemini3flash" })}</SelectItem>
+                        <SelectItem value="google/gemini-2.5-pro">{intl.formatMessage({ id: "settings.llm.model.or.gemini25pro" })}</SelectItem>
+                        <SelectItem value="google/gemini-2.5-flash">{intl.formatMessage({ id: "settings.llm.model.or.gemini25flash" })}</SelectItem>
+                        <SelectItem value="google/gemini-2.5-flash-lite">{intl.formatMessage({ id: "settings.llm.model.or.gemini25flashLite" })}</SelectItem>
+                        <SelectItem value="anthropic/claude-sonnet-4">{intl.formatMessage({ id: "settings.llm.model.or.claudeSonnet4" })}</SelectItem>
+                        <SelectItem value="openai/gpt-4.1-mini">{intl.formatMessage({ id: "settings.llm.model.or.gpt41mini" })}</SelectItem>
+                        <SelectItem value="meta-llama/llama-4-maverick">{intl.formatMessage({ id: "settings.llm.model.or.llama4maverick" })}</SelectItem>
+                        <SelectItem value="qwen/qwen-turbo">{intl.formatMessage({ id: "settings.llm.model.or.qwenTurbo" })}</SelectItem>
+                        <SelectItem value="deepseek/deepseek-r1">{intl.formatMessage({ id: "settings.llm.model.or.deepseekR1" })}</SelectItem>
                       </>
                     )}
                   </SelectContent>

@@ -24,17 +24,31 @@ class LLMModel:
 
 
 # Default models configuration
+# Prices in USD per 1M tokens (input, output)
 DEFAULT_MODELS = {
     "gemini": [
-        LLMModel("gemini-2.5-flash", "Gemini 2.5 Flash", 0.30, 2.50),
-        LLMModel("gemini-2.5-flash-lite", "Gemini 2.5 Flash Lite", 0.10, 0.40),
-        LLMModel("gemini-3-flash-preview", "Gemini 3 Flash Preview", 0.50, 3.00),
+        # Gemini 3 (latest)
+        LLMModel("gemini-3-pro-preview", "Gemini 3 Pro Preview (1M)", 2.00, 12.00),
+        LLMModel("gemini-3-flash-preview", "Gemini 3 Flash Preview (1M)", 0.50, 3.00),
+        # Gemini 2.5
+        LLMModel("gemini-2.5-pro", "Gemini 2.5 Pro (1M)", 1.25, 10.00),
+        LLMModel("gemini-2.5-flash", "Gemini 2.5 Flash (1M)", 0.30, 2.50),
+        LLMModel("gemini-2.5-flash-lite", "Gemini 2.5 Flash Lite (1M)", 0.10, 0.40),
     ],
     "openrouter": [
-        LLMModel("openai/gpt-4o-mini", "GPT-4o Mini", 0.15, 0.60),
-        LLMModel("anthropic/claude-3.5-haiku", "Claude 3.5 Haiku", 0.80, 4.00),
-        LLMModel("deepseek/deepseek-r1", "DeepSeek R1", 0.70, 2.40),
-        LLMModel("google/gemini-2.5-flash", "Gemini 2.5 Flash (via OR)", 0.30, 2.50),
+        # Large context models (1M+)
+        LLMModel("x-ai/grok-4.1-fast", "Grok 4.1 Fast (2M!)", 0.20, 0.50),
+        LLMModel("google/gemini-3-pro-preview", "Gemini 3 Pro (via OR, 1M)", 2.00, 12.00),
+        LLMModel("google/gemini-3-flash-preview", "Gemini 3 Flash (via OR, 1M)", 0.50, 3.00),
+        LLMModel("google/gemini-2.5-pro", "Gemini 2.5 Pro (via OR, 1M)", 1.25, 10.00),
+        LLMModel("google/gemini-2.5-flash", "Gemini 2.5 Flash (via OR, 1M)", 0.30, 2.50),
+        LLMModel("google/gemini-2.5-flash-lite", "Gemini 2.5 Flash Lite (via OR, 1M)", 0.10, 0.40),
+        LLMModel("anthropic/claude-sonnet-4", "Claude Sonnet 4 (1M)", 3.00, 15.00),
+        LLMModel("openai/gpt-4.1-mini", "GPT-4.1 Mini (1M)", 0.40, 1.60),
+        LLMModel("meta-llama/llama-4-maverick", "Llama 4 Maverick (1M)", 0.15, 0.60),
+        LLMModel("qwen/qwen-turbo", "Qwen Turbo (1M)", 0.05, 0.20),
+        # Reasoning
+        LLMModel("deepseek/deepseek-r1", "DeepSeek R1 (reasoning)", 0.70, 2.50),
     ],
 }
 

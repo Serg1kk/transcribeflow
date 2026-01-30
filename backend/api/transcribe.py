@@ -24,7 +24,7 @@ def _format_timestamp(seconds: float) -> str:
     return f"{hours:02d}:{minutes:02d}:{secs:02d}"
 
 
-def _regenerate_txt_files(output_dir: Path, original_data: dict | None, cleaned_data: dict | None):
+def _regenerate_txt_files(output_dir: Path, original_data: Optional[dict], cleaned_data: Optional[dict]):
     """Regenerate TXT files with current speaker names from JSON data."""
     # Regenerate transcript.txt
     if original_data:
@@ -328,23 +328,7 @@ async def get_transcription(
     if not transcription:
         raise HTTPException(status_code=404, detail="Transcription not found")
 
-    return TranscriptionResponse(
-        id=transcription.id,
-        filename=transcription.filename,
-        status=transcription.status.value,
-        engine=transcription.engine,
-        model=transcription.model,
-        language=transcription.language,
-        initial_prompt=transcription.initial_prompt,
-        created_at=transcription.created_at,
-        progress=transcription.progress,
-        error_message=transcription.error_message,
-        file_size=transcription.file_size,
-        duration_seconds=transcription.duration_seconds,
-        processing_time_seconds=transcription.processing_time_seconds,
-        transcription_time_seconds=transcription.transcription_time_seconds,
-        diarization_time_seconds=transcription.diarization_time_seconds,
-    )
+    return _build_transcription_response(transcription, db)
 
 
 class TranscriptionUpdate(BaseModel):

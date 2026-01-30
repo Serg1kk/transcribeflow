@@ -86,7 +86,7 @@ export function PostProcessingControls({
       // Poll for completion or failure by checking operation status
       const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
       let pollCount = 0;
-      const maxPolls = 60; // 2 minutes at 2s intervals
+      const maxPolls = 500; // ~16 minutes at 2s intervals (covers Gemini 15min timeout + retries)
 
       const pollInterval = setInterval(async () => {
         pollCount++;

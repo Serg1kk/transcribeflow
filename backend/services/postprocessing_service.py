@@ -100,6 +100,7 @@ class PostProcessingService:
         provider: Optional[str] = None,
         model: Optional[str] = None,
         db: Optional[Session] = None,
+        existing_operation: Optional[LLMOperation] = None,
     ) -> PostProcessingResult:
         """Process a transcript with LLM cleanup.
 
@@ -109,6 +110,7 @@ class PostProcessingService:
             provider: LLM provider (default from settings)
             model: LLM model (default from settings)
             db: Database session for logging operation
+            existing_operation: Optional existing operation to update (instead of creating new)
 
         Returns:
             PostProcessingResult with cleaned segments and usage stats
@@ -189,22 +191,32 @@ TRANSCRIPT:
             processing_time=processing_time,
         )
 
-        # Log operation to database
+        # Log operation to database (update existing or create new)
         if db:
-            operation = LLMOperation(
-                transcription_id=transcription.id,
-                provider=provider,
-                model=model,
-                template_id=template_id,
-                temperature=template.temperature,
-                input_tokens=llm_response.input_tokens,
-                output_tokens=llm_response.output_tokens,
-                cost_usd=cost_usd,
-                processing_time_seconds=processing_time,
-                status=LLMOperationStatus.SUCCESS,
-            )
-            db.add(operation)
-            db.commit()
+            if existing_operation:
+                # Update existing operation with results
+                existing_operation.input_tokens = llm_response.input_tokens
+                existing_operation.output_tokens = llm_response.output_tokens
+                existing_operation.cost_usd = cost_usd
+                existing_operation.temperature = template.temperature
+                # Note: status and processing_time will be set by caller
+                db.commit()
+            else:
+                # Create new operation (legacy path)
+                operation = LLMOperation(
+                    transcription_id=transcription.id,
+                    provider=provider,
+                    model=model,
+                    template_id=template_id,
+                    temperature=template.temperature,
+                    input_tokens=llm_response.input_tokens,
+                    output_tokens=llm_response.output_tokens,
+                    cost_usd=cost_usd,
+                    processing_time_seconds=processing_time,
+                    status=LLMOperationStatus.SUCCESS,
+                )
+                db.add(operation)
+                db.commit()
 
         return PostProcessingResult(
             segments=cleaned_segments,

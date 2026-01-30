@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import localFont from "next/font/local";
 import { Toaster } from "sonner";
 import { LocaleProvider } from "@/i18n";
+import { SystemMonitorWrapper } from "@/components/SystemMonitorWrapper";
 import "./globals.css";
 
 const geistSans = localFont({
@@ -36,6 +37,7 @@ export default function RootLayout({
             {children}
           </div>
           <Toaster richColors position="top-right" />
+          <SystemMonitorWrapper />
         </LocaleProvider>
       </body>
     </html>
