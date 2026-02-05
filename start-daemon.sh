@@ -4,7 +4,7 @@
 
 set -e
 
-BASE_DIR="$HOME/local-projects/transcribeflow"
+BASE_DIR="$HOME/services/transcribeflow/app"
 LOG_DIR="$BASE_DIR/logs"
 
 mkdir -p "$LOG_DIR"
@@ -34,14 +34,15 @@ if [ ! -d ".venv" ]; then
     python3 -m venv .venv
 fi
 
-source .venv/bin/activate
+# Activate venv and use full paths
+export PATH="$BASE_DIR/backend/.venv/bin:$PATH"
 
 # Install deps if needed
-pip install -q -r requirements.txt
+.venv/bin/pip install -q -r requirements.txt 2>/dev/null || true
 
 # Start backend
 echo "Starting backend..."
-python -m uvicorn main:app --host 0.0.0.0 --port 8000 >> "$LOG_DIR/backend.log" 2>&1 &
+.venv/bin/python -m uvicorn main:app --host 0.0.0.0 --port 8000 >> "$LOG_DIR/backend.log" 2>&1 &
 BACKEND_PID=$!
 echo $BACKEND_PID > "$LOG_DIR/backend.pid"
 
