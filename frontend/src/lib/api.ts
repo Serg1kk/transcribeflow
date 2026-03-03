@@ -478,6 +478,21 @@ export async function applyAllSpeakerSuggestions(
   return response.json();
 }
 
+// Speaker identification (cloud engines)
+export async function identifySpeakers(
+  transcriptionId: string
+): Promise<{ status: string; transcription_id: string }> {
+  const response = await fetch(
+    `${API_BASE}/api/postprocess/transcriptions/${transcriptionId}/identify-speakers`,
+    { method: "POST" }
+  );
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.detail || "Failed to start speaker identification");
+  }
+  return response.json();
+}
+
 // AI Insights types
 export interface InsightSection {
   id: string;

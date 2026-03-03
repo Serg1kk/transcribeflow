@@ -22,6 +22,7 @@ import {
   checkCleanedExists,
   getInsights,
   listInsights,
+  identifySpeakers,
   TranscriptionDetail,
   TranscriptData,
   CleanedTranscript,
@@ -51,6 +52,9 @@ export default function TranscriptionPage() {
 
   // Template sync state
   const [cleaningTemplateId, setCleaningTemplateId] = useState<string>("");
+
+  // Identify speakers state
+  const [isIdentifyingSpeakers, setIsIdentifyingSpeakers] = useState(false);
 
   useEffect(() => {
     async function fetchData() {
@@ -152,6 +156,58 @@ export default function TranscriptionPage() {
     }
   };
 
+  // Check if this is a cloud engine (not local mlx-whisper)
+  const isCloudEngine = transcription?.engine !== "mlx-whisper";
+
+  // Identify speakers handler
+  const handleIdentifySpeakers = async () => {
+    setIsIdentifyingSpeakers(true);
+    try {
+      const startTime = new Date().toISOString();
+      await identifySpeakers(id);
+
+      // Poll for completion
+      const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+      let pollCount = 0;
+      const maxPolls = 300;
+
+      const pollInterval = setInterval(async () => {
+        pollCount++;
+        try {
+          const opsResponse = await fetch(
+            `${API_BASE}/api/postprocess/operations?transcription_id=${id}&limit=1&_t=${Date.now()}`
+          );
+          if (opsResponse.ok) {
+            const ops = await opsResponse.json();
+            if (ops.length > 0) {
+              const latestOp = ops[0];
+              if (latestOp.created_at >= startTime && latestOp.template_id === "identify-speakers") {
+                if (latestOp.status === "success") {
+                  clearInterval(pollInterval);
+                  setIsIdentifyingSpeakers(false);
+                  setSuggestionsKey((prev) => prev + 1);
+                  return;
+                } else if (latestOp.status === "failed") {
+                  clearInterval(pollInterval);
+                  setIsIdentifyingSpeakers(false);
+                  return;
+                }
+              }
+            }
+          }
+          if (pollCount >= maxPolls) {
+            clearInterval(pollInterval);
+            setIsIdentifyingSpeakers(false);
+          }
+        } catch {
+          // Network error, keep polling
+        }
+      }, 2000);
+    } catch {
+      setIsIdentifyingSpeakers(false);
+    }
+  };
+
   // Copy/Download handlers
   const handleCopyOriginalTxt = async () => {
     try {
@@ -230,6 +286,32 @@ export default function TranscriptionPage() {
             speakers={transcript.speakers}
             onUpdate={handleSpeakersUpdate}
           />
+
+          {/* Identify Speakers button — only for cloud engines */}
+          {isCloudEngine && (
+            <div className="mt-3">
+              <Button
+                onClick={handleIdentifySpeakers}
+                disabled={isIdentifyingSpeakers}
+                variant="outline"
+                size="sm"
+              >
+                {isIdentifyingSpeakers ? (
+                  <>
+                    <span className="animate-spin mr-2">⏳</span>
+                    Identifying...
+                  </>
+                ) : (
+                  <>
+                    <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                    </svg>
+                    Identify Speakers
+                  </>
+                )}
+              </Button>
+            </div>
+          )}
 
           {/* Post-Processing Controls */}
           <div className="mt-6 pt-6 border-t">

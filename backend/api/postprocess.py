@@ -464,6 +464,116 @@ async def get_speaker_suggestions(
         return json.load(f)
 
 
+@router.post("/transcriptions/{transcription_id}/identify-speakers")
+async def identify_speakers(
+    transcription_id: str,
+    background_tasks: BackgroundTasks,
+    db: Session = Depends(get_db),
+):
+    """Identify speakers from transcript context (for cloud-engine transcriptions).
+
+    Unlike full post-processing, this only identifies who each speaker is
+    without cleaning/modifying the transcript text.
+    """
+    transcription = db.query(Transcription).filter(
+        Transcription.id == transcription_id
+    ).first()
+
+    if not transcription:
+        raise HTTPException(status_code=404, detail="Transcription not found")
+
+    if transcription.status != TranscriptionStatus.COMPLETED:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Transcription must be completed. Current status: {transcription.status.value}"
+        )
+
+    settings = get_settings()
+    provider = settings.postprocessing_provider
+    model = settings.postprocessing_model
+
+    async def run_identify_speakers():
+        import logging
+        import time
+        logger = logging.getLogger(__name__)
+        logger.info(f"Identify speakers started for transcription {transcription_id}")
+
+        from models import SessionLocal
+        bg_db = SessionLocal()
+        operation = None
+        start_time = time.time()
+
+        try:
+            operation = LLMOperation(
+                transcription_id=transcription_id,
+                provider=provider,
+                model=model,
+                template_id="identify-speakers",
+                temperature=0.2,
+                input_tokens=0,
+                output_tokens=0,
+                cost_usd=None,
+                processing_time_seconds=0,
+                status=LLMOperationStatus.PROCESSING,
+                error_message=None,
+            )
+            bg_db.add(operation)
+            bg_db.commit()
+            bg_db.refresh(operation)
+
+            bg_transcription = bg_db.query(Transcription).filter(
+                Transcription.id == transcription_id
+            ).first()
+
+            if not bg_transcription:
+                raise ValueError(f"Transcription {transcription_id} not found")
+
+            service = PostProcessingService()
+            await service.identify_speakers(
+                transcription=bg_transcription,
+                db=bg_db,
+                existing_operation=operation,
+            )
+
+            operation.status = LLMOperationStatus.SUCCESS
+            operation.processing_time_seconds = time.time() - start_time
+            bg_db.commit()
+            logger.info(f"Identify speakers completed for {transcription_id}")
+
+        except Exception as e:
+            import traceback
+            error_msg = str(e) or repr(e) or type(e).__name__
+            logger.error(f"Identify speakers failed: {error_msg}")
+            logger.error(traceback.format_exc())
+
+            if operation:
+                operation.status = LLMOperationStatus.FAILED
+                operation.error_message = error_msg
+                operation.processing_time_seconds = time.time() - start_time
+            else:
+                operation = LLMOperation(
+                    transcription_id=transcription_id,
+                    provider=provider,
+                    model=model,
+                    template_id="identify-speakers",
+                    temperature=0.2,
+                    input_tokens=0,
+                    output_tokens=0,
+                    cost_usd=None,
+                    processing_time_seconds=time.time() - start_time,
+                    status=LLMOperationStatus.FAILED,
+                    error_message=error_msg,
+                )
+                bg_db.add(operation)
+            bg_db.commit()
+        finally:
+            bg_db.close()
+
+    background_tasks.add_task(run_identify_speakers)
+
+    return {"status": "processing", "transcription_id": transcription_id}
+
+
 @router.post("/transcriptions/{transcription_id}/suggestions/{speaker_id}/apply")
 async def apply_speaker_suggestion(
     transcription_id: str,
