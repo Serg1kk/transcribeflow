@@ -319,12 +319,14 @@ async def download_insights_md(
     filename = f"{date_str}_{base_name}_insights.md"
 
     # Use StreamingResponse instead of temp file to avoid Chrome "Keep" warning
+    from urllib.parse import quote
     content = BytesIO(md.encode('utf-8'))
+    encoded_filename = quote(filename)
     
     return StreamingResponse(
         content,
         media_type="text/markdown",
-        headers={"Content-Disposition": f'attachment; filename="{filename}"'}
+        headers={"Content-Disposition": f"attachment; filename*=utf-8''{encoded_filename}"}
     )
 
 
@@ -360,10 +362,12 @@ async def download_mindmap_md(
     filename = f"{date_str}_{base_name}_mindmap.md"
 
     # Use StreamingResponse instead of temp file to avoid Chrome "Keep" warning
+    from urllib.parse import quote
     content = BytesIO(insights['mindmap']['content'].encode('utf-8'))
+    encoded_filename = quote(filename)
     
     return StreamingResponse(
         content,
         media_type="text/markdown",
-        headers={"Content-Disposition": f'attachment; filename="{filename}"'}
+        headers={"Content-Disposition": f"attachment; filename*=utf-8''{encoded_filename}"}
     )
