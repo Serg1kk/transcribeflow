@@ -290,7 +290,11 @@ export default function TranscriptionPage() {
       }
 
       // 3. Download transcript - delay 1000ms
-      await downloadFile(api.getOriginalTxtUrl(id), 1000);
+      // Prefer cleaned version, fallback to original
+      const transcriptUrl = hasCleanedVersion
+        ? api.getCleanedTxtUrl(id)
+        : api.getOriginalTxtUrl(id);
+      await downloadFile(transcriptUrl, 1000);
 
       toast.success("Downloading all files...");
     } catch (error) {
