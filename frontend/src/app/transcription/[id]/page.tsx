@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import { useIntl } from "react-intl";
+import { toast } from "sonner";
 import { Header } from "@/components/Header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -257,30 +258,45 @@ export default function TranscriptionPage() {
     window.open(api.getCleanedTxtUrl(id), "_blank");
   };
 
-  const handleDownloadAll = () => {
+  const handleDownloadAll = async () => {
     if (!insights) return;
 
     const templateId = insights.metadata.template_id;
     const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
-    // Download all 3 files with delays to avoid popup blocker
-    // 1. Insights MD
-    window.open(`${API_BASE}/api/insights/transcriptions/${id}/download/insights-md?template_id=${templateId}`, "_blank");
+    // Helper function to download file without "Keep from" prompt
+    const downloadFile = async (url: string, delay: number = 0) => {
+      if (delay > 0) {
+        await new Promise(resolve => setTimeout(resolve, delay));
+      }
+      
+      // Create invisible link and trigger download
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = ""; // Force download
+      a.style.display = "none";
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+    };
 
-    // 2. Mindmap MD (if available) - delay 500ms
-    if (insights.mindmap) {
-      setTimeout(() => {
-        window.open(`${API_BASE}/api/insights/transcriptions/${id}/download/mindmap-md?template_id=${templateId}`, "_blank");
-      }, 500);
+    try {
+      // 1. Download insights MD
+      await downloadFile(`${API_BASE}/api/insights/transcriptions/${id}/download/insights-md?template_id=${templateId}`);
+
+      // 2. Download mindmap MD (if available) - delay 500ms
+      if (insights.mindmap) {
+        await downloadFile(`${API_BASE}/api/insights/transcriptions/${id}/download/mindmap-md?template_id=${templateId}`, 500);
+      }
+
+      // 3. Download transcript - delay 1000ms
+      await downloadFile(api.getOriginalTxtUrl(id), 1000);
+
+      toast.success("Downloading all files...");
+    } catch (error) {
+      console.error("Download error:", error);
+      toast.error("Failed to download files");
     }
-
-    // 3. Transcript - delay 1000ms
-    setTimeout(() => {
-      const transcriptUrl = hasCleanedVersion
-        ? api.getCleanedTxtUrl(id)
-        : api.getOriginalTxtUrl(id);
-      window.open(transcriptUrl, "_blank");
-    }, 1000);
   };
 
   return (

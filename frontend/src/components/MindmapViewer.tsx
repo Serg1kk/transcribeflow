@@ -148,7 +148,7 @@ export function MindmapViewer({ markdown, className = "", filename = "mindmap" }
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `mindmap-${exportName}.md`;
+    a.download = `${exportName}_mindmap.md`;
     a.click();
     URL.revokeObjectURL(url);
   }
