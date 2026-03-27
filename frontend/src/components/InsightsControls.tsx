@@ -70,7 +70,8 @@ export function InsightsControls({
       }
     }
     load();
-  }, [transcriptionId, selectedTemplate, usedTemplateId, suggestedTemplateId]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [transcriptionId, usedTemplateId]);
 
   // Apply suggested template from parent (Step 1 selection) - only if:
   // 1. User hasn't manually changed it

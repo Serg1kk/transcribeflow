@@ -375,7 +375,7 @@ export default function TranscriptionPage() {
               </p>
               <div className="ml-8">
                 <InsightsControls
-                  key={`insights-${hasCleanedVersion}-${cleaningTemplateId}`}
+                  key={`insights-${hasCleanedVersion}`}
                   transcriptionId={id}
                   hasInsights={hasInsights}
                   onGenerationComplete={handleInsightsComplete}

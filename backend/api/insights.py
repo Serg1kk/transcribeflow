@@ -287,7 +287,8 @@ async def download_insights_md(
     db: Session = Depends(get_db),
 ):
     """Download insights as markdown file."""
-    from fastapi.responses import FileResponse
+    from fastapi.responses import StreamingResponse
+    from io import BytesIO
     
     transcription = db.query(Transcription).filter(
         Transcription.id == transcription_id
@@ -317,21 +318,14 @@ async def download_insights_md(
     date_str = datetime.now().strftime("%d.%m.%y")
     filename = f"{date_str}_{base_name}_insights.md"
 
-    # Create temp file
-    import tempfile
-    with tempfile.NamedTemporaryFile(mode='w', suffix='.md', delete=False) as f:
-        f.write(md)
-        temp_path = f.name
-
-    from fastapi.responses import FileResponse
-    response = FileResponse(
-        path=temp_path,
-        filename=filename,
+    # Use StreamingResponse instead of temp file to avoid Chrome "Keep" warning
+    content = BytesIO(md.encode('utf-8'))
+    
+    return StreamingResponse(
+        content,
         media_type="text/markdown",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'}
     )
-    # Force Content-Disposition header for download
-    response.headers["Content-Disposition"] = f'attachment; filename="{filename}"'
-    return response
 
 
 @router.get("/transcriptions/{transcription_id}/download/mindmap-md")
@@ -341,7 +335,8 @@ async def download_mindmap_md(
     db: Session = Depends(get_db),
 ):
     """Download mindmap as markdown file."""
-    from fastapi.responses import FileResponse
+    from fastapi.responses import StreamingResponse
+    from io import BytesIO
     
     transcription = db.query(Transcription).filter(
         Transcription.id == transcription_id
@@ -364,18 +359,11 @@ async def download_mindmap_md(
     date_str = datetime.now().strftime("%d.%m.%y")
     filename = f"{date_str}_{base_name}_mindmap.md"
 
-    # Create temp file
-    import tempfile
-    with tempfile.NamedTemporaryFile(mode='w', suffix='.md', delete=False) as f:
-        f.write(insights['mindmap']['content'])
-        temp_path = f.name
-
-    from fastapi.responses import FileResponse
-    response = FileResponse(
-        path=temp_path,
-        filename=filename,
+    # Use StreamingResponse instead of temp file to avoid Chrome "Keep" warning
+    content = BytesIO(insights['mindmap']['content'].encode('utf-8'))
+    
+    return StreamingResponse(
+        content,
         media_type="text/markdown",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'}
     )
-    # Force Content-Disposition header for download
-    response.headers["Content-Disposition"] = f'attachment; filename="{filename}"'
-    return response
