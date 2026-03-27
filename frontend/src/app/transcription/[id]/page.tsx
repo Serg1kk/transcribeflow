@@ -257,6 +257,27 @@ export default function TranscriptionPage() {
     window.open(api.getCleanedTxtUrl(id), "_blank");
   };
 
+  const handleDownloadAll = () => {
+    if (!insights) return;
+
+    const templateId = insights.metadata.template_id;
+    const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+
+    // Download insights MD
+    window.open(`${API_BASE}/api/insights/transcriptions/${id}/download/insights-md?template_id=${templateId}`, "_blank");
+
+    // Download mindmap MD if available
+    if (insights.mindmap) {
+      window.open(`${API_BASE}/api/insights/transcriptions/${id}/download/mindmap-md?template_id=${templateId}`, "_blank");
+    }
+
+    // Download transcript (prefer cleaned)
+    const transcriptUrl = hasCleanedVersion
+      ? api.getCleanedTxtUrl(id)
+      : api.getOriginalTxtUrl(id);
+    window.open(transcriptUrl, "_blank");
+  };
+
   return (
     <main className="container mx-auto py-8 px-4 max-w-6xl">
       <Header showSettings={false} showBack={true} />
@@ -366,7 +387,21 @@ export default function TranscriptionPage() {
       {insights && (
         <Card className="mb-6">
           <CardHeader>
-            <CardTitle>{intl.formatMessage({ id: "transcription.postProcessing.insights.title" })}</CardTitle>
+            <div className="flex items-center justify-between">
+              <CardTitle>{intl.formatMessage({ id: "transcription.postProcessing.insights.title" })}</CardTitle>
+              {/* Download All button */}
+              <Button
+                variant="default"
+                size="sm"
+                onClick={handleDownloadAll}
+                className="ml-auto"
+              >
+                <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                </svg>
+                Download All
+              </Button>
+            </div>
           </CardHeader>
           <CardContent>
             <InsightsPanel

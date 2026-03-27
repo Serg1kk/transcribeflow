@@ -185,7 +185,10 @@ export function InsightsControls({
 
       <Select
         value={selectedTemplate}
-        onValueChange={setSelectedTemplate}
+        onValueChange={(value) => {
+          setSelectedTemplate(value);
+          setUserManuallyChangedTemplate(true);
+        }}
         disabled={isProcessing}
       >
         <SelectTrigger className="w-48">

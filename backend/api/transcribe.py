@@ -543,10 +543,11 @@ async def download_transcript_txt(
 
     # Get base filename without extension
     base_name = Path(transcription.filename).stem
+    date_str = datetime.now().strftime("%d.%m.%y")
 
     return FileResponse(
         path=txt_path,
-        filename=f"{base_name}_original.txt",
+        filename=f"{date_str}_{base_name}_original.txt",
         media_type="text/plain",
     )
 
@@ -575,10 +576,11 @@ async def download_transcript_json(
 
     # Get base filename without extension
     base_name = Path(transcription.filename).stem
+    date_str = datetime.now().strftime("%d.%m.%y")
 
     return FileResponse(
         path=json_path,
-        filename=f"{base_name}_original.json",
+        filename=f"{date_str}_{base_name}_original.json",
         media_type="application/json",
     )
 
@@ -636,10 +638,11 @@ async def download_cleaned_txt(
 
     # Get base filename without extension
     base_name = Path(transcription.filename).stem
+    date_str = datetime.now().strftime("%d.%m.%y")
 
     return FileResponse(
         path=txt_path,
-        filename=f"{base_name}_cleaned.txt",
+        filename=f"{date_str}_{base_name}_cleaned.txt",
         media_type="text/plain",
     )
 
@@ -668,9 +671,10 @@ async def download_cleaned_json(
 
     # Get base filename without extension
     base_name = Path(transcription.filename).stem
+    date_str = datetime.now().strftime("%d.%m.%y")
 
     return FileResponse(
         path=json_path,
-        filename=f"{base_name}_cleaned.json",
+        filename=f"{date_str}_{base_name}_cleaned.json",
         media_type="application/json",
     )

@@ -2,8 +2,11 @@
 """AI Insights API endpoints."""
 from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
+from fastapi.responses import FileResponse
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
+from pathlib import Path
+from datetime import datetime
 
 from config import get_settings
 from models import get_db, Transcription, TranscriptionStatus, LLMOperation, LLMOperationStatus, LLMOperationType
@@ -274,3 +277,97 @@ async def get_insights(
         raise HTTPException(status_code=404, detail="Insights not found for this template")
 
     return insights
+
+
+# Download endpoints
+@router.get("/transcriptions/{transcription_id}/download/insights-md")
+async def download_insights_md(
+    transcription_id: str,
+    template_id: str,
+    db: Session = Depends(get_db),
+):
+    """Download insights as markdown file."""
+    from fastapi.responses import FileResponse
+    
+    transcription = db.query(Transcription).filter(
+        Transcription.id == transcription_id
+    ).first()
+
+    if not transcription:
+        raise HTTPException(status_code=404, detail="Transcription not found")
+
+    if not transcription.output_dir:
+        raise HTTPException(status_code=404, detail="Insights not found")
+
+    service = InsightService()
+    insights = service.get_insights(transcription, template_id)
+
+    if not insights:
+        raise HTTPException(status_code=404, detail="Insights not found for this template")
+
+    # Build markdown content
+    md = f"# {insights.metadata.template_name} Insights\n\n"
+    if insights.description:
+        md += f"*{insights.description}*\n\n"
+    for section in insights.sections:
+        md += f"## {section.title}\n\n{section.content}\n\n"
+
+    # Generate filename with date prefix
+    base_name = Path(transcription.filename).stem
+    date_str = datetime.now().strftime("%d.%m.%y")
+    filename = f"{date_str}_{base_name}_insights.md"
+
+    # Create temp file
+    import tempfile
+    with tempfile.NamedTemporaryFile(mode='w', suffix='.md', delete=False) as f:
+        f.write(md)
+        temp_path = f.name
+
+    return FileResponse(
+        path=temp_path,
+        filename=filename,
+        media_type="text/markdown",
+    )
+
+
+@router.get("/transcriptions/{transcription_id}/download/mindmap-md")
+async def download_mindmap_md(
+    transcription_id: str,
+    template_id: str,
+    db: Session = Depends(get_db),
+):
+    """Download mindmap as markdown file."""
+    from fastapi.responses import FileResponse
+    
+    transcription = db.query(Transcription).filter(
+        Transcription.id == transcription_id
+    ).first()
+
+    if not transcription:
+        raise HTTPException(status_code=404, detail="Transcription not found")
+
+    if not transcription.output_dir:
+        raise HTTPException(status_code=404, detail="Mindmap not found")
+
+    service = InsightService()
+    insights = service.get_insights(transcription, template_id)
+
+    if not insights or not insights.mindmap:
+        raise HTTPException(status_code=404, detail="Mindmap not found for this template")
+
+    # Generate filename with date prefix
+    base_name = Path(transcription.filename).stem
+    date_str = datetime.now().strftime("%d.%m.%y")
+    filename = f"{date_str}_{base_name}_mindmap.md"
+
+    # Create temp file
+    import tempfile
+    with tempfile.NamedTemporaryFile(mode='w', suffix='.md', delete=False) as f:
+        f.write(insights.mindmap.content)
+        temp_path = f.name
+
+    return FileResponse(
+        path=temp_path,
+        filename=filename,
+        media_type="text/markdown",
+    )

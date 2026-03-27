@@ -637,3 +637,13 @@ export async function checkInsightsExist(
     return false;
   }
 }
+
+// Insights download URLs
+export function getInsightsMdUrl(transcriptionId: string, templateId: string): string {
+  return `${API_BASE}/api/insights/transcriptions/${transcriptionId}/download/insights-md?template_id=${templateId}`;
+}
+
+export function getMindmapMdUrl(transcriptionId: string, templateId: string): string {
+  return `${API_BASE}/api/insights/transcriptions/${transcriptionId}/download/mindmap-md?template_id=${templateId}`;
+}
+
