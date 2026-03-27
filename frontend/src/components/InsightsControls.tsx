@@ -40,6 +40,7 @@ export function InsightsControls({
   const [selectedSource, setSelectedSource] = useState<"original" | "cleaned">("original");
   const [isProcessing, setIsProcessing] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
+  const [userManuallyChangedTemplate, setUserManuallyChangedTemplate] = useState(false);
 
   useEffect(() => {
     async function load() {
@@ -71,15 +72,17 @@ export function InsightsControls({
     load();
   }, [transcriptionId, selectedTemplate, usedTemplateId, suggestedTemplateId]);
 
-  // Apply suggested template from parent (Step 1 selection) - only if no usedTemplateId
+  // Apply suggested template from parent (Step 1 selection) - only if:
+  // 1. User hasn't manually changed it
+  // 2. No previously used template (usedTemplateId)
   useEffect(() => {
-    if (suggestedTemplateId && !usedTemplateId && templates.length > 0) {
+    if (!userManuallyChangedTemplate && !usedTemplateId && suggestedTemplateId && templates.length > 0) {
       const matchingTemplate = templates.find(t => t.id === suggestedTemplateId);
       if (matchingTemplate) {
         setSelectedTemplate(suggestedTemplateId);
       }
     }
-  }, [suggestedTemplateId, usedTemplateId, templates]);
+  }, [suggestedTemplateId, usedTemplateId, templates, userManuallyChangedTemplate]);
 
   async function handleGenerate() {
     if (hasInsights && !showConfirm) {
