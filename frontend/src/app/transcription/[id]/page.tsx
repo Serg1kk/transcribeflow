@@ -407,6 +407,7 @@ export default function TranscriptionPage() {
             <InsightsPanel
               insights={insights}
               filename={transcription.filename}
+              transcriptionId={id}
             />
           </CardContent>
         </Card>

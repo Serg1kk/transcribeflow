@@ -305,12 +305,12 @@ async def download_insights_md(
     if not insights:
         raise HTTPException(status_code=404, detail="Insights not found for this template")
 
-    # Build markdown content
-    md = f"# {insights.metadata.template_name} Insights\n\n"
-    if insights.description:
-        md += f"*{insights.description}*\n\n"
-    for section in insights.sections:
-        md += f"## {section.title}\n\n{section.content}\n\n"
+    # Build markdown content (insights is a dict, not an object)
+    md = f"# {insights['metadata']['template_name']} Insights\n\n"
+    if insights.get('description'):
+        md += f"*{insights['description']}*\n\n"
+    for section in insights.get('sections', []):
+        md += f"## {section['title']}\n\n{section['content']}\n\n"
 
     # Generate filename with date prefix
     base_name = Path(transcription.filename).stem
@@ -352,7 +352,7 @@ async def download_mindmap_md(
     service = InsightService()
     insights = service.get_insights(transcription, template_id)
 
-    if not insights or not insights.mindmap:
+    if not insights or not insights.get('mindmap'):
         raise HTTPException(status_code=404, detail="Mindmap not found for this template")
 
     # Generate filename with date prefix
@@ -363,7 +363,7 @@ async def download_mindmap_md(
     # Create temp file
     import tempfile
     with tempfile.NamedTemporaryFile(mode='w', suffix='.md', delete=False) as f:
-        f.write(insights.mindmap.content)
+        f.write(insights['mindmap']['content'])
         temp_path = f.name
 
     return FileResponse(

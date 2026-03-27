@@ -7,11 +7,12 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { MindmapViewer } from "@/components/MindmapViewer";
-import { Insights } from "@/lib/api";
+import { Insights, getInsightsMdUrl, getMindmapMdUrl } from "@/lib/api";
 
 interface InsightsPanelProps {
   insights: Insights;
   filename?: string;
+  transcriptionId?: string;
 }
 
 type TabType = "mindmap" | "insights";
@@ -19,6 +20,7 @@ type TabType = "mindmap" | "insights";
 export function InsightsPanel({
   insights,
   filename,
+  transcriptionId,
 }: InsightsPanelProps) {
   const hasMindmap = insights.mindmap !== null;
   const [activeTab, setActiveTab] = useState<TabType>(hasMindmap ? "mindmap" : "insights");
@@ -47,13 +49,26 @@ export function InsightsPanel({
   }
 
   function handleDownloadInsightsMarkdown() {
-    const blob = new Blob([buildInsightsMarkdown()], { type: "text/markdown" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `insights-${exportName}.md`;
-    a.click();
-    URL.revokeObjectURL(url);
+    // Use server endpoint if transcriptionId is available
+    if (transcriptionId) {
+      const url = getInsightsMdUrl(transcriptionId, insights.metadata.template_id);
+      window.open(url, "_blank");
+    } else {
+      // Fallback to blob download
+      const blob = new Blob([buildInsightsMarkdown()], { type: "text/markdown" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `${exportName}_insights.md`;
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+  }
+
+  function handleDownloadMindmapMarkdown() {
+    if (!transcriptionId || !insights.mindmap) return;
+    const url = getMindmapMdUrl(transcriptionId, insights.metadata.template_id);
+    window.open(url, "_blank");
   }
 
   const formatCost = (cost: number | null) => {
@@ -122,7 +137,15 @@ export function InsightsPanel({
 
       {/* Tab content */}
       {activeTab === "mindmap" && insights.mindmap ? (
-        <MindmapViewer markdown={insights.mindmap.content} filename={filename} />
+        <div className="space-y-4">
+          <MindmapViewer markdown={insights.mindmap.content} filename={filename} />
+          {/* Download mindmap button */}
+          <div className="flex flex-wrap gap-2 pt-4 border-t">
+            <Button variant="outline" size="sm" onClick={handleDownloadMindmapMarkdown}>
+              Download Mindmap .md
+            </Button>
+          </div>
+        </div>
       ) : (
         <div className="space-y-6">
           {insights.sections.map((section) => (
