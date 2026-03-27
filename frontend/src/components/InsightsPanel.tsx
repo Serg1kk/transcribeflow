@@ -7,7 +7,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { MindmapViewer } from "@/components/MindmapViewer";
-import { Insights, getInsightsMdUrl, getMindmapMdUrl } from "@/lib/api";
+import { Insights, getInsightsMdUrl } from "@/lib/api";
 
 interface InsightsPanelProps {
   insights: Insights;
@@ -63,12 +63,6 @@ export function InsightsPanel({
       a.click();
       URL.revokeObjectURL(url);
     }
-  }
-
-  function handleDownloadMindmapMarkdown() {
-    if (!transcriptionId || !insights.mindmap) return;
-    const url = getMindmapMdUrl(transcriptionId, insights.metadata.template_id);
-    window.open(url, "_blank");
   }
 
   const formatCost = (cost: number | null) => {
@@ -137,15 +131,7 @@ export function InsightsPanel({
 
       {/* Tab content */}
       {activeTab === "mindmap" && insights.mindmap ? (
-        <div className="space-y-4">
-          <MindmapViewer markdown={insights.mindmap.content} filename={filename} />
-          {/* Download mindmap button */}
-          <div className="flex flex-wrap gap-2 pt-4 border-t">
-            <Button variant="outline" size="sm" onClick={handleDownloadMindmapMarkdown}>
-              Download Mindmap .md
-            </Button>
-          </div>
-        </div>
+        <MindmapViewer markdown={insights.mindmap.content} filename={filename} />
       ) : (
         <div className="space-y-6">
           {insights.sections.map((section) => (

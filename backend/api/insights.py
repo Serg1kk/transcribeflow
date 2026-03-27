@@ -323,11 +323,15 @@ async def download_insights_md(
         f.write(md)
         temp_path = f.name
 
-    return FileResponse(
+    from fastapi.responses import FileResponse
+    response = FileResponse(
         path=temp_path,
         filename=filename,
         media_type="text/markdown",
     )
+    # Force Content-Disposition header for download
+    response.headers["Content-Disposition"] = f'attachment; filename="{filename}"'
+    return response
 
 
 @router.get("/transcriptions/{transcription_id}/download/mindmap-md")
@@ -366,8 +370,12 @@ async def download_mindmap_md(
         f.write(insights['mindmap']['content'])
         temp_path = f.name
 
-    return FileResponse(
+    from fastapi.responses import FileResponse
+    response = FileResponse(
         path=temp_path,
         filename=filename,
         media_type="text/markdown",
     )
+    # Force Content-Disposition header for download
+    response.headers["Content-Disposition"] = f'attachment; filename="{filename}"'
+    return response

@@ -263,19 +263,24 @@ export default function TranscriptionPage() {
     const templateId = insights.metadata.template_id;
     const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
-    // Download insights MD
+    // Download all 3 files with delays to avoid popup blocker
+    // 1. Insights MD
     window.open(`${API_BASE}/api/insights/transcriptions/${id}/download/insights-md?template_id=${templateId}`, "_blank");
 
-    // Download mindmap MD if available
+    // 2. Mindmap MD (if available) - delay 500ms
     if (insights.mindmap) {
-      window.open(`${API_BASE}/api/insights/transcriptions/${id}/download/mindmap-md?template_id=${templateId}`, "_blank");
+      setTimeout(() => {
+        window.open(`${API_BASE}/api/insights/transcriptions/${id}/download/mindmap-md?template_id=${templateId}`, "_blank");
+      }, 500);
     }
 
-    // Download transcript (prefer cleaned)
-    const transcriptUrl = hasCleanedVersion
-      ? api.getCleanedTxtUrl(id)
-      : api.getOriginalTxtUrl(id);
-    window.open(transcriptUrl, "_blank");
+    // 3. Transcript - delay 1000ms
+    setTimeout(() => {
+      const transcriptUrl = hasCleanedVersion
+        ? api.getCleanedTxtUrl(id)
+        : api.getOriginalTxtUrl(id);
+      window.open(transcriptUrl, "_blank");
+    }, 1000);
   };
 
   return (
