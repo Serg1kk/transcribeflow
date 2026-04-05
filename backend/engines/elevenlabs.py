@@ -91,17 +91,40 @@ class ElevenLabsEngine(TranscriptionEngine):
         full_text = result.get("text", "")
         raw_words = result.get("words", [])
 
-        # Build words list (filter out spacing and audio events)
+        # Build words list (filter out spacing, handle audio events with long text)
         words = []
         for w in raw_words:
-            if w.get("type") == "word":
+            word_type = w.get("type", "")
+            text = w.get("text", "")
+
+            if word_type == "word":
+                # Normal word - add directly
                 words.append({
-                    "word": w.get("text", ""),
+                    "word": text,
                     "start": w.get("start", 0),
                     "end": w.get("end", 0),
                     "confidence": abs(w.get("logprob", 0)),  # logprob is negative
                     "speaker": w.get("speaker_id", "speaker_0"),
                 })
+            elif word_type == "audio_event" and len(text) > 100:
+                # ElevenLabs bug: long text incorrectly marked as audio_event
+                # Split into individual words and interpolate timestamps
+                word_list = text.split()
+                if word_list and w.get("start") and w.get("end"):
+                    start_time = w.get("start", 0)
+                    end_time = w.get("end", 0)
+                    duration = end_time - start_time
+                    word_duration = duration / len(word_list) if word_list else 0
+                    speaker = w.get("speaker_id", "speaker_0")
+
+                    for i, word_text in enumerate(word_list):
+                        words.append({
+                            "word": word_text,
+                            "start": start_time + (i * word_duration),
+                            "end": start_time + ((i + 1) * word_duration),
+                            "confidence": 0.5,  # Lower confidence for interpolated
+                            "speaker": speaker,
+                        })
 
         # Build segments by grouping consecutive words by speaker
         segments = []
