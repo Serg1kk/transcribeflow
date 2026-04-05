@@ -71,7 +71,7 @@ class ElevenLabsEngine(TranscriptionEngine):
                 files = {"file": (audio_path.name, f, self._get_content_type(audio_path))}
                 data = {
                     "model_id": model,
-                    "tag_audio_events": "true",
+                    "tag_audio_events": "false",  # Disable to prevent long text grouping
                     "diarize": str(diarization).lower(),
                 }
 
