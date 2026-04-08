@@ -313,10 +313,9 @@ async def download_insights_md(
     for section in insights.get('sections', []):
         md += f"## {section['title']}\n\n{section['content']}\n\n"
 
-    # Generate filename with date prefix
+    # Generate filename
     base_name = Path(transcription.filename).stem
-    date_str = datetime.now().strftime("%d.%m.%y")
-    filename = f"{date_str}_{base_name}_insights.md"
+    filename = f"{base_name}_insights.md"
 
     # Use StreamingResponse instead of temp file to avoid Chrome "Keep" warning
     from urllib.parse import quote
@@ -356,10 +355,9 @@ async def download_mindmap_md(
     if not insights or not insights.get('mindmap'):
         raise HTTPException(status_code=404, detail="Mindmap not found for this template")
 
-    # Generate filename with date prefix
+    # Generate filename
     base_name = Path(transcription.filename).stem
-    date_str = datetime.now().strftime("%d.%m.%y")
-    filename = f"{date_str}_{base_name}_mindmap.md"
+    filename = f"{base_name}_mindmap.md"
 
     # Use StreamingResponse instead of temp file to avoid Chrome "Keep" warning
     from urllib.parse import quote
