@@ -248,6 +248,25 @@ DEFAULT_INSIGHT_TEMPLATES = [
         system_prompt="",
         temperature=0.3
     ),
+    InsightTemplate(
+        id="course-lecture",
+        name="Course Lecture",
+        description="Structured theoretical lecture from an AI/tech educational course. Instructor presents concepts, live demos, Q&A with students",
+        include_mindmap=True,
+        sections=[
+            {"id": "lecture_overview", "title": "Lecture Overview", "description": "Module number and name, topic covered, instructor name, date if mentioned, student count if mentioned, lecture duration, which course this belongs to"},
+            {"id": "key_concepts", "title": "Key Concepts & Definitions", "description": "Core concepts explained by the instructor with clear definitions. Each concept should be a bold heading with its explanation below. Include mental models, analogies, and frameworks used to explain complex ideas. Preserve the instructor's exact terminology."},
+            {"id": "technical_deep_dive", "title": "Technical Deep Dive", "description": "Detailed technical explanations: architecture patterns, how specific technologies work under the hood, code examples discussed, API patterns, data flows. Include any diagrams described verbally, configuration details, and step-by-step processes."},
+            {"id": "live_demos", "title": "Live Demos & Tool Walkthroughs", "description": "Tools and platforms demonstrated in real-time. What was shown, how it was configured, what results were produced. Include: prompts used, settings changed, outputs received, errors encountered and how they were resolved."},
+            {"id": "qa_insights", "title": "Student Q&A Insights", "description": "Questions asked by students and the instructor's answers. Group by theme if possible. Highlight: (1) questions that revealed common misconceptions, (2) questions that deepened understanding, (3) questions about edge cases or practical application. Format as Q: ... A: ... with speaker attribution."},
+            {"id": "practical_applications", "title": "Practical Applications & Use Cases", "description": "Real-world use cases and examples discussed. How students can apply the concepts in their daily work. Specific scenarios, industries, or project types mentioned. Before/after comparisons if discussed."},
+            {"id": "homework_connections", "title": "Homework & Practice Connections", "description": "References to homework assignments, practice tasks, or self-study materials. What students should try on their own before the next session. Connections between lecture theory and upcoming practical exercises."},
+            {"id": "instructor_tips", "title": "Instructor Tips & Best Practices", "description": "Opinionated advice from the instructor based on their experience. Dos and don'ts, common pitfalls, pro tips, workflow recommendations. Personal anecdotes that illustrate key points."},
+            {"id": "next_session", "title": "Next Session Preview", "description": "What was mentioned about the next lecture or practical session. Topics to be covered, preparation required, readings or videos to watch, tools to install or set up."},
+        ],
+        system_prompt="",
+        temperature=0.3
+    ),
 ]
 
 

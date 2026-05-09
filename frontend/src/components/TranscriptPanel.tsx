@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, forwardRef, useImperativeHandle } from "react";
+import { useRef, forwardRef, useImperativeHandle, useState } from "react";
 import { useIntl } from "react-intl";
 import { Button } from "@/components/ui/button";
 import { Copy, FileText, Braces, FileJson } from "lucide-react";
@@ -119,13 +119,75 @@ export const TranscriptPanel = forwardRef<TranscriptPanelRef, TranscriptPanelPro
       ? intl.formatMessage({ id: 'transcription.panel.title.original' })
       : intl.formatMessage({ id: 'transcription.panel.title.cleaned' });
 
+    // Speaker filter state
+    const [filterSpeaker, setFilterSpeaker] = useState<string | null>(null);
+
+    // Calculate speaker stats by character count
+    const speakerCharCount: Record<string, number> = {};
+    let totalChars = 0;
+    for (const seg of segments) {
+      const len = seg.text.length;
+      speakerCharCount[seg.speaker] = (speakerCharCount[seg.speaker] || 0) + len;
+      totalChars += len;
+    }
+    const speakerStats = Object.entries(speakerCharCount)
+      .sort(([, a], [, b]) => b - a)
+      .map(([speakerId, chars]) => {
+        const speaker = speakers[speakerId];
+        return {
+          id: speakerId,
+          name: speaker?.name || speakerId,
+          color: speaker?.color || undefined,
+          pct: totalChars > 0 ? Math.round((chars / totalChars) * 100) : 0,
+        };
+      });
+
+    const toggleFilter = (speakerId: string) => {
+      setFilterSpeaker(prev => prev === speakerId ? null : speakerId);
+    };
+
     return (
       <div className="space-y-2">
         {/* Header with buttons */}
-        <div className="flex items-center justify-between">
-          <h3 className="font-medium text-sm text-muted-foreground">
-            {intl.formatMessage({ id: 'transcription.panel.segments' }, { title, count: segmentCount })}
-          </h3>
+        <div className="flex items-center justify-between gap-2 flex-wrap">
+          <div className="flex items-center gap-3 flex-wrap">
+            <h3 className="font-medium text-sm text-muted-foreground">
+              {intl.formatMessage({ id: 'transcription.panel.segments' }, { title, count: segmentCount })}
+            </h3>
+            {/* Speaker stats */}
+            {speakerStats.length > 1 && (
+              <div className="flex items-center gap-2 text-xs">
+                {speakerStats.map((s) => (
+                  <button
+                    key={s.id}
+                    onClick={() => toggleFilter(s.id)}
+                    className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded transition-colors cursor-pointer border ${
+                      filterSpeaker === s.id
+                        ? "bg-muted border-foreground/20"
+                        : "border-transparent hover:bg-muted/50"
+                    }`}
+                    title={`Filter: ${s.name} (${s.pct}%)`}
+                  >
+                    <span
+                      className="inline-block w-2 h-2 rounded-full shrink-0"
+                      style={{ backgroundColor: s.color || '#888' }}
+                    />
+                    <span style={{ color: s.color }}>{s.name}</span>
+                    <span className="text-muted-foreground">{s.pct}%</span>
+                  </button>
+                ))}
+                {filterSpeaker && (
+                  <button
+                    onClick={() => setFilterSpeaker(null)}
+                    className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded transition-colors cursor-pointer border border-transparent hover:bg-muted/50 text-muted-foreground"
+                    title="Show all speakers"
+                  >
+                    ✕ All
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
           <div className="flex items-center gap-1">
             {/* TXT group */}
             <span className="text-xs text-muted-foreground mr-1">{intl.formatMessage({ id: 'transcription.export.txt' })}</span>
@@ -210,6 +272,7 @@ export const TranscriptPanel = forwardRef<TranscriptPanelRef, TranscriptPanelPro
         >
           {segments.map((segment, index) => {
             const speaker = speakers[segment.speaker];
+            if (filterSpeaker && segment.speaker !== filterSpeaker) return null;
             return (
               <div
                 key={index}

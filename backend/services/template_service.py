@@ -217,6 +217,16 @@ DEFAULT_TEMPLATES = [
         ),
         temperature=0.2
     ),
+    Template(
+        id="course-lecture",
+        name="Course Lecture",
+        description="Structured educational lecture or theoretical workshop. Instructor-led teaching with concepts, demos, Q&A",
+        system_prompt=BASELINE_PROMPT.format(
+            context="This is a structured educational lecture or theoretical workshop. An instructor presents material to an audience - explaining concepts, demonstrating tools, answering questions. There may be screen-sharing, live demos, code examples, and interactive Q&A. Preserve all technical explanations, tool references, and conceptual breakdowns exactly as spoken. Sessions are typically 1-2.5 hours long.",
+            role_context="instructor, преподаватель, student, студент, participant, участник, assistant, ассистент"
+        ),
+        temperature=0.3
+    ),
 ]
 
 
