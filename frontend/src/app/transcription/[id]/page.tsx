@@ -11,6 +11,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { SpeakerEditor } from "@/components/SpeakerEditor";
+import { TranscriptionWorkflowControls } from "@/components/TranscriptionWorkflowControls";
 import { PostProcessingControls } from "@/components/PostProcessingControls";
 import { TranscriptComparison } from "@/components/TranscriptComparison";
 import { TranscriptPanel } from "@/components/TranscriptPanel";
@@ -309,11 +310,17 @@ export default function TranscriptionPage() {
 
       <Card className="mb-6">
         <CardHeader>
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between gap-4 flex-wrap">
             <CardTitle className="flex items-center gap-2">
               <Badge variant="outline">Completed</Badge>
               {transcription.filename}
             </CardTitle>
+            <TranscriptionWorkflowControls
+              transcription={transcription}
+              compact
+              showComment={false}
+              onUpdated={(updated) => setTranscription((prev) => (prev ? { ...prev, ...updated } : prev))}
+            />
           </div>
         </CardHeader>
         <CardContent>
@@ -323,6 +330,14 @@ export default function TranscriptionPage() {
             </span>
             <span>{intl.formatMessage({ id: "transcription.meta.speakers" })} {transcript.stats.speakers_count}</span>
             <span>{intl.formatMessage({ id: "transcription.meta.language" })} {transcript.metadata.language}</span>
+          </div>
+
+          <div className="mb-6 rounded-lg border p-4">
+            <TranscriptionWorkflowControls
+              transcription={transcription}
+              showStatusRow={false}
+              onUpdated={(updated) => setTranscription((prev) => (prev ? { ...prev, ...updated } : prev))}
+            />
           </div>
 
           {/* Speaker Editor */}
@@ -494,6 +509,7 @@ export default function TranscriptionPage() {
           ) : viewMode === "cleaned" && cleanedTranscript ? (
             <TranscriptPanel
               type="cleaned"
+              transcriptionId={id}
               data={cleanedTranscript}
               segmentCount={cleanedTranscript.stats.cleaned_segments}
               onCopyTxt={handleCopyCleanedTxt}
@@ -502,6 +518,7 @@ export default function TranscriptionPage() {
           ) : (
             <TranscriptPanel
               type="original"
+              transcriptionId={id}
               data={transcript}
               segmentCount={transcript.segments.length}
               engine={transcription.engine}

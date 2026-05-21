@@ -1,11 +1,12 @@
 # api/transcribe.py
 """Transcription API endpoints."""
 import json
+import mimetypes
 import shutil
 from datetime import datetime
 from pathlib import Path
 from typing import List, Optional
-from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, Response, UploadFile
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
 
@@ -15,6 +16,16 @@ from config import get_settings, Settings
 router = APIRouter(prefix="/api/transcribe", tags=["transcription"])
 
 ALLOWED_EXTENSIONS = {".mp3", ".m4a", ".wav", ".ogg", ".flac", ".webm"}
+AUDIO_CONTENT_TYPES = {
+    ".mp3": "audio/mpeg",
+    ".m4a": "audio/mp4",
+    ".wav": "audio/wav",
+    ".ogg": "audio/ogg",
+    ".flac": "audio/flac",
+    ".webm": "audio/webm",
+}
+AUDIO_STREAM_CHUNK_SIZE = 1024 * 1024
+PLAYBACK_PREVIEW_FILENAME = "playback_preview.m4a"
 
 
 def _format_timestamp(seconds: float) -> str:
@@ -94,6 +105,83 @@ def _regenerate_txt_files(output_dir: Path, original_data: Optional[dict], clean
             f.write("\n".join(lines))
 
 
+def _resolve_audio_path(transcription: Transcription) -> Path:
+    """Resolve the best available audio file for transcript playback."""
+    if transcription.output_dir:
+        output_dir = Path(transcription.output_dir)
+
+        preview_path = output_dir / PLAYBACK_PREVIEW_FILENAME
+        if preview_path.exists():
+            return preview_path
+
+        preferred = output_dir / transcription.filename
+        if preferred.exists():
+            return preferred
+
+        for candidate in output_dir.iterdir():
+            if candidate.is_file() and candidate.suffix.lower() in ALLOWED_EXTENSIONS:
+                return candidate
+
+    original_path = Path(transcription.original_path)
+    if original_path.exists():
+        return original_path
+
+    raise HTTPException(status_code=404, detail="Playable audio file not found")
+
+
+def _get_audio_content_type(audio_path: Path) -> str:
+    """Return browser-friendly content type for audio playback."""
+    return AUDIO_CONTENT_TYPES.get(audio_path.suffix.lower()) or mimetypes.guess_type(str(audio_path))[0] or "application/octet-stream"
+
+
+def _parse_range_header(range_header: Optional[str], file_size: int) -> Optional[tuple[int, int]]:
+    """Parse a single HTTP byte range."""
+    if not range_header:
+        return None
+
+    if not range_header.startswith("bytes="):
+        raise HTTPException(status_code=416, detail="Invalid range unit")
+
+    try:
+        start_str, end_str = range_header[len("bytes="):].split("-", 1)
+    except ValueError as exc:
+        raise HTTPException(status_code=416, detail="Invalid range header") from exc
+
+    if not start_str and not end_str:
+        raise HTTPException(status_code=416, detail="Invalid range header")
+
+    try:
+        if start_str:
+            start = int(start_str)
+            end = int(end_str) if end_str else file_size - 1
+        else:
+            suffix_length = int(end_str)
+            if suffix_length <= 0:
+                raise ValueError("suffix range must be positive")
+            start = max(file_size - suffix_length, 0)
+            end = file_size - 1
+    except ValueError as exc:
+        raise HTTPException(status_code=416, detail="Invalid range header") from exc
+
+    if start < 0 or start >= file_size or end < start:
+        raise HTTPException(status_code=416, detail="Requested range not satisfiable")
+
+    return start, min(end, file_size - 1)
+
+
+def _iter_file_range(audio_path: Path, start: int, end: int):
+    """Yield a byte range from file without loading everything into memory."""
+    with open(audio_path, "rb") as audio_file:
+        audio_file.seek(start)
+        remaining = end - start + 1
+        while remaining > 0:
+            chunk = audio_file.read(min(AUDIO_STREAM_CHUNK_SIZE, remaining))
+            if not chunk:
+                break
+            remaining -= len(chunk)
+            yield chunk
+
+
 class LLMOperationSummary(BaseModel):
     """Summary of an LLM operation (clean or insights)."""
     operation_type: str  # "cleanup" | "insights"
@@ -127,6 +215,8 @@ class TranscriptionResponse(BaseModel):
     processing_time_seconds: Optional[float] = None  # Total processing time
     transcription_time_seconds: Optional[float] = None  # ASR time only
     diarization_time_seconds: Optional[float] = None  # Speaker ID time only
+    workflow_status: str = "pending"
+    workflow_comment: Optional[str] = None
     # LLM operations
     llm_operations: List[LLMOperationSummary] = []
 
@@ -194,6 +284,8 @@ async def upload_audio(
         error_message=transcription.error_message,
         file_size=transcription.file_size,
         duration_seconds=transcription.duration_seconds,
+        workflow_status=transcription.workflow_status or "pending",
+        workflow_comment=transcription.workflow_comment,
         processing_time_seconds=transcription.processing_time_seconds,
         transcription_time_seconds=transcription.transcription_time_seconds,
         diarization_time_seconds=transcription.diarization_time_seconds,
@@ -243,6 +335,8 @@ def _build_transcription_response(t: Transcription, db: Session) -> Transcriptio
         processing_time_seconds=t.processing_time_seconds,
         transcription_time_seconds=t.transcription_time_seconds,
         diarization_time_seconds=t.diarization_time_seconds,
+        workflow_status=t.workflow_status or "pending",
+        workflow_comment=t.workflow_comment,
         llm_operations=llm_operations,
     )
 
@@ -250,15 +344,17 @@ def _build_transcription_response(t: Transcription, db: Session) -> Transcriptio
 @router.get("/queue", response_model=List[TranscriptionResponse])
 async def list_queue(
     db: Session = Depends(get_db),
-    limit: int = 50,
+    limit: Optional[int] = None,
 ):
-    """List all transcriptions in the queue."""
-    transcriptions = (
-        db.query(Transcription)
-        .order_by(Transcription.created_at.desc())
-        .limit(limit)
-        .all()
-    )
+    """List transcriptions in reverse chronological order.
+
+    By default returns the full list for the UI. Optional limit is kept for
+    ad-hoc callers that want a smaller result set.
+    """
+    query = db.query(Transcription).order_by(Transcription.created_at.desc())
+    if limit is not None:
+        query = query.limit(limit)
+    transcriptions = query.all()
     return [_build_transcription_response(t, db) for t in transcriptions]
 
 
@@ -334,6 +430,8 @@ async def get_transcription(
 class TranscriptionUpdate(BaseModel):
     """Request model for updating a transcription."""
     initial_prompt: Optional[str] = None
+    workflow_status: Optional[str] = None
+    workflow_comment: Optional[str] = None
 
 
 @router.put("/{transcription_id}", response_model=TranscriptionResponse)
@@ -350,36 +448,26 @@ async def update_transcription(
     if not transcription:
         raise HTTPException(status_code=404, detail="Transcription not found")
 
-    # Only allow updates for DRAFT or QUEUED status
-    if transcription.status not in [TranscriptionStatus.DRAFT, TranscriptionStatus.QUEUED]:
-        raise HTTPException(
-            status_code=400,
-            detail=f"Cannot update transcription in {transcription.status.value} status"
-        )
-
     if update.initial_prompt is not None:
+        if transcription.status not in [TranscriptionStatus.DRAFT, TranscriptionStatus.QUEUED]:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Cannot update initial_prompt in {transcription.status.value} status"
+            )
         transcription.initial_prompt = update.initial_prompt
+
+    if update.workflow_status is not None:
+        if update.workflow_status not in {"pending", "processed"}:
+            raise HTTPException(status_code=400, detail="workflow_status must be 'pending' or 'processed'")
+        transcription.workflow_status = update.workflow_status
+
+    if update.workflow_comment is not None:
+        transcription.workflow_comment = update.workflow_comment.strip() or None
 
     db.commit()
     db.refresh(transcription)
 
-    return TranscriptionResponse(
-        id=transcription.id,
-        filename=transcription.filename,
-        status=transcription.status.value,
-        engine=transcription.engine,
-        model=transcription.model,
-        language=transcription.language,
-        initial_prompt=transcription.initial_prompt,
-        created_at=transcription.created_at,
-        progress=transcription.progress,
-        error_message=transcription.error_message,
-        file_size=transcription.file_size,
-        duration_seconds=transcription.duration_seconds,
-        processing_time_seconds=transcription.processing_time_seconds,
-        transcription_time_seconds=transcription.transcription_time_seconds,
-        diarization_time_seconds=transcription.diarization_time_seconds,
-    )
+    return _build_transcription_response(transcription, db)
 
 
 @router.delete("/{transcription_id}")
@@ -609,6 +697,62 @@ async def download_raw_response(
         path=raw_path,
         filename=f"{transcription.filename}_raw_{transcription.engine}.json",
         media_type="application/json",
+    )
+
+
+@router.api_route("/{transcription_id}/audio", methods=["GET", "HEAD"])
+async def stream_original_audio(
+    transcription_id: str,
+    request: Request,
+    db: Session = Depends(get_db),
+):
+    """Stream the original audio file for transcript playback."""
+    from fastapi.responses import FileResponse, StreamingResponse
+
+    transcription = db.query(Transcription).filter(
+        Transcription.id == transcription_id
+    ).first()
+
+    if not transcription:
+        raise HTTPException(status_code=404, detail="Transcription not found")
+
+    audio_path = _resolve_audio_path(transcription)
+    media_type = _get_audio_content_type(audio_path)
+    file_size = audio_path.stat().st_size
+    base_headers = {
+        "Accept-Ranges": "bytes",
+        "Cache-Control": "public, max-age=3600",
+    }
+
+    byte_range = _parse_range_header(request.headers.get("range"), file_size)
+    if byte_range is not None:
+        start, end = byte_range
+        content_length = end - start + 1
+        headers = {
+            **base_headers,
+            "Content-Length": str(content_length),
+            "Content-Range": f"bytes {start}-{end}/{file_size}",
+        }
+        if request.method == "HEAD":
+            return Response(status_code=206, headers=headers, media_type=media_type)
+        return StreamingResponse(
+            _iter_file_range(audio_path, start, end),
+            status_code=206,
+            headers=headers,
+            media_type=media_type,
+        )
+
+    headers = {
+        **base_headers,
+        "Content-Length": str(file_size),
+    }
+    if request.method == "HEAD":
+        return Response(status_code=200, headers=headers, media_type=media_type)
+
+    return FileResponse(
+        path=audio_path,
+        media_type=media_type,
+        headers=headers,
     )
 
 

@@ -140,6 +140,7 @@ export function TranscriptComparison({
         <TranscriptPanel
           ref={leftRef}
           type="original"
+          transcriptionId={transcriptionId}
           data={original}
           segmentCount={original.segments.length}
           engine={engine}
@@ -155,6 +156,7 @@ export function TranscriptComparison({
         <TranscriptPanel
           ref={rightRef}
           type="cleaned"
+          transcriptionId={transcriptionId}
           data={cleaned}
           segmentCount={cleaned.stats.cleaned_segments}
           onCopyTxt={handleCopyCleanedTxt}

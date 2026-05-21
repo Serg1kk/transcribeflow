@@ -57,6 +57,10 @@ class Transcription(Base):
     # Speaker name mappings (JSON: {"SPEAKER_00": "Ivan", ...})
     speaker_names = Column(JSON, nullable=True)
 
+    # Manual workflow tracking
+    workflow_status = Column(String(20), nullable=False, default="pending")
+    workflow_comment = Column(Text, nullable=True)
+
     # Timestamps
     created_at = Column(DateTime, default=datetime.utcnow)
     started_at = Column(DateTime, nullable=True)

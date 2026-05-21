@@ -2,8 +2,11 @@
 """Main transcription processing worker."""
 import gc
 import json
+import logging
 import os
 import shutil
+import subprocess
+import threading
 import time
 from datetime import datetime
 from pathlib import Path
@@ -25,6 +28,9 @@ from models import Transcription, TranscriptionStatus
 # Lazy imports to avoid loading PyTorch before MLX transcription
 # from workers.diarization import DiarizationWorker
 # from workers.whisperx_diarization import WhisperXDiarizationWorker
+
+PLAYBACK_PREVIEW_FILENAME = "playback_preview.m4a"
+PLAYBACK_PREVIEW_TEMP_FILENAME = "playback_preview.tmp.m4a"
 
 
 class TranscriptionWorker:
@@ -83,6 +89,65 @@ class TranscriptionWorker:
         except Exception as e:
             import logging
             logging.getLogger(__name__).warning(f"Failed to cleanup upload {original_path}: {e}")
+
+    def _start_playback_preview_generation(self, output_dir: Path, source_audio_path: Path):
+        """Create a lightweight audio preview in the background for transcript playback."""
+        preview_path = output_dir / PLAYBACK_PREVIEW_FILENAME
+        temp_preview_path = output_dir / PLAYBACK_PREVIEW_TEMP_FILENAME
+
+        if preview_path.exists() or temp_preview_path.exists():
+            return
+
+        thread = threading.Thread(
+            target=self._generate_playback_preview,
+            args=(source_audio_path, preview_path, temp_preview_path),
+            daemon=True,
+        )
+        thread.start()
+
+    def _generate_playback_preview(self, source_audio_path: Path, preview_path: Path, temp_preview_path: Path):
+        """Generate compressed AAC preview optimized for fast seeking/playback."""
+        logger = logging.getLogger(__name__)
+        try:
+            command = [
+                "ffmpeg",
+                "-y",
+                "-i",
+                str(source_audio_path),
+                "-vn",
+                "-map",
+                "0:a:0",
+                "-ac",
+                "1",
+                "-ar",
+                "24000",
+                "-c:a",
+                "aac",
+                "-b:a",
+                "48k",
+                "-movflags",
+                "+faststart",
+                str(temp_preview_path),
+            ]
+            result = subprocess.run(command, capture_output=True, text=True)
+            if result.returncode != 0:
+                logger.warning(
+                    "Failed to generate playback preview for %s: %s",
+                    source_audio_path,
+                    (result.stderr or result.stdout or "ffmpeg failed").strip(),
+                )
+                if temp_preview_path.exists():
+                    temp_preview_path.unlink()
+                return
+
+            temp_preview_path.replace(preview_path)
+            logger.info("Playback preview ready: %s", preview_path)
+        except FileNotFoundError:
+            logger.warning("ffmpeg not found, skipping playback preview generation")
+        except Exception as exc:
+            logger.warning("Playback preview generation failed for %s: %s", source_audio_path, exc)
+            if temp_preview_path.exists():
+                temp_preview_path.unlink()
 
     def get_engine(self, engine_name: str) -> TranscriptionEngine:
         """Get or create a transcription engine by name."""
@@ -177,6 +242,13 @@ class TranscriptionWorker:
             audio_path = Path(transcription.original_path)
             if not audio_path.exists():
                 raise FileNotFoundError(f"Audio file not found: {audio_path}")
+
+            output_dir = self._create_output_directory(transcription, audio_path)
+            transcription.output_dir = str(output_dir)
+            db.commit()
+
+            playback_source_path = output_dir / audio_path.name
+            self._start_playback_preview_generation(output_dir, playback_source_path)
 
             # Step 1: Transcribe with ASR engine
             transcription_start_time = time.time()
@@ -283,7 +355,6 @@ class TranscriptionWorker:
             total_processing_time = time.time() - total_start_time
 
             # Step 3: Save results
-            output_dir = self._create_output_directory(transcription, audio_path)
             self._save_results(
                 output_dir=output_dir,
                 transcription=transcription,
@@ -302,7 +373,6 @@ class TranscriptionWorker:
             )
 
             # Update transcription record
-            transcription.output_dir = str(output_dir)
             transcription.duration_seconds = result.duration_seconds
             transcription.speakers_count = speakers_count
             transcription.language_detected = result.language

@@ -1,13 +1,14 @@
 'use client';
 
-import { useRef, forwardRef, useImperativeHandle, useState } from "react";
+import { useEffect, useRef, forwardRef, useImperativeHandle, useState } from "react";
 import { useIntl } from "react-intl";
 import { Button } from "@/components/ui/button";
-import { Copy, FileText, Braces, FileJson } from "lucide-react";
-import { TranscriptData, CleanedTranscript } from "@/lib/api";
+import { Copy, FileText, Braces, FileJson, Pause, Play, Square } from "lucide-react";
+import { TranscriptData, CleanedTranscript, getOriginalAudioUrl } from "@/lib/api";
 
 interface TranscriptPanelProps {
   type: "original" | "cleaned";
+  transcriptionId: string;
   data: TranscriptData | CleanedTranscript;
   segmentCount: number;
   engine?: string; // For showing Raw API button
@@ -29,6 +30,7 @@ export const TranscriptPanel = forwardRef<TranscriptPanelRef, TranscriptPanelPro
   function TranscriptPanel(
     {
       type,
+      transcriptionId,
       data,
       segmentCount,
       engine,
@@ -45,6 +47,17 @@ export const TranscriptPanel = forwardRef<TranscriptPanelRef, TranscriptPanelPro
     const intl = useIntl();
     const containerRef = useRef<HTMLDivElement>(null);
     const segmentRefs = useRef<Map<number, HTMLDivElement>>(new Map());
+    const audioRef = useRef<HTMLAudioElement>(null);
+    const audioUrl = getOriginalAudioUrl(transcriptionId);
+    const [activeSegmentIndex, setActiveSegmentIndex] = useState<number | null>(null);
+    const [isPlaying, setIsPlaying] = useState(false);
+
+    useEffect(() => {
+      const audio = audioRef.current;
+      return () => {
+        audio?.pause();
+      };
+    }, []);
 
     useImperativeHandle(ref, () => ({
       scrollToTimestamp: (timestamp: number) => {
@@ -121,6 +134,97 @@ export const TranscriptPanel = forwardRef<TranscriptPanelRef, TranscriptPanelPro
 
     // Speaker filter state
     const [filterSpeaker, setFilterSpeaker] = useState<string | null>(null);
+
+    const ensureAudioMetadata = async (audio: HTMLAudioElement) => {
+      if (audio.readyState >= 1) return;
+
+      await new Promise<void>((resolve, reject) => {
+        const handleLoaded = () => {
+          cleanup();
+          resolve();
+        };
+        const handleError = () => {
+          cleanup();
+          reject(audio.error || new Error("Failed to load audio metadata"));
+        };
+        const cleanup = () => {
+          audio.removeEventListener("loadedmetadata", handleLoaded);
+          audio.removeEventListener("error", handleError);
+        };
+
+        audio.addEventListener("loadedmetadata", handleLoaded);
+        audio.addEventListener("error", handleError);
+        audio.load();
+      });
+    };
+
+    const seekAudioTo = async (audio: HTMLAudioElement, targetTime: number) => {
+      const safeTarget = Math.max(0, targetTime);
+
+      if (Math.abs(audio.currentTime - safeTarget) < 0.25) {
+        return;
+      }
+
+      await new Promise<void>((resolve, reject) => {
+        const handleSeeked = () => {
+          cleanup();
+          resolve();
+        };
+        const handleError = () => {
+          cleanup();
+          reject(audio.error || new Error("Failed to seek audio"));
+        };
+        const cleanup = () => {
+          audio.removeEventListener("seeked", handleSeeked);
+          audio.removeEventListener("error", handleError);
+        };
+
+        audio.addEventListener("seeked", handleSeeked, { once: true });
+        audio.addEventListener("error", handleError, { once: true });
+
+        if (typeof audio.fastSeek === "function") {
+          audio.fastSeek(safeTarget);
+        } else {
+          audio.currentTime = safeTarget;
+        }
+
+        window.setTimeout(() => {
+          cleanup();
+          resolve();
+        }, 1200);
+      });
+    };
+
+    const handlePlayToggle = async (segmentStart: number, index: number) => {
+      const audio = audioRef.current;
+      if (!audio) return;
+
+      if (activeSegmentIndex === index && !audio.paused) {
+        audio.pause();
+        return;
+      }
+
+      try {
+        await ensureAudioMetadata(audio);
+        audio.pause();
+        await seekAudioTo(audio, segmentStart);
+        await audio.play();
+        setActiveSegmentIndex(index);
+        setIsPlaying(true);
+      } catch (error) {
+        console.error("Failed to play audio:", error);
+      }
+    };
+
+    const handleStop = (segmentStart: number) => {
+      const audio = audioRef.current;
+      if (!audio) return;
+
+      audio.pause();
+      audio.currentTime = segmentStart;
+      setIsPlaying(false);
+      setActiveSegmentIndex(null);
+    };
 
     // Calculate speaker stats by character count
     const speakerCharCount: Record<string, number> = {};
@@ -270,9 +374,24 @@ export const TranscriptPanel = forwardRef<TranscriptPanelRef, TranscriptPanelPro
           onScroll={handleScroll}
           className="h-[600px] overflow-y-auto border rounded-lg p-4 space-y-3"
         >
+          <audio
+            ref={audioRef}
+            src={audioUrl}
+            preload="none"
+            onPause={() => setIsPlaying(false)}
+            onPlay={() => setIsPlaying(true)}
+            onEnded={() => {
+              setIsPlaying(false);
+              setActiveSegmentIndex(null);
+            }}
+          />
           {segments.map((segment, index) => {
             const speaker = speakers[segment.speaker];
             if (filterSpeaker && segment.speaker !== filterSpeaker) return null;
+
+            const isActive = activeSegmentIndex === index;
+            const isActiveAndPlaying = isActive && isPlaying;
+
             return (
               <div
                 key={index}
@@ -280,19 +399,43 @@ export const TranscriptPanel = forwardRef<TranscriptPanelRef, TranscriptPanelPro
                   if (el) segmentRefs.current.set(index, el);
                 }}
                 data-timestamp={segment.start}
-                className="flex gap-2 text-sm"
+                className={`flex gap-2 text-sm items-start rounded-md px-2 py-1 ${isActive ? "bg-muted/50" : ""}`}
               >
-                <span className="text-muted-foreground shrink-0 w-20">
+                <div className="shrink-0 w-16 flex items-center gap-1">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="h-7 w-7"
+                    onClick={() => handlePlayToggle(segment.start, index)}
+                    title={isActiveAndPlaying ? "Pause audio" : `Play from ${formatTimestamp(segment.start)}`}
+                  >
+                    {isActiveAndPlaying ? <Pause className="h-3.5 w-3.5" /> : <Play className="h-3.5 w-3.5" />}
+                  </Button>
+                  {isActive && (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="h-7 w-7"
+                      onClick={() => handleStop(segment.start)}
+                      title="Stop audio"
+                    >
+                      <Square className="h-3 w-3" />
+                    </Button>
+                  )}
+                </div>
+                <span className="text-muted-foreground shrink-0 w-20 pt-1">
                   [{formatTimestamp(segment.start)}]
                 </span>
                 <span
-                  className="font-medium shrink-0 w-28 min-w-20"
+                  className="font-medium shrink-0 w-28 min-w-20 pt-1"
                   style={{ color: speaker?.color, overflowWrap: "anywhere" }}
                   title={speaker?.name || segment.speaker}
                 >
                   {speaker?.name || segment.speaker}:
                 </span>
-                <span className={type === "original" ? "text-muted-foreground" : ""}>
+                <span className={`${type === "original" ? "text-muted-foreground" : ""} pt-1`}>
                   {segment.text}
                 </span>
               </div>

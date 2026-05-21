@@ -32,6 +32,8 @@ export interface Transcription {
   processing_time_seconds: number | null;
   transcription_time_seconds: number | null;
   diarization_time_seconds: number | null;
+  workflow_status: "pending" | "processed";
+  workflow_comment: string | null;
   // LLM operations
   llm_operations: LLMOperationSummary[];
 }
@@ -140,7 +142,11 @@ export async function updateSpeakerNames(
 
 export async function updateTranscription(
   id: string,
-  data: { initial_prompt?: string }
+  data: {
+    initial_prompt?: string;
+    workflow_status?: "pending" | "processed";
+    workflow_comment?: string | null;
+  }
 ): Promise<Transcription> {
   const response = await fetch(`${API_BASE}/api/transcribe/${id}`, {
     method: "PUT",
@@ -365,6 +371,10 @@ export function getOriginalJsonUrl(id: string): string {
 
 export function getRawApiUrl(id: string): string {
   return `${API_BASE}/api/transcribe/${id}/download/raw`;
+}
+
+export function getOriginalAudioUrl(id: string): string {
+  return `${API_BASE}/api/transcribe/${id}/audio`;
 }
 
 export function getCleanedTxtUrl(id: string): string {

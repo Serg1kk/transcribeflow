@@ -3,6 +3,7 @@ import pytest
 from fastapi.testclient import TestClient
 from io import BytesIO
 from main import app
+from models import SessionLocal, Transcription, TranscriptionStatus
 
 
 client = TestClient(app)
@@ -111,6 +112,60 @@ def test_update_transcription_initial_prompt():
     assert data["status"] == "draft"
 
 
+def test_update_transcription_workflow_fields_for_completed_status():
+    """Workflow status/comment should be editable even after completion."""
+    fake_audio = BytesIO(b"fake audio content")
+    upload_response = client.post(
+        "/api/transcribe/upload",
+        files={"file": ("workflow_test.mp3", fake_audio, "audio/mpeg")},
+    )
+    transcription_id = upload_response.json()["id"]
+
+    db = SessionLocal()
+    try:
+        transcription = db.query(Transcription).filter(Transcription.id == transcription_id).first()
+        transcription.status = TranscriptionStatus.COMPLETED
+        db.commit()
+    finally:
+        db.close()
+
+    response = client.put(
+        f"/api/transcribe/{transcription_id}",
+        json={"workflow_status": "processed", "workflow_comment": "Passed through pipeline"}
+    )
+
+    assert response.status_code == 200
+    data = response.json()
+    assert data["workflow_status"] == "processed"
+    assert data["workflow_comment"] == "Passed through pipeline"
+
+
+
+def test_update_transcription_initial_prompt_rejected_after_completion():
+    """Initial prompt stays editable only before processing starts."""
+    fake_audio = BytesIO(b"fake audio content")
+    upload_response = client.post(
+        "/api/transcribe/upload",
+        files={"file": ("completed_update_test.mp3", fake_audio, "audio/mpeg")},
+    )
+    transcription_id = upload_response.json()["id"]
+
+    db = SessionLocal()
+    try:
+        transcription = db.query(Transcription).filter(Transcription.id == transcription_id).first()
+        transcription.status = TranscriptionStatus.COMPLETED
+        db.commit()
+    finally:
+        db.close()
+
+    response = client.put(
+        f"/api/transcribe/{transcription_id}",
+        json={"initial_prompt": "Should fail"}
+    )
+    assert response.status_code == 400
+
+
+
 def test_update_transcription_not_found():
     """Test 404 when updating nonexistent transcription."""
     response = client.put(
@@ -195,3 +250,101 @@ def test_delete_transcription():
     # Verify it's gone
     check = client.get(f"/api/transcribe/{transcription_id}")
     assert check.status_code == 404
+
+
+def test_stream_original_audio(tmp_path):
+    """Test streaming original audio from completed transcription output dir."""
+    fake_audio = BytesIO(b"fake audio content")
+    upload_response = client.post(
+        "/api/transcribe/upload",
+        files={"file": ("playback_test.ogg", fake_audio, "audio/ogg")},
+    )
+    transcription_id = upload_response.json()["id"]
+
+    output_dir = tmp_path / "transcription-output"
+    output_dir.mkdir()
+    audio_path = output_dir / "playback_test.ogg"
+    expected_content = b"original audio bytes"
+    audio_path.write_bytes(expected_content)
+
+    db = SessionLocal()
+    try:
+        transcription = db.query(Transcription).filter(Transcription.id == transcription_id).first()
+        transcription.output_dir = str(output_dir)
+        db.commit()
+    finally:
+        db.close()
+
+    response = client.get(f"/api/transcribe/{transcription_id}/audio")
+
+    assert response.status_code == 200
+    assert response.content == expected_content
+    assert response.headers["content-type"].startswith("audio/ogg")
+    assert response.headers["accept-ranges"] == "bytes"
+    assert "content-disposition" not in response.headers
+
+
+def test_stream_original_audio_supports_range_requests(tmp_path):
+    """Test audio endpoint supports partial content for browser playback."""
+    fake_audio = BytesIO(b"fake audio content")
+    upload_response = client.post(
+        "/api/transcribe/upload",
+        files={"file": ("playback_test.m4a", fake_audio, "audio/mp4")},
+    )
+    transcription_id = upload_response.json()["id"]
+
+    output_dir = tmp_path / "transcription-output-range"
+    output_dir.mkdir()
+    audio_path = output_dir / "playback_test.m4a"
+    expected_content = b"0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+    audio_path.write_bytes(expected_content)
+
+    db = SessionLocal()
+    try:
+        transcription = db.query(Transcription).filter(Transcription.id == transcription_id).first()
+        transcription.output_dir = str(output_dir)
+        db.commit()
+    finally:
+        db.close()
+
+    response = client.get(
+        f"/api/transcribe/{transcription_id}/audio",
+        headers={"Range": "bytes=5-14"},
+    )
+
+    assert response.status_code == 206
+    assert response.content == expected_content[5:15]
+    assert response.headers["content-range"] == f"bytes 5-14/{len(expected_content)}"
+    assert response.headers["content-length"] == "10"
+    assert response.headers["content-type"].startswith("audio/mp4")
+
+
+def test_stream_original_audio_prefers_preview_when_available(tmp_path):
+    """Test audio endpoint serves preview audio first and falls back to original otherwise."""
+    fake_audio = BytesIO(b"fake audio content")
+    upload_response = client.post(
+        "/api/transcribe/upload",
+        files={"file": ("preview_source.ogg", fake_audio, "audio/ogg")},
+    )
+    transcription_id = upload_response.json()["id"]
+
+    output_dir = tmp_path / "transcription-output-preview"
+    output_dir.mkdir()
+    original_path = output_dir / "preview_source.ogg"
+    original_path.write_bytes(b"ORIGINAL_AUDIO_BYTES")
+    preview_path = output_dir / "playback_preview.m4a"
+    preview_path.write_bytes(b"PREVIEW_AUDIO_BYTES")
+
+    db = SessionLocal()
+    try:
+        transcription = db.query(Transcription).filter(Transcription.id == transcription_id).first()
+        transcription.output_dir = str(output_dir)
+        db.commit()
+    finally:
+        db.close()
+
+    response = client.get(f"/api/transcribe/{transcription_id}/audio")
+
+    assert response.status_code == 200
+    assert response.content == b"PREVIEW_AUDIO_BYTES"
+    assert response.headers["content-type"].startswith("audio/mp4")

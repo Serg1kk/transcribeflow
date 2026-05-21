@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Input } from "@/components/ui/input";
+import { TranscriptionWorkflowControls } from "@/components/TranscriptionWorkflowControls";
 import {
   getQueue,
   Transcription,
@@ -424,8 +425,14 @@ function InProgressItem({ transcription, statusLabels }: { transcription: Transc
 // Completed item
 function CompletedItem({ transcription }: { transcription: Transcription }) {
   const intl = useIntl();
-  const isCompleted = transcription.status === "completed";
-  const isFailed = transcription.status === "failed";
+  const [item, setItem] = useState(transcription);
+
+  useEffect(() => {
+    setItem(transcription);
+  }, [transcription]);
+
+  const isCompleted = item.status === "completed";
+  const isFailed = item.status === "failed";
 
   // Format time as "1h 23m 45s" (skip hours if < 1h, skip minutes if < 1m)
   const formatTime = (seconds: number | null) => {
@@ -447,20 +454,20 @@ function CompletedItem({ transcription }: { transcription: Transcription }) {
     return formatTime(seconds);
   };
 
-  const fileSizeMB = transcription.file_size
-    ? (transcription.file_size / 1024 / 1024).toFixed(1) + " MB"
+  const fileSizeMB = item.file_size
+    ? (item.file_size / 1024 / 1024).toFixed(1) + " MB"
     : null;
 
   // Get LLM operations by type (latest only for display, but count all for cost)
-  const cleanupOps = transcription.llm_operations?.filter(op => op.operation_type === "cleanup") || [];
-  const insightsOps = transcription.llm_operations?.filter(op => op.operation_type === "insights") || [];
+  const cleanupOps = item.llm_operations?.filter(op => op.operation_type === "cleanup") || [];
+  const insightsOps = item.llm_operations?.filter(op => op.operation_type === "insights") || [];
   const latestCleanup = cleanupOps[0]; // Already sorted desc by created_at
   const latestInsights = insightsOps[0];
 
   // Calculate totals
-  const totalLLMCost = transcription.llm_operations?.reduce((sum, op) => sum + (op.cost_usd || 0), 0) || 0;
-  const totalLLMTime = transcription.llm_operations?.reduce((sum, op) => sum + op.processing_time_seconds, 0) || 0;
-  const totalTime = (transcription.processing_time_seconds || 0) + totalLLMTime;
+  const totalLLMCost = item.llm_operations?.reduce((sum, op) => sum + (op.cost_usd || 0), 0) || 0;
+  const totalLLMTime = item.llm_operations?.reduce((sum, op) => sum + op.processing_time_seconds, 0) || 0;
+  const totalTime = (item.processing_time_seconds || 0) + totalLLMTime;
 
   const formatCost = (cost: number | null) => {
     if (!cost) return null;
@@ -479,36 +486,51 @@ function CompletedItem({ transcription }: { transcription: Transcription }) {
         <div className="flex items-center gap-3">
           {isCompleted ? (
             <Link
-              href={`/transcription/${transcription.id}`}
+              href={`/transcription/${item.id}`}
               className="font-medium hover:underline"
             >
-              {transcription.filename}
+              {item.filename}
             </Link>
           ) : (
-            <span className="font-medium">{transcription.filename}</span>
+            <span className="font-medium">{item.filename}</span>
           )}
           <span className="text-xs text-muted-foreground">
             {fileSizeMB && <span>{fileSizeMB}</span>}
-            {fileSizeMB && transcription.duration_seconds && <span> • </span>}
-            {transcription.duration_seconds && <span>{formatDuration(transcription.duration_seconds)}</span>}
+            {fileSizeMB && item.duration_seconds && <span> • </span>}
+            {item.duration_seconds && <span>{formatDuration(item.duration_seconds)}</span>}
           </span>
         </div>
-        <Badge variant={isFailed ? "destructive" : "outline"}>
-          {isFailed ? intl.formatMessage({ id: "status.failed" }) : intl.formatMessage({ id: "status.completed" })}
-        </Badge>
+        <div className="flex items-center gap-2">
+          <Badge variant={isFailed ? "destructive" : "outline"}>
+            {isFailed ? intl.formatMessage({ id: "status.failed" }) : intl.formatMessage({ id: "status.completed" })}
+          </Badge>
+          <TranscriptionWorkflowControls
+            transcription={item}
+            compact
+            showComment={false}
+            onUpdated={setItem}
+          />
+        </div>
       </div>
 
+      <TranscriptionWorkflowControls
+        transcription={item}
+        compact
+        showStatusRow={false}
+        onUpdated={setItem}
+      />
+
       {/* Error message for failed */}
-      {isFailed && transcription.error_message && (
+      {isFailed && item.error_message && (
         <div className="text-sm text-red-600 bg-red-50 rounded p-2">
-          {transcription.error_message}
+          {item.error_message}
         </div>
       )}
 
       {/* Context (formerly Initial prompt) */}
-      {transcription.initial_prompt && (
+      {item.initial_prompt && (
         <p className="text-sm text-muted-foreground">
-          Context: &quot;{transcription.initial_prompt}&quot;
+          Context: &quot;{item.initial_prompt}&quot;
         </p>
       )}
 
@@ -518,19 +540,19 @@ function CompletedItem({ transcription }: { transcription: Transcription }) {
           {/* ASR */}
           <div className="flex justify-between">
             <span>
-              <span className="text-green-600">✓</span> ASR: {transcription.model} (GPU)
+              <span className="text-green-600">✓</span> ASR: {item.model} (GPU)
             </span>
-            <span>{formatTime(transcription.transcription_time_seconds)}</span>
+            <span>{formatTime(item.transcription_time_seconds)}</span>
           </div>
 
           {/* Diarization */}
           <div className="flex justify-between">
-            {transcription.diarization_method && transcription.diarization_method !== "none" ? (
+            {item.diarization_method && item.diarization_method !== "none" ? (
               <>
                 <span>
-                  <span className="text-green-600">✓</span> Diarization: {transcription.diarization_method === "fast" ? "Fast" : "Accurate"} ({transcription.compute_device === "cpu" ? "CPU" : "GPU"})
+                  <span className="text-green-600">✓</span> Diarization: {item.diarization_method === "fast" ? "Fast" : "Accurate"} ({item.compute_device === "cpu" ? "CPU" : "GPU"})
                 </span>
-                <span>{formatTime(transcription.diarization_time_seconds)}</span>
+                <span>{formatTime(item.diarization_time_seconds)}</span>
               </>
             ) : (
               <>
