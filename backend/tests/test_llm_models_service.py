@@ -19,11 +19,28 @@ def test_llm_models_service_get_model(tmp_path):
     """Test getting a specific model."""
     service = LLMModelsService(config_path=tmp_path / "llm_models.json")
 
-    model = service.get_model("gemini", "gemini-2.5-flash")
+    model = service.get_model("gemini", "gemini-3.1-pro-preview")
     assert model is not None
-    assert model.id == "gemini-2.5-flash"
-    assert model.name == "Gemini 2.5 Flash"
-    assert model.input_price_per_1m == 0.30
+    assert model.id == "gemini-3.1-pro-preview"
+    assert model.name == "Gemini 3.1 Pro Preview (1M)"
+    assert model.input_price_per_1m == 2.00
+
+
+def test_llm_models_service_uses_updated_official_model_ids(tmp_path):
+    """Test updated Gemini/OpenRouter model lists match the curated official set."""
+    service = LLMModelsService(config_path=tmp_path / "llm_models.json")
+
+    gemini_ids = {model.id for model in service.list_models("gemini")}
+    openrouter_ids = {model.id for model in service.list_models("openrouter")}
+
+    assert "gemini-3.1-pro-preview" in gemini_ids
+    assert "gemini-3.5-flash" in gemini_ids
+    assert "gemini-3-pro-preview" not in gemini_ids
+
+    assert "google/gemini-3.1-pro-preview" in openrouter_ids
+    assert "google/gemini-3.5-flash" in openrouter_ids
+    assert "google/gemini-3-pro-preview" not in openrouter_ids
+    assert "qwen/qwen-turbo" not in openrouter_ids
 
 
 def test_llm_model_cost_calculation():

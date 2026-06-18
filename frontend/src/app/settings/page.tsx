@@ -17,6 +17,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { getLLMModels, type LLMModel as AvailableLLMModel, type LLMModelsConfig } from "@/lib/api";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
@@ -61,10 +62,16 @@ interface Settings {
   has_openrouter_key: boolean;
 }
 
+const EMPTY_LLM_MODELS: LLMModelsConfig = {
+  gemini: { models: [] },
+  openrouter: { models: [] },
+};
+
 export default function SettingsPage() {
   const intl = useIntl();
   const [settings, setSettings] = useState<Settings | null>(null);
   const [engines, setEngines] = useState<Engine[]>([]);
+  const [llmModels, setLlmModels] = useState<LLMModelsConfig>(EMPTY_LLM_MODELS);
   const [isSaving, setIsSaving] = useState(false);
 
   // Form state
@@ -109,6 +116,7 @@ export default function SettingsPage() {
   useEffect(() => {
     fetchSettings();
     fetchEngines();
+    fetchLLMModels();
   }, []);
 
   async function fetchSettings() {
@@ -153,6 +161,15 @@ export default function SettingsPage() {
     }
   }
 
+  async function fetchLLMModels() {
+    try {
+      const data = await getLLMModels();
+      setLlmModels(data);
+    } catch (error) {
+      console.error("Failed to fetch LLM models:", error);
+    }
+  }
+
   // Get models for current engine
   const currentEngine = engines.find((e) => e.id === defaultEngine);
   const availableModels = useMemo(
@@ -166,6 +183,36 @@ export default function SettingsPage() {
       setDefaultModel(availableModels[0]);
     }
   }, [defaultEngine, availableModels, defaultModel]);
+
+  const postprocessingAvailableModels = useMemo<AvailableLLMModel[]>(() => {
+    return postprocessingProvider === "openrouter"
+      ? llmModels.openrouter.models
+      : llmModels.gemini.models;
+  }, [llmModels, postprocessingProvider]);
+
+  const insightsAvailableModels = useMemo<AvailableLLMModel[]>(() => {
+    return insightsProvider === "openrouter"
+      ? llmModels.openrouter.models
+      : llmModels.gemini.models;
+  }, [llmModels, insightsProvider]);
+
+  useEffect(() => {
+    if (
+      postprocessingAvailableModels.length > 0
+      && !postprocessingAvailableModels.some((model) => model.id === postprocessingModel)
+    ) {
+      setPostprocessingModel(postprocessingAvailableModels[0].id);
+    }
+  }, [postprocessingAvailableModels, postprocessingModel]);
+
+  useEffect(() => {
+    if (
+      insightsAvailableModels.length > 0
+      && !insightsAvailableModels.some((model) => model.id === insightsModel)
+    ) {
+      setInsightsModel(insightsAvailableModels[0].id);
+    }
+  }, [insightsAvailableModels, insightsModel]);
 
   async function saveSettings() {
     setIsSaving(true);
@@ -632,29 +679,11 @@ export default function SettingsPage() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {postprocessingProvider === "gemini" ? (
-                      <>
-                        <SelectItem value="gemini-3-pro-preview">{intl.formatMessage({ id: "settings.llm.model.gemini3proPreview" })}</SelectItem>
-                        <SelectItem value="gemini-3-flash-preview">{intl.formatMessage({ id: "settings.llm.model.gemini3flashPreview" })}</SelectItem>
-                        <SelectItem value="gemini-2.5-pro">{intl.formatMessage({ id: "settings.llm.model.gemini25pro" })}</SelectItem>
-                        <SelectItem value="gemini-2.5-flash">{intl.formatMessage({ id: "settings.llm.model.gemini25flash" })}</SelectItem>
-                        <SelectItem value="gemini-2.5-flash-lite">{intl.formatMessage({ id: "settings.llm.model.gemini25flashLite" })}</SelectItem>
-                      </>
-                    ) : (
-                      <>
-                        <SelectItem value="x-ai/grok-4.1-fast">{intl.formatMessage({ id: "settings.llm.model.or.grok41fast" })}</SelectItem>
-                        <SelectItem value="google/gemini-3-pro-preview">{intl.formatMessage({ id: "settings.llm.model.or.gemini3pro" })}</SelectItem>
-                        <SelectItem value="google/gemini-3-flash-preview">{intl.formatMessage({ id: "settings.llm.model.or.gemini3flash" })}</SelectItem>
-                        <SelectItem value="google/gemini-2.5-pro">{intl.formatMessage({ id: "settings.llm.model.or.gemini25pro" })}</SelectItem>
-                        <SelectItem value="google/gemini-2.5-flash">{intl.formatMessage({ id: "settings.llm.model.or.gemini25flash" })}</SelectItem>
-                        <SelectItem value="google/gemini-2.5-flash-lite">{intl.formatMessage({ id: "settings.llm.model.or.gemini25flashLite" })}</SelectItem>
-                        <SelectItem value="anthropic/claude-sonnet-4">{intl.formatMessage({ id: "settings.llm.model.or.claudeSonnet4" })}</SelectItem>
-                        <SelectItem value="openai/gpt-4.1-mini">{intl.formatMessage({ id: "settings.llm.model.or.gpt41mini" })}</SelectItem>
-                        <SelectItem value="meta-llama/llama-4-maverick">{intl.formatMessage({ id: "settings.llm.model.or.llama4maverick" })}</SelectItem>
-                        <SelectItem value="qwen/qwen-turbo">{intl.formatMessage({ id: "settings.llm.model.or.qwenTurbo" })}</SelectItem>
-                        <SelectItem value="deepseek/deepseek-r1">{intl.formatMessage({ id: "settings.llm.model.or.deepseekR1" })}</SelectItem>
-                      </>
-                    )}
+                    {postprocessingAvailableModels.map((model) => (
+                      <SelectItem key={model.id} value={model.id}>
+                        {model.name}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
@@ -726,29 +755,11 @@ export default function SettingsPage() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {insightsProvider === "gemini" ? (
-                      <>
-                        <SelectItem value="gemini-3-pro-preview">{intl.formatMessage({ id: "settings.llm.model.gemini3proPreview" })}</SelectItem>
-                        <SelectItem value="gemini-3-flash-preview">{intl.formatMessage({ id: "settings.llm.model.gemini3flashPreview" })}</SelectItem>
-                        <SelectItem value="gemini-2.5-pro">{intl.formatMessage({ id: "settings.llm.model.gemini25pro" })}</SelectItem>
-                        <SelectItem value="gemini-2.5-flash">{intl.formatMessage({ id: "settings.llm.model.gemini25flash" })}</SelectItem>
-                        <SelectItem value="gemini-2.5-flash-lite">{intl.formatMessage({ id: "settings.llm.model.gemini25flashLite" })}</SelectItem>
-                      </>
-                    ) : (
-                      <>
-                        <SelectItem value="x-ai/grok-4.1-fast">{intl.formatMessage({ id: "settings.llm.model.or.grok41fast" })}</SelectItem>
-                        <SelectItem value="google/gemini-3-pro-preview">{intl.formatMessage({ id: "settings.llm.model.or.gemini3pro" })}</SelectItem>
-                        <SelectItem value="google/gemini-3-flash-preview">{intl.formatMessage({ id: "settings.llm.model.or.gemini3flash" })}</SelectItem>
-                        <SelectItem value="google/gemini-2.5-pro">{intl.formatMessage({ id: "settings.llm.model.or.gemini25pro" })}</SelectItem>
-                        <SelectItem value="google/gemini-2.5-flash">{intl.formatMessage({ id: "settings.llm.model.or.gemini25flash" })}</SelectItem>
-                        <SelectItem value="google/gemini-2.5-flash-lite">{intl.formatMessage({ id: "settings.llm.model.or.gemini25flashLite" })}</SelectItem>
-                        <SelectItem value="anthropic/claude-sonnet-4">{intl.formatMessage({ id: "settings.llm.model.or.claudeSonnet4" })}</SelectItem>
-                        <SelectItem value="openai/gpt-4.1-mini">{intl.formatMessage({ id: "settings.llm.model.or.gpt41mini" })}</SelectItem>
-                        <SelectItem value="meta-llama/llama-4-maverick">{intl.formatMessage({ id: "settings.llm.model.or.llama4maverick" })}</SelectItem>
-                        <SelectItem value="qwen/qwen-turbo">{intl.formatMessage({ id: "settings.llm.model.or.qwenTurbo" })}</SelectItem>
-                        <SelectItem value="deepseek/deepseek-r1">{intl.formatMessage({ id: "settings.llm.model.or.deepseekR1" })}</SelectItem>
-                      </>
-                    )}
+                    {insightsAvailableModels.map((model) => (
+                      <SelectItem key={model.id} value={model.id}>
+                        {model.name}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
