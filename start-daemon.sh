@@ -23,6 +23,7 @@ fi
 # Also kill any orphan processes
 pkill -9 -f "uvicorn main:app.*8000" 2>/dev/null || true
 pkill -9 -f "next dev.*3001" 2>/dev/null || true
+pkill -9 -f "next start.*3001" 2>/dev/null || true
 
 # Wait for ports to be released
 sleep 3
@@ -53,9 +54,15 @@ if [ ! -d "node_modules" ]; then
     npm install
 fi
 
-# Start frontend (listening on all interfaces for LAN access)
-echo "Starting frontend..."
-npm run dev -- -H 0.0.0.0 -p 3001 >> "$LOG_DIR/frontend.log" 2>&1 &
+# Build frontend for production if needed
+if [ ! -f ".next/BUILD_ID" ]; then
+    echo "Building frontend for production..."
+    npm run build >> "$LOG_DIR/frontend.log" 2>&1
+fi
+
+# Start frontend in production mode (listening on all interfaces for LAN access)
+echo "Starting frontend in production mode..."
+npm run start -- -H 0.0.0.0 -p 3001 >> "$LOG_DIR/frontend.log" 2>&1 &
 FRONTEND_PID=$!
 echo $FRONTEND_PID > "$LOG_DIR/frontend.pid"
 

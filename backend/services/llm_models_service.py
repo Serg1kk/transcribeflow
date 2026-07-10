@@ -48,8 +48,12 @@ DEFAULT_MODELS = {
         LLMModel("google/gemini-2.5-pro-preview", "Gemini 2.5 Pro Preview (via OR, 1M)", 1.25, 10.00),
         LLMModel("google/gemini-2.5-flash", "Gemini 2.5 Flash (via OR, 1M)", 0.30, 2.50),
         LLMModel("google/gemini-2.5-flash-lite", "Gemini 2.5 Flash Lite (via OR, 1M)", 0.10, 0.40),
-        LLMModel("anthropic/claude-sonnet-4", "Claude Sonnet 4 (1M)", 3.00, 15.00),
+        LLMModel("anthropic/claude-haiku-4.5", "Claude Haiku 4.5 (200K)", 1.00, 5.00),
+        LLMModel("anthropic/claude-sonnet-5", "Claude Sonnet 5 (1M)", 2.00, 10.00),
+        LLMModel("anthropic/claude-opus-4.8", "Claude Opus 4.8 (1M)", 5.00, 25.00),
         LLMModel("openai/gpt-4.1-mini", "GPT-4.1 Mini (1M)", 0.40, 1.60),
+        LLMModel("openai/gpt-5.4-mini", "GPT-5.4 Mini (400K)", 0.75, 4.50),
+        LLMModel("openai/gpt-5.5", "GPT-5.5 (1M)", 5.00, 30.00),
         LLMModel("meta-llama/llama-4-maverick", "Llama 4 Maverick (1M)", 0.15, 0.60),
         # Reasoning
         LLMModel("deepseek/deepseek-r1", "DeepSeek R1 (reasoning)", 0.70, 2.50),

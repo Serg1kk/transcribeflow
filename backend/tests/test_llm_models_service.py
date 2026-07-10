@@ -40,6 +40,12 @@ def test_llm_models_service_uses_updated_official_model_ids(tmp_path):
     assert "google/gemini-3.1-pro-preview" in openrouter_ids
     assert "google/gemini-3.5-flash" in openrouter_ids
     assert "google/gemini-3-pro-preview" not in openrouter_ids
+    assert "anthropic/claude-haiku-4.5" in openrouter_ids
+    assert "anthropic/claude-sonnet-5" in openrouter_ids
+    assert "anthropic/claude-opus-4.8" in openrouter_ids
+    assert "anthropic/claude-sonnet-4" not in openrouter_ids
+    assert "openai/gpt-5.4-mini" in openrouter_ids
+    assert "openai/gpt-5.5" in openrouter_ids
     assert "qwen/qwen-turbo" not in openrouter_ids
 
 
