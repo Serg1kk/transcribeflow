@@ -45,8 +45,8 @@ def test_elevenlabs_rejects_unknown_model(tmp_path):
         engine.transcribe(audio_path, model="scribe_v999")
 
 
-def test_elevenlabs_audio_event_flag_depends_on_model(tmp_path):
-    """Scribe v2 should enable audio event tagging, v1 should keep it disabled."""
+def test_elevenlabs_audio_event_flag_enabled_for_supported_models(tmp_path):
+    """All supported Scribe models should enable audio event tagging."""
     engine = ElevenLabsEngine(api_key="test-key")
     audio_path = tmp_path / "sample.mp3"
     audio_path.write_bytes(b"fake-audio")
@@ -79,7 +79,7 @@ def test_elevenlabs_audio_event_flag_depends_on_model(tmp_path):
         mock_client.return_value.__aexit__ = AsyncMock(return_value=None)
         engine.transcribe(audio_path, model="scribe_v2")
 
-    assert v1_calls[0]["tag_audio_events"] == "false"
+    assert v1_calls[0]["tag_audio_events"] == "true"
     assert v2_calls[0]["tag_audio_events"] == "true"
 
 

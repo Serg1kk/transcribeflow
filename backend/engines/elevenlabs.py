@@ -188,8 +188,8 @@ class ElevenLabsEngine(TranscriptionEngine):
         )
 
     def _should_tag_audio_events(self, model: str) -> bool:
-        """Enable ElevenLabs audio event tagging only for Scribe v2."""
-        return model == "scribe_v2"
+        """Enable ElevenLabs audio event tagging for all supported Scribe models."""
+        return model in self.SUPPORTED_MODELS
 
     def _format_audio_event(self, text: str) -> str:
         """Normalize audio event markers for transcript readability."""
