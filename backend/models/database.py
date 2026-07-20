@@ -50,10 +50,50 @@ def init_db():
                 )
             )
 
+        if "elevenlabs_keyterms" not in columns:
+            conn.execute(
+                text(
+                    "ALTER TABLE transcriptions "
+                    "ADD COLUMN elevenlabs_keyterms JSON"
+                )
+            )
+
+        if "elevenlabs_entity_detection" not in columns:
+            conn.execute(
+                text(
+                    "ALTER TABLE transcriptions "
+                    "ADD COLUMN elevenlabs_entity_detection JSON"
+                )
+            )
+
+        if "elevenlabs_entity_redaction" not in columns:
+            conn.execute(
+                text(
+                    "ALTER TABLE transcriptions "
+                    "ADD COLUMN elevenlabs_entity_redaction JSON"
+                )
+            )
+
+        if "elevenlabs_entity_redaction_mode" not in columns:
+            conn.execute(
+                text(
+                    "ALTER TABLE transcriptions "
+                    "ADD COLUMN elevenlabs_entity_redaction_mode VARCHAR(50)"
+                )
+            )
+
         conn.execute(
             text(
                 "UPDATE transcriptions "
                 "SET workflow_status = 'pending' "
                 "WHERE workflow_status IS NULL OR workflow_status = ''"
+            )
+        )
+
+        conn.execute(
+            text(
+                "UPDATE transcriptions "
+                "SET model = 'scribe_v2' "
+                "WHERE engine = 'elevenlabs' AND model = 'scribe_v1'"
             )
         )

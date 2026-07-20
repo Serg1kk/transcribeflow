@@ -39,6 +39,16 @@ export function FileUpload({ onUploadComplete }: FileUploadProps) {
   const [uploadProgress, setUploadProgress] = useState(0);
   const [error, setError] = useState<string | null>(null);
 
+  const [elevenlabsKeytermsEnabled, setElevenlabsKeytermsEnabled] = useState(false);
+  const [elevenlabsKeytermsText, setElevenlabsKeytermsText] = useState("");
+  const [elevenlabsEntityDetectionEnabled, setElevenlabsEntityDetectionEnabled] = useState(false);
+  const [elevenlabsDetectionScope, setElevenlabsDetectionScope] = useState("all");
+  const [elevenlabsDetectionCustomText, setElevenlabsDetectionCustomText] = useState("");
+  const [elevenlabsEntityRedactionEnabled, setElevenlabsEntityRedactionEnabled] = useState(false);
+  const [elevenlabsRedactionScope, setElevenlabsRedactionScope] = useState("same_as_detection");
+  const [elevenlabsRedactionCustomText, setElevenlabsRedactionCustomText] = useState("");
+  const [elevenlabsRedactionMode, setElevenlabsRedactionMode] = useState("enumerated_entity_type");
+
   useEffect(() => {
     fetch(`${API_BASE}/api/engines`)
       .then((res) => res.json())
@@ -63,6 +73,7 @@ export function FileUpload({ onUploadComplete }: FileUploadProps) {
     () => currentEngine?.models || [],
     [currentEngine]
   );
+  const isElevenLabs = engine === "elevenlabs";
 
   useEffect(() => {
     if (availableModels.length > 0 && !availableModels.includes(model)) {
@@ -115,13 +126,54 @@ export function FileUpload({ onUploadComplete }: FileUploadProps) {
   const handleUpload = async () => {
     if (files.length === 0) return;
 
+    const requestModel = isElevenLabs ? "scribe_v2" : model;
+    const keyterms = elevenlabsKeytermsEnabled
+      ? parseTextareaList(elevenlabsKeytermsText)
+      : [];
+    const entityDetection = isElevenLabs && elevenlabsEntityDetectionEnabled
+      ? resolveEntitySelection(elevenlabsDetectionScope, elevenlabsDetectionCustomText)
+      : [];
+    const entityRedaction = isElevenLabs && elevenlabsEntityRedactionEnabled
+      ? (elevenlabsRedactionScope === "same_as_detection"
+          ? entityDetection
+          : resolveEntitySelection(elevenlabsRedactionScope, elevenlabsRedactionCustomText))
+      : [];
+
+    if (isElevenLabs && elevenlabsKeytermsEnabled && keyterms.length === 0) {
+      setError(intl.formatMessage({ id: 'upload.elevenlabs.error.keytermsRequired' }));
+      return;
+    }
+
+    if (isElevenLabs && elevenlabsEntityDetectionEnabled && entityDetection.length === 0) {
+      setError(intl.formatMessage({ id: 'upload.elevenlabs.error.entityDetectionRequired' }));
+      return;
+    }
+
+    if (isElevenLabs && elevenlabsEntityRedactionEnabled) {
+      if (!elevenlabsEntityDetectionEnabled || entityDetection.length === 0) {
+        setError(intl.formatMessage({ id: 'upload.elevenlabs.error.redactionNeedsDetection' }));
+        return;
+      }
+      if (entityRedaction.length === 0) {
+        setError(intl.formatMessage({ id: 'upload.elevenlabs.error.entityRedactionRequired' }));
+        return;
+      }
+    }
+
     setIsUploading(true);
     setError(null);
     setUploadProgress(0);
 
     try {
       for (let i = 0; i < files.length; i++) {
-        await uploadAudio(files[i], { engine, model });
+        await uploadAudio(files[i], {
+          engine,
+          model: requestModel,
+          elevenlabsKeyterms: isElevenLabs && elevenlabsKeytermsEnabled ? keyterms : undefined,
+          elevenlabsEntityDetection: isElevenLabs && elevenlabsEntityDetectionEnabled ? entityDetection : undefined,
+          elevenlabsEntityRedaction: isElevenLabs && elevenlabsEntityRedactionEnabled ? entityRedaction : undefined,
+          elevenlabsEntityRedactionMode: isElevenLabs && elevenlabsEntityRedactionEnabled ? elevenlabsRedactionMode : undefined,
+        });
         setUploadProgress(((i + 1) / files.length) * 100);
       }
       setFiles([]);
@@ -234,7 +286,7 @@ export function FileUpload({ onUploadComplete }: FileUploadProps) {
 
           <div className="space-y-2">
             <Label>{intl.formatMessage({ id: 'label.model' })}</Label>
-            <Select value={model} onValueChange={setModel}>
+            <Select value={isElevenLabs ? 'scribe_v2' : model} onValueChange={setModel}>
               <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>
@@ -252,6 +304,186 @@ export function FileUpload({ onUploadComplete }: FileUploadProps) {
             </Select>
           </div>
         </div>
+
+        {isElevenLabs && (
+          <div className="space-y-4 rounded-lg border p-4 bg-muted/20">
+            <div className="space-y-1">
+              <p className="text-sm font-medium">
+                {intl.formatMessage({ id: 'upload.elevenlabs.title' })}
+              </p>
+              <p className="text-xs text-muted-foreground">
+                {intl.formatMessage({ id: 'upload.elevenlabs.description' })}
+              </p>
+            </div>
+
+            <div className="space-y-3 rounded-md border bg-background p-3">
+              <label className="flex items-start gap-3">
+                <input
+                  type="checkbox"
+                  className="mt-1 h-4 w-4"
+                  checked={elevenlabsKeytermsEnabled}
+                  onChange={(e) => setElevenlabsKeytermsEnabled(e.target.checked)}
+                />
+                <div className="space-y-1">
+                  <p className="text-sm font-medium">
+                    {intl.formatMessage({ id: 'upload.elevenlabs.keyterms.label' })}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {intl.formatMessage({ id: 'upload.elevenlabs.keyterms.help' })}
+                  </p>
+                </div>
+              </label>
+
+              {elevenlabsKeytermsEnabled && (
+                <div className="space-y-2 pl-7">
+                  <textarea
+                    value={elevenlabsKeytermsText}
+                    onChange={(e) => setElevenlabsKeytermsText(e.target.value)}
+                    placeholder={intl.formatMessage({ id: 'upload.elevenlabs.keyterms.placeholder' })}
+                    rows={5}
+                    className="w-full rounded-md border bg-background px-3 py-2 text-sm"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    {intl.formatMessage({ id: 'upload.elevenlabs.keyterms.constraints' })}
+                  </p>
+                </div>
+              )}
+            </div>
+
+            <div className="space-y-3 rounded-md border bg-background p-3">
+              <label className="flex items-start gap-3">
+                <input
+                  type="checkbox"
+                  className="mt-1 h-4 w-4"
+                  checked={elevenlabsEntityDetectionEnabled}
+                  onChange={(e) => {
+                    const checked = e.target.checked;
+                    setElevenlabsEntityDetectionEnabled(checked);
+                    if (!checked) {
+                      setElevenlabsEntityRedactionEnabled(false);
+                    }
+                  }}
+                />
+                <div className="space-y-1">
+                  <p className="text-sm font-medium">
+                    {intl.formatMessage({ id: 'upload.elevenlabs.entityDetection.label' })}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {intl.formatMessage({ id: 'upload.elevenlabs.entityDetection.help' })}
+                  </p>
+                </div>
+              </label>
+
+              {elevenlabsEntityDetectionEnabled && (
+                <div className="space-y-3 pl-7">
+                  <div className="space-y-2">
+                    <Label>{intl.formatMessage({ id: 'upload.elevenlabs.entityDetection.scope' })}</Label>
+                    <Select value={elevenlabsDetectionScope} onValueChange={setElevenlabsDetectionScope}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">all</SelectItem>
+                        <SelectItem value="pii">pii</SelectItem>
+                        <SelectItem value="phi">phi</SelectItem>
+                        <SelectItem value="pci">pci</SelectItem>
+                        <SelectItem value="other">other</SelectItem>
+                        <SelectItem value="offensive_language">offensive_language</SelectItem>
+                        <SelectItem value="custom">custom</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {elevenlabsDetectionScope === "custom" && (
+                    <div className="space-y-2">
+                      <textarea
+                        value={elevenlabsDetectionCustomText}
+                        onChange={(e) => setElevenlabsDetectionCustomText(e.target.value)}
+                        placeholder={intl.formatMessage({ id: 'upload.elevenlabs.entityDetection.placeholder' })}
+                        rows={4}
+                        className="w-full rounded-md border bg-background px-3 py-2 text-sm"
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        {intl.formatMessage({ id: 'upload.elevenlabs.entityDetection.customHelp' })}
+                      </p>
+                    </div>
+                  )}
+
+                  <div className="space-y-3 rounded-md border p-3 bg-muted/10">
+                    <label className="flex items-start gap-3">
+                      <input
+                        type="checkbox"
+                        className="mt-1 h-4 w-4"
+                        checked={elevenlabsEntityRedactionEnabled}
+                        onChange={(e) => setElevenlabsEntityRedactionEnabled(e.target.checked)}
+                      />
+                      <div className="space-y-1">
+                        <p className="text-sm font-medium">
+                          {intl.formatMessage({ id: 'upload.elevenlabs.redaction.label' })}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          {intl.formatMessage({ id: 'upload.elevenlabs.redaction.help' })}
+                        </p>
+                      </div>
+                    </label>
+
+                    {elevenlabsEntityRedactionEnabled && (
+                      <div className="space-y-3 pl-7">
+                        <div className="space-y-2">
+                          <Label>{intl.formatMessage({ id: 'upload.elevenlabs.redaction.scope' })}</Label>
+                          <Select value={elevenlabsRedactionScope} onValueChange={setElevenlabsRedactionScope}>
+                            <SelectTrigger>
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="same_as_detection">same_as_detection</SelectItem>
+                              <SelectItem value="all">all</SelectItem>
+                              <SelectItem value="pii">pii</SelectItem>
+                              <SelectItem value="phi">phi</SelectItem>
+                              <SelectItem value="pci">pci</SelectItem>
+                              <SelectItem value="other">other</SelectItem>
+                              <SelectItem value="offensive_language">offensive_language</SelectItem>
+                              <SelectItem value="custom">custom</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+
+                        {elevenlabsRedactionScope === "custom" && (
+                          <div className="space-y-2">
+                            <textarea
+                              value={elevenlabsRedactionCustomText}
+                              onChange={(e) => setElevenlabsRedactionCustomText(e.target.value)}
+                              placeholder={intl.formatMessage({ id: 'upload.elevenlabs.redaction.placeholder' })}
+                              rows={4}
+                              className="w-full rounded-md border bg-background px-3 py-2 text-sm"
+                            />
+                            <p className="text-xs text-muted-foreground">
+                              {intl.formatMessage({ id: 'upload.elevenlabs.redaction.customHelp' })}
+                            </p>
+                          </div>
+                        )}
+
+                        <div className="space-y-2">
+                          <Label>{intl.formatMessage({ id: 'upload.elevenlabs.redaction.mode' })}</Label>
+                          <Select value={elevenlabsRedactionMode} onValueChange={setElevenlabsRedactionMode}>
+                            <SelectTrigger>
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="enumerated_entity_type">enumerated_entity_type</SelectItem>
+                              <SelectItem value="entity_type">entity_type</SelectItem>
+                              <SelectItem value="redacted">redacted</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
 
         {error && (
           <p className="text-sm text-destructive">{error}</p>
@@ -276,4 +508,23 @@ export function FileUpload({ onUploadComplete }: FileUploadProps) {
 function isAudioFile(file: File): boolean {
   const audioExtensions = [".mp3", ".m4a", ".wav", ".ogg", ".flac", ".webm"];
   return audioExtensions.some((ext) => file.name.toLowerCase().endsWith(ext));
+}
+
+function parseTextareaList(value: string): string[] {
+  return Array.from(
+    new Set(
+      value
+        .replace(/\n/g, ",")
+        .split(",")
+        .map((item) => item.trim().replace(/\s+/g, " "))
+        .filter(Boolean)
+    )
+  );
+}
+
+function resolveEntitySelection(scope: string, customValue: string): string[] {
+  if (scope === "custom") {
+    return parseTextareaList(customValue);
+  }
+  return scope ? [scope] : [];
 }

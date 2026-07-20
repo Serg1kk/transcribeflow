@@ -25,6 +25,10 @@ export interface Transcription {
   progress: number;
   error_message: string | null;
   file_size: number | null;
+  elevenlabs_keyterms: string[] | null;
+  elevenlabs_entity_detection: string[] | null;
+  elevenlabs_entity_redaction: string[] | null;
+  elevenlabs_entity_redaction_mode: string | null;
   duration_seconds: number | null;
   compute_device: string | null;  // "cpu" | "mps" | "auto"
   diarization_method: string | null;  // "none" | "fast" | "accurate"
@@ -46,6 +50,10 @@ export async function uploadAudio(
     language?: string;
     minSpeakers?: number;
     maxSpeakers?: number;
+    elevenlabsKeyterms?: string[];
+    elevenlabsEntityDetection?: string[];
+    elevenlabsEntityRedaction?: string[];
+    elevenlabsEntityRedactionMode?: string;
   } = {}
 ): Promise<Transcription> {
   const formData = new FormData();
@@ -56,6 +64,18 @@ export async function uploadAudio(
   if (options.language) formData.append("language", options.language);
   if (options.minSpeakers) formData.append("min_speakers", String(options.minSpeakers));
   if (options.maxSpeakers) formData.append("max_speakers", String(options.maxSpeakers));
+  if (options.elevenlabsKeyterms?.length) {
+    formData.append("elevenlabs_keyterms", JSON.stringify(options.elevenlabsKeyterms));
+  }
+  if (options.elevenlabsEntityDetection?.length) {
+    formData.append("elevenlabs_entity_detection", JSON.stringify(options.elevenlabsEntityDetection));
+  }
+  if (options.elevenlabsEntityRedaction?.length) {
+    formData.append("elevenlabs_entity_redaction", JSON.stringify(options.elevenlabsEntityRedaction));
+  }
+  if (options.elevenlabsEntityRedactionMode) {
+    formData.append("elevenlabs_entity_redaction_mode", options.elevenlabsEntityRedactionMode);
+  }
 
   const response = await fetch(`${API_BASE}/api/transcribe/upload`, {
     method: "POST",

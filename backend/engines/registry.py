@@ -36,7 +36,7 @@ PROVIDERS: Dict[str, Dict[str, Any]] = {
         "name": "ElevenLabs Scribe",
         "requires_api_key": True,
         "key_field": "elevenlabs_api_key",
-        "models": ["scribe_v1", "scribe_v2"],
+        "models": ["scribe_v2"],
         "supports_diarization": True,
     },
     "yandex": {

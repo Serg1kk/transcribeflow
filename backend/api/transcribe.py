@@ -28,6 +28,58 @@ AUDIO_STREAM_CHUNK_SIZE = 1024 * 1024
 PLAYBACK_PREVIEW_FILENAME = "playback_preview.m4a"
 
 
+def _dedupe_preserve_order(values: List[str]) -> List[str]:
+    """Trim values, drop empties, and preserve original order when deduplicating."""
+    result: List[str] = []
+    seen = set()
+    for value in values:
+        cleaned = " ".join(str(value).strip().split())
+        if cleaned and cleaned not in seen:
+            result.append(cleaned)
+            seen.add(cleaned)
+    return result
+
+
+def _parse_optional_string_list(raw: Optional[str]) -> Optional[List[str]]:
+    """Parse JSON/string list form payloads into normalized string arrays."""
+    if raw is None:
+        return None
+
+    raw = raw.strip()
+    if not raw:
+        return None
+
+    try:
+        parsed = json.loads(raw)
+    except json.JSONDecodeError:
+        parsed = raw
+
+    if isinstance(parsed, list):
+        items = [str(item) for item in parsed]
+    elif isinstance(parsed, str):
+        items = parsed.replace("\n", ",").split(",")
+    else:
+        items = [str(parsed)]
+
+    normalized = _dedupe_preserve_order(items)
+    return normalized or None
+
+
+def _build_elevenlabs_options(
+    keyterms: Optional[List[str]],
+    entity_detection: Optional[List[str]],
+    entity_redaction: Optional[List[str]],
+    entity_redaction_mode: Optional[str],
+) -> dict:
+    """Build normalized ElevenLabs settings payload for API responses/files."""
+    return {
+        "keyterms": keyterms or [],
+        "entity_detection": entity_detection or [],
+        "entity_redaction": entity_redaction or [],
+        "entity_redaction_mode": entity_redaction_mode,
+    }
+
+
 def _format_timestamp(seconds: float) -> str:
     """Format timestamp as HH:MM:SS."""
     hours, remainder = divmod(int(seconds), 3600)
@@ -208,6 +260,10 @@ class TranscriptionResponse(BaseModel):
     progress: float
     error_message: Optional[str] = None
     file_size: Optional[int] = None  # File size in bytes
+    elevenlabs_keyterms: Optional[List[str]] = None
+    elevenlabs_entity_detection: Optional[List[str]] = None
+    elevenlabs_entity_redaction: Optional[List[str]] = None
+    elevenlabs_entity_redaction_mode: Optional[str] = None
     duration_seconds: Optional[float] = None  # Audio duration
     compute_device: Optional[str] = None  # "cpu" | "mps" | "auto"
     diarization_method: Optional[str] = None  # "none" | "fast" | "accurate"
@@ -232,6 +288,10 @@ async def upload_audio(
     language: Optional[str] = Form(default=None),
     min_speakers: Optional[int] = Form(default=None),
     max_speakers: Optional[int] = Form(default=None),
+    elevenlabs_keyterms: Optional[str] = Form(default=None),
+    elevenlabs_entity_detection: Optional[str] = Form(default=None),
+    elevenlabs_entity_redaction: Optional[str] = Form(default=None),
+    elevenlabs_entity_redaction_mode: Optional[str] = Form(default=None),
     db: Session = Depends(get_db),
     settings: Settings = Depends(get_settings),
 ):
@@ -243,6 +303,28 @@ async def upload_audio(
             status_code=400,
             detail=f"File type {file_ext} not supported. Allowed: {ALLOWED_EXTENSIONS}"
         )
+
+    # Normalize provider-specific options
+    normalized_keyterms = None
+    normalized_entity_detection = None
+    normalized_entity_redaction = None
+    normalized_entity_redaction_mode = None
+
+    if engine == "elevenlabs":
+        model = "scribe_v2"
+        normalized_keyterms = _parse_optional_string_list(elevenlabs_keyterms)
+        normalized_entity_detection = _parse_optional_string_list(elevenlabs_entity_detection)
+        normalized_entity_redaction = _parse_optional_string_list(elevenlabs_entity_redaction)
+        normalized_entity_redaction_mode = (elevenlabs_entity_redaction_mode or "").strip() or None
+
+        if normalized_entity_redaction and not normalized_entity_detection:
+            raise HTTPException(
+                status_code=400,
+                detail="Entity redaction requires entity detection to be enabled first",
+            )
+
+        if normalized_entity_redaction and normalized_entity_redaction_mode is None:
+            normalized_entity_redaction_mode = "enumerated_entity_type"
 
     # Ensure directories exist
     settings.ensure_directories()
@@ -265,6 +347,10 @@ async def upload_audio(
         language=language,
         min_speakers=min_speakers,
         max_speakers=max_speakers,
+        elevenlabs_keyterms=normalized_keyterms,
+        elevenlabs_entity_detection=normalized_entity_detection,
+        elevenlabs_entity_redaction=normalized_entity_redaction,
+        elevenlabs_entity_redaction_mode=normalized_entity_redaction_mode,
         status=TranscriptionStatus.DRAFT,  # Default to DRAFT
     )
     db.add(transcription)
@@ -283,6 +369,10 @@ async def upload_audio(
         progress=transcription.progress,
         error_message=transcription.error_message,
         file_size=transcription.file_size,
+        elevenlabs_keyterms=transcription.elevenlabs_keyterms,
+        elevenlabs_entity_detection=transcription.elevenlabs_entity_detection,
+        elevenlabs_entity_redaction=transcription.elevenlabs_entity_redaction,
+        elevenlabs_entity_redaction_mode=transcription.elevenlabs_entity_redaction_mode,
         duration_seconds=transcription.duration_seconds,
         workflow_status=transcription.workflow_status or "pending",
         workflow_comment=transcription.workflow_comment,
@@ -329,6 +419,10 @@ def _build_transcription_response(t: Transcription, db: Session) -> Transcriptio
         progress=t.progress,
         error_message=t.error_message,
         file_size=t.file_size,
+        elevenlabs_keyterms=t.elevenlabs_keyterms,
+        elevenlabs_entity_detection=t.elevenlabs_entity_detection,
+        elevenlabs_entity_redaction=t.elevenlabs_entity_redaction,
+        elevenlabs_entity_redaction_mode=t.elevenlabs_entity_redaction_mode,
         duration_seconds=t.duration_seconds,
         compute_device=t.compute_device,
         diarization_method=t.diarization_method,

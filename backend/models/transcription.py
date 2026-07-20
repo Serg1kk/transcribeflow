@@ -39,6 +39,12 @@ class Transcription(Base):
     # Per-file transcription hint
     initial_prompt = Column(Text, nullable=True)
 
+    # ElevenLabs Scribe v2 advanced options
+    elevenlabs_keyterms = Column(JSON, nullable=True)
+    elevenlabs_entity_detection = Column(JSON, nullable=True)
+    elevenlabs_entity_redaction = Column(JSON, nullable=True)
+    elevenlabs_entity_redaction_mode = Column(String(50), nullable=True)
+
     # Status & progress
     status = Column(Enum(TranscriptionStatus), default=TranscriptionStatus.QUEUED)
     progress = Column(Float, default=0.0)

@@ -1,20 +1,24 @@
 # engines/elevenlabs.py
 """ElevenLabs Scribe transcription engine."""
 import asyncio
+import logging
 import time
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Any, Dict, List, Optional
 
 import httpx
 
 from engines.base import TranscriptionEngine, TranscriptionResult
+
+logger = logging.getLogger(__name__)
 
 
 class ElevenLabsEngine(TranscriptionEngine):
     """ElevenLabs Scribe cloud transcription engine."""
 
     BASE_URL = "https://api.elevenlabs.io/v1"
-    SUPPORTED_MODELS = ("scribe_v1", "scribe_v2")
+    SUPPORTED_MODELS = ("scribe_v2",)
+    LEGACY_MODEL_ALIASES = {"scribe_v1": "scribe_v2"}
 
     def __init__(self, api_key: Optional[str] = None):
         self.api_key = api_key
@@ -45,18 +49,37 @@ class ElevenLabsEngine(TranscriptionEngine):
     def transcribe(
         self,
         audio_path: Path,
-        model: str = "scribe_v1",
+        model: str = "scribe_v2",
         language: Optional[str] = None,
+        keyterms: Optional[List[str]] = None,
+        entity_detection: Optional[List[str]] = None,
+        entity_redaction: Optional[List[str]] = None,
+        entity_redaction_mode: Optional[str] = None,
     ) -> TranscriptionResult:
         """Transcribe audio using ElevenLabs Scribe API."""
-        return asyncio.run(self._transcribe_async(audio_path, model, language))
+        normalized_model = self._normalize_model(model)
+        return asyncio.run(
+            self._transcribe_async(
+                audio_path,
+                normalized_model,
+                language,
+                keyterms=keyterms,
+                entity_detection=entity_detection,
+                entity_redaction=entity_redaction,
+                entity_redaction_mode=entity_redaction_mode,
+            )
+        )
 
     async def _transcribe_async(
         self,
         audio_path: Path,
-        model: str = "scribe_v1",
+        model: str = "scribe_v2",
         language: Optional[str] = None,
         diarization: bool = True,
+        keyterms: Optional[List[str]] = None,
+        entity_detection: Optional[List[str]] = None,
+        entity_redaction: Optional[List[str]] = None,
+        entity_redaction_mode: Optional[str] = None,
     ) -> TranscriptionResult:
         """Async transcription implementation."""
         if not self.is_available():
@@ -70,16 +93,42 @@ class ElevenLabsEngine(TranscriptionEngine):
         start_time = time.time()
 
         headers = {"xi-api-key": self.api_key}
+        keyterms = self._normalize_string_list(keyterms)
+        entity_detection = self._normalize_string_list(entity_detection)
+        entity_redaction = self._normalize_string_list(entity_redaction)
+        estimated_cost_multiplier = self._estimate_cost_multiplier(
+            keyterms=keyterms,
+            entity_detection=entity_detection,
+            entity_redaction=entity_redaction,
+        )
 
         async with httpx.AsyncClient(timeout=600.0) as client:
             # Upload and transcribe in one request
             with open(audio_path, "rb") as f:
                 files = {"file": (audio_path.name, f, self._get_content_type(audio_path))}
-                data = {
+                data: Dict[str, Any] = {
                     "model_id": model,
                     "tag_audio_events": str(self._should_tag_audio_events(model)).lower(),
                     "diarize": str(diarization).lower(),
                 }
+                if keyterms:
+                    data["keyterms"] = keyterms
+                if entity_detection:
+                    data["entity_detection"] = entity_detection
+                if entity_redaction:
+                    data["entity_redaction"] = entity_redaction
+                    data["entity_redaction_mode"] = entity_redaction_mode or "enumerated_entity_type"
+
+                logger.info(
+                    "ElevenLabs Scribe request: file=%s model=%s keyterms=%d entity_detection=%s entity_redaction=%s redaction_mode=%s estimated_cost_multiplier=%.2f",
+                    audio_path.name,
+                    model,
+                    len(keyterms),
+                    entity_detection or [],
+                    entity_redaction or [],
+                    data.get("entity_redaction_mode"),
+                    estimated_cost_multiplier,
+                )
 
                 response = await client.post(
                     f"{self.BASE_URL}/speech-to-text",
@@ -87,6 +136,14 @@ class ElevenLabsEngine(TranscriptionEngine):
                     files=files,
                     data=data,
                 )
+
+                billing_headers = {
+                    key: value
+                    for key, value in response.headers.items()
+                    if any(token in key.lower() for token in ("credit", "cost", "bill", "usage"))
+                }
+                if billing_headers:
+                    logger.info("ElevenLabs billing-related response headers: %s", billing_headers)
 
             response.raise_for_status()
             result = response.json()
@@ -187,9 +244,41 @@ class ElevenLabsEngine(TranscriptionEngine):
             raw_response=result,  # Original ElevenLabs response
         )
 
+    def _normalize_model(self, model: str) -> str:
+        """Normalize legacy model ids to the supported Scribe v2 model."""
+        return self.LEGACY_MODEL_ALIASES.get(model, model)
+
+    def _normalize_string_list(self, values: Optional[List[str]]) -> List[str]:
+        """Trim, deduplicate and preserve order for list-based API options."""
+        if not values:
+            return []
+
+        normalized: List[str] = []
+        seen = set()
+        for value in values:
+            cleaned = " ".join(str(value).strip().split())
+            if cleaned and cleaned not in seen:
+                normalized.append(cleaned)
+                seen.add(cleaned)
+        return normalized
+
+    def _estimate_cost_multiplier(
+        self,
+        keyterms: Optional[List[str]] = None,
+        entity_detection: Optional[List[str]] = None,
+        entity_redaction: Optional[List[str]] = None,
+    ) -> float:
+        """Estimate cost multiplier from enabled premium ElevenLabs options."""
+        multiplier = 1.0
+        if keyterms:
+            multiplier += 0.05 / 0.22
+        if entity_detection or entity_redaction:
+            multiplier += 0.07 / 0.22
+        return multiplier
+
     def _should_tag_audio_events(self, model: str) -> bool:
-        """Enable ElevenLabs audio event tagging for all supported Scribe models."""
-        return model in self.SUPPORTED_MODELS
+        """Enable ElevenLabs audio event tagging for the supported Scribe v2 model."""
+        return self._normalize_model(model) in self.SUPPORTED_MODELS
 
     def _format_audio_event(self, text: str) -> str:
         """Normalize audio event markers for transcript readability."""

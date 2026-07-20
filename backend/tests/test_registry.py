@@ -18,9 +18,9 @@ def test_providers_has_cloud_engines():
     assert "yandex" in PROVIDERS
 
 
-def test_elevenlabs_exposes_both_scribe_models():
-    """ElevenLabs should expose both Scribe v1 and v2 in the UI/API."""
-    assert PROVIDERS["elevenlabs"]["models"] == ["scribe_v1", "scribe_v2"]
+def test_elevenlabs_exposes_only_scribe_v2():
+    """ElevenLabs should only expose Scribe v2 in the UI/API."""
+    assert PROVIDERS["elevenlabs"]["models"] == ["scribe_v2"]
 
 
 def test_each_provider_has_required_fields():

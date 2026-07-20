@@ -13,6 +13,28 @@
   "upload.error.invalidType": "Выберите аудиофайлы (mp3, m4a, wav, ogg, flac, webm)",
   "upload.error.noFiles": "Выберите аудиофайлы",
 
+  "upload.elevenlabs.title": "Scribe v2 advanced options",
+  "upload.elevenlabs.description": "Эти настройки видны только для ElevenLabs. По умолчанию все дорогие доп. опции выключены.",
+  "upload.elevenlabs.keyterms.label": "Keyterm prompting",
+  "upload.elevenlabs.keyterms.help": "Подскажи модели важные бренды, имена и термины. Тариф ElevenLabs: +$0.05/час поверх Scribe v2.",
+  "upload.elevenlabs.keyterms.placeholder": "ProdSignal\nTranscribeFlow\nSupabase\nn8n",
+  "upload.elevenlabs.keyterms.constraints": "Batch Scribe v2: до 1000 терминов, до 50 символов на термин, до 5 слов. Один термин в строке или через запятую.",
+  "upload.elevenlabs.entityDetection.label": "Entity detection",
+  "upload.elevenlabs.entityDetection.help": "Размечает сущности вроде имён, дат, карт, email и адресов. Тариф ElevenLabs: +$0.07/час поверх Scribe v2.",
+  "upload.elevenlabs.entityDetection.scope": "Что детектировать",
+  "upload.elevenlabs.entityDetection.placeholder": "name\ndob\ncredit_card\nemail_address",
+  "upload.elevenlabs.entityDetection.customHelp": "Для custom укажи entity types по одному в строке или через запятую.",
+  "upload.elevenlabs.redaction.label": "Entity redaction",
+  "upload.elevenlabs.redaction.help": "Маскирует найденные сущности в итоговом тексте. Требует включённый entity detection и использует тот же add-on entity detection без отдельной доплаты.",
+  "upload.elevenlabs.redaction.scope": "Что редактировать",
+  "upload.elevenlabs.redaction.placeholder": "name\ncredit_card\nemail_address",
+  "upload.elevenlabs.redaction.customHelp": "Custom redaction должен быть подмножеством entity detection по правилам ElevenLabs.",
+  "upload.elevenlabs.redaction.mode": "Формат замены",
+  "upload.elevenlabs.error.keytermsRequired": "Keyterm prompting включён, но список терминов пустой.",
+  "upload.elevenlabs.error.entityDetectionRequired": "Entity detection включён, но список сущностей пустой.",
+  "upload.elevenlabs.error.redactionNeedsDetection": "Entity redaction работает только вместе с entity detection.",
+  "upload.elevenlabs.error.entityRedactionRequired": "Entity redaction включён, но список сущностей для маскирования пустой.",
+
   "upload.fallback.engine": "MLX Local",
   "upload.fallback.model": "large-v3-turbo"
 }

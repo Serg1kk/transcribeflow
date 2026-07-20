@@ -31,8 +31,8 @@ def test_elevenlabs_name():
 
 
 def test_elevenlabs_supported_models():
-    """Engine should expose both supported Scribe models."""
-    assert ElevenLabsEngine.SUPPORTED_MODELS == ("scribe_v1", "scribe_v2")
+    """Engine should expose only Scribe v2 in the product now."""
+    assert ElevenLabsEngine.SUPPORTED_MODELS == ("scribe_v2",)
 
 
 def test_elevenlabs_rejects_unknown_model(tmp_path):
@@ -45,42 +45,44 @@ def test_elevenlabs_rejects_unknown_model(tmp_path):
         engine.transcribe(audio_path, model="scribe_v999")
 
 
-def test_elevenlabs_audio_event_flag_enabled_for_supported_models(tmp_path):
-    """All supported Scribe models should enable audio event tagging."""
+def test_elevenlabs_audio_event_flag_and_advanced_options(tmp_path):
+    """Scribe v2 should send advanced payload fields and alias legacy v1 to v2."""
     engine = ElevenLabsEngine(api_key="test-key")
     audio_path = tmp_path / "sample.mp3"
     audio_path.write_bytes(b"fake-audio")
 
-    def build_client(post_recorder):
-        mock_response = MagicMock()
-        mock_response.raise_for_status = MagicMock()
-        mock_response.json.return_value = {"text": "hello", "words": [], "language_code": "en"}
+    mock_response = MagicMock()
+    mock_response.raise_for_status = MagicMock()
+    mock_response.json.return_value = {"text": "hello", "words": [], "language_code": "en"}
 
-        mock_instance = AsyncMock()
+    recorded_payloads = []
+    mock_instance = AsyncMock()
 
-        async def post(*args, **kwargs):
-            post_recorder.append(kwargs["data"])
-            return mock_response
+    async def post(*args, **kwargs):
+        recorded_payloads.append(kwargs["data"])
+        return mock_response
 
-        mock_instance.post = AsyncMock(side_effect=post)
-        return mock_instance
+    mock_instance.post = AsyncMock(side_effect=post)
 
-    v1_calls = []
     with patch("httpx.AsyncClient") as mock_client:
-        mock_instance = build_client(v1_calls)
         mock_client.return_value.__aenter__ = AsyncMock(return_value=mock_instance)
         mock_client.return_value.__aexit__ = AsyncMock(return_value=None)
-        engine.transcribe(audio_path, model="scribe_v1")
+        engine.transcribe(
+            audio_path,
+            model="scribe_v1",
+            keyterms=["ProdSignal", "TranscribeFlow"],
+            entity_detection=["pii"],
+            entity_redaction=["name"],
+            entity_redaction_mode="entity_type",
+        )
 
-    v2_calls = []
-    with patch("httpx.AsyncClient") as mock_client:
-        mock_instance = build_client(v2_calls)
-        mock_client.return_value.__aenter__ = AsyncMock(return_value=mock_instance)
-        mock_client.return_value.__aexit__ = AsyncMock(return_value=None)
-        engine.transcribe(audio_path, model="scribe_v2")
-
-    assert v1_calls[0]["tag_audio_events"] == "true"
-    assert v2_calls[0]["tag_audio_events"] == "true"
+    payload = recorded_payloads[0]
+    assert payload["model_id"] == "scribe_v2"
+    assert payload["tag_audio_events"] == "true"
+    assert payload["keyterms"] == ["ProdSignal", "TranscribeFlow"]
+    assert payload["entity_detection"] == ["pii"]
+    assert payload["entity_redaction"] == ["name"]
+    assert payload["entity_redaction_mode"] == "entity_type"
 
 
 def test_elevenlabs_transcribe_includes_audio_events(tmp_path):

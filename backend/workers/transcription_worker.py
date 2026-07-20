@@ -15,6 +15,7 @@ from typing import Dict, Optional
 from sqlalchemy.orm import Session
 
 from config import Settings, get_settings
+from api.transcribe import _build_elevenlabs_options
 from engines import (
     MLXWhisperEngine,
     TranscriptionEngine,
@@ -269,10 +270,20 @@ class TranscriptionWorker:
                 )
             else:
                 # Cloud engines don't use Whisper settings
+                cloud_kwargs = {}
+                if transcription.engine == "elevenlabs":
+                    cloud_kwargs = {
+                        "keyterms": transcription.elevenlabs_keyterms,
+                        "entity_detection": transcription.elevenlabs_entity_detection,
+                        "entity_redaction": transcription.elevenlabs_entity_redaction,
+                        "entity_redaction_mode": transcription.elevenlabs_entity_redaction_mode,
+                    }
+
                 result = engine.transcribe(
                     audio_path=audio_path,
                     model=transcription.model,
                     language=transcription.language,
+                    **cloud_kwargs,
                 )
             transcription_time = time.time() - transcription_start_time
 
@@ -465,6 +476,14 @@ class TranscriptionWorker:
                 "compute_device": compute_device,
             },
         }
+
+        if transcription.engine == "elevenlabs":
+            transcript_data["settings"]["elevenlabs"] = _build_elevenlabs_options(
+                keyterms=transcription.elevenlabs_keyterms,
+                entity_detection=transcription.elevenlabs_entity_detection,
+                entity_redaction=transcription.elevenlabs_entity_redaction,
+                entity_redaction_mode=transcription.elevenlabs_entity_redaction_mode,
+            )
 
         # Save JSON
         json_path = output_dir / "transcript.json"

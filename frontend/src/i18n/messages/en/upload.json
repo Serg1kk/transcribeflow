@@ -13,6 +13,28 @@
   "upload.error.invalidType": "Please select audio files (mp3, m4a, wav, ogg, flac, webm)",
   "upload.error.noFiles": "Please select audio files",
 
+  "upload.elevenlabs.title": "Scribe v2 advanced options",
+  "upload.elevenlabs.description": "These controls only appear for ElevenLabs. Premium extras stay disabled by default.",
+  "upload.elevenlabs.keyterms.label": "Keyterm prompting",
+  "upload.elevenlabs.keyterms.help": "Bias the model toward important brands, names, and domain terms. ElevenLabs pricing: +$0.05/hour on top of Scribe v2.",
+  "upload.elevenlabs.keyterms.placeholder": "ProdSignal\nTranscribeFlow\nSupabase\nn8n",
+  "upload.elevenlabs.keyterms.constraints": "Batch Scribe v2: up to 1000 keyterms, 50 characters per keyterm, up to 5 words. One per line or comma-separated.",
+  "upload.elevenlabs.entityDetection.label": "Entity detection",
+  "upload.elevenlabs.entityDetection.help": "Tag entities like names, dates, cards, emails, and addresses. ElevenLabs pricing: +$0.07/hour on top of Scribe v2.",
+  "upload.elevenlabs.entityDetection.scope": "What to detect",
+  "upload.elevenlabs.entityDetection.placeholder": "name\ndob\ncredit_card\nemail_address",
+  "upload.elevenlabs.entityDetection.customHelp": "For custom mode, enter entity types one per line or comma-separated.",
+  "upload.elevenlabs.redaction.label": "Entity redaction",
+  "upload.elevenlabs.redaction.help": "Mask detected entities in the final transcript. Requires entity detection and uses the same entity-detection add-on, with no separate extra fee.",
+  "upload.elevenlabs.redaction.scope": "What to redact",
+  "upload.elevenlabs.redaction.placeholder": "name\ncredit_card\nemail_address",
+  "upload.elevenlabs.redaction.customHelp": "Custom redaction should stay a subset of entity detection per ElevenLabs rules.",
+  "upload.elevenlabs.redaction.mode": "Replacement mode",
+  "upload.elevenlabs.error.keytermsRequired": "Keyterm prompting is enabled, but the keyterm list is empty.",
+  "upload.elevenlabs.error.entityDetectionRequired": "Entity detection is enabled, but the entity list is empty.",
+  "upload.elevenlabs.error.redactionNeedsDetection": "Entity redaction only works when entity detection is enabled.",
+  "upload.elevenlabs.error.entityRedactionRequired": "Entity redaction is enabled, but the redaction list is empty.",
+
   "upload.fallback.engine": "MLX Local",
   "upload.fallback.model": "large-v3-turbo"
 }
