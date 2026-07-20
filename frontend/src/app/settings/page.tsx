@@ -18,6 +18,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { getLLMModels, type LLMModel as AvailableLLMModel, type LLMModelsConfig } from "@/lib/api";
+import { formatTranscriptionModelLabel } from "@/lib/transcriptionModels";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
@@ -337,7 +338,7 @@ export default function SettingsPage() {
                     {availableModels.length > 0 ? (
                       availableModels.map((m) => (
                         <SelectItem key={m} value={m}>
-                          {m}
+                          {formatTranscriptionModelLabel(m)}
                         </SelectItem>
                       ))
                     ) : (

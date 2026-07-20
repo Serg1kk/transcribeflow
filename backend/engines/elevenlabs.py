@@ -14,6 +14,7 @@ class ElevenLabsEngine(TranscriptionEngine):
     """ElevenLabs Scribe cloud transcription engine."""
 
     BASE_URL = "https://api.elevenlabs.io/v1"
+    SUPPORTED_MODELS = ("scribe_v1", "scribe_v2")
 
     def __init__(self, api_key: Optional[str] = None):
         self.api_key = api_key
@@ -60,6 +61,11 @@ class ElevenLabsEngine(TranscriptionEngine):
         """Async transcription implementation."""
         if not self.is_available():
             raise RuntimeError("ElevenLabs API key not configured")
+
+        if model not in self.SUPPORTED_MODELS:
+            raise ValueError(
+                f"Unsupported ElevenLabs model: {model}. Supported models: {', '.join(self.SUPPORTED_MODELS)}"
+            )
 
         start_time = time.time()
 

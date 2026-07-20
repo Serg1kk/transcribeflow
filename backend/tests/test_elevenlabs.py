@@ -30,6 +30,21 @@ def test_elevenlabs_name():
     assert engine.name == "elevenlabs"
 
 
+def test_elevenlabs_supported_models():
+    """Engine should expose both supported Scribe models."""
+    assert ElevenLabsEngine.SUPPORTED_MODELS == ("scribe_v1", "scribe_v2")
+
+
+def test_elevenlabs_rejects_unknown_model(tmp_path):
+    """Unknown model IDs should fail fast before hitting the API."""
+    engine = ElevenLabsEngine(api_key="test-key")
+    audio_path = tmp_path / "sample.mp3"
+    audio_path.write_bytes(b"fake-audio")
+
+    with pytest.raises(ValueError, match="Unsupported ElevenLabs model"):
+        engine.transcribe(audio_path, model="scribe_v999")
+
+
 @pytest.mark.asyncio
 async def test_elevenlabs_validate_key_success():
     """validate_api_key returns True for valid key."""
