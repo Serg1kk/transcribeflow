@@ -77,7 +77,7 @@ class ElevenLabsEngine(TranscriptionEngine):
                 files = {"file": (audio_path.name, f, self._get_content_type(audio_path))}
                 data = {
                     "model_id": model,
-                    "tag_audio_events": "false",  # Disable to prevent long text grouping
+                    "tag_audio_events": str(self._should_tag_audio_events(model)).lower(),
                     "diarize": str(diarization).lower(),
                 }
 
@@ -111,6 +111,7 @@ class ElevenLabsEngine(TranscriptionEngine):
                     "end": w.get("end", 0),
                     "confidence": abs(w.get("logprob", 0)),  # logprob is negative
                     "speaker": w.get("speaker_id", "speaker_0"),
+                    "is_audio_event": False,
                 })
             elif word_type == "audio_event" and len(text) > 100:
                 # ElevenLabs bug: long text incorrectly marked as audio_event
@@ -130,7 +131,17 @@ class ElevenLabsEngine(TranscriptionEngine):
                             "end": start_time + ((i + 1) * word_duration),
                             "confidence": 0.5,  # Lower confidence for interpolated
                             "speaker": speaker,
+                            "is_audio_event": False,
                         })
+            elif word_type == "audio_event" and text:
+                words.append({
+                    "word": self._format_audio_event(text),
+                    "start": w.get("start", 0),
+                    "end": w.get("end", w.get("start", 0)),
+                    "confidence": 1.0,
+                    "speaker": w.get("speaker_id", "speaker_0"),
+                    "is_audio_event": True,
+                })
 
         # Build segments by grouping consecutive words by speaker
         segments = []
@@ -175,6 +186,19 @@ class ElevenLabsEngine(TranscriptionEngine):
             processing_time_seconds=processing_time,
             raw_response=result,  # Original ElevenLabs response
         )
+
+    def _should_tag_audio_events(self, model: str) -> bool:
+        """Enable ElevenLabs audio event tagging only for Scribe v2."""
+        return model == "scribe_v2"
+
+    def _format_audio_event(self, text: str) -> str:
+        """Normalize audio event markers for transcript readability."""
+        normalized = text.strip()
+        if not normalized:
+            return "[audio_event]"
+        if normalized.startswith("[") and normalized.endswith("]"):
+            return normalized
+        return f"[{normalized}]"
 
     def _format_speaker_id(self, speaker_id: Optional[str]) -> str:
         """Format speaker ID to standard format (SPEAKER_00, SPEAKER_01, etc.)"""

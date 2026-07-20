@@ -45,6 +45,74 @@ def test_elevenlabs_rejects_unknown_model(tmp_path):
         engine.transcribe(audio_path, model="scribe_v999")
 
 
+def test_elevenlabs_audio_event_flag_depends_on_model(tmp_path):
+    """Scribe v2 should enable audio event tagging, v1 should keep it disabled."""
+    engine = ElevenLabsEngine(api_key="test-key")
+    audio_path = tmp_path / "sample.mp3"
+    audio_path.write_bytes(b"fake-audio")
+
+    def build_client(post_recorder):
+        mock_response = MagicMock()
+        mock_response.raise_for_status = MagicMock()
+        mock_response.json.return_value = {"text": "hello", "words": [], "language_code": "en"}
+
+        mock_instance = AsyncMock()
+
+        async def post(*args, **kwargs):
+            post_recorder.append(kwargs["data"])
+            return mock_response
+
+        mock_instance.post = AsyncMock(side_effect=post)
+        return mock_instance
+
+    v1_calls = []
+    with patch("httpx.AsyncClient") as mock_client:
+        mock_instance = build_client(v1_calls)
+        mock_client.return_value.__aenter__ = AsyncMock(return_value=mock_instance)
+        mock_client.return_value.__aexit__ = AsyncMock(return_value=None)
+        engine.transcribe(audio_path, model="scribe_v1")
+
+    v2_calls = []
+    with patch("httpx.AsyncClient") as mock_client:
+        mock_instance = build_client(v2_calls)
+        mock_client.return_value.__aenter__ = AsyncMock(return_value=mock_instance)
+        mock_client.return_value.__aexit__ = AsyncMock(return_value=None)
+        engine.transcribe(audio_path, model="scribe_v2")
+
+    assert v1_calls[0]["tag_audio_events"] == "false"
+    assert v2_calls[0]["tag_audio_events"] == "true"
+
+
+def test_elevenlabs_transcribe_includes_audio_events(tmp_path):
+    """Tagged ElevenLabs audio events should be preserved in transcript output."""
+    engine = ElevenLabsEngine(api_key="test-key")
+    audio_path = tmp_path / "sample.mp3"
+    audio_path.write_bytes(b"fake-audio")
+
+    mock_response = MagicMock()
+    mock_response.raise_for_status = MagicMock()
+    mock_response.json.return_value = {
+        "text": "hello [laughter] world",
+        "language_code": "en",
+        "words": [
+            {"type": "word", "text": "hello", "start": 0.0, "end": 0.5, "logprob": -0.1, "speaker_id": "speaker_0"},
+            {"type": "audio_event", "text": "laughter", "start": 0.5, "end": 0.7, "speaker_id": "speaker_0"},
+            {"type": "word", "text": "world", "start": 0.7, "end": 1.1, "logprob": -0.2, "speaker_id": "speaker_0"},
+        ],
+    }
+
+    mock_instance = AsyncMock()
+    mock_instance.post = AsyncMock(return_value=mock_response)
+
+    with patch("httpx.AsyncClient") as mock_client:
+        mock_client.return_value.__aenter__ = AsyncMock(return_value=mock_instance)
+        mock_client.return_value.__aexit__ = AsyncMock(return_value=None)
+        result = engine.transcribe(audio_path, model="scribe_v2")
+
+    assert [w["word"] for w in result.words] == ["hello", "[laughter]", "world"]
+    assert result.segments[0]["text"] == "hello [laughter] world"
+
+
 @pytest.mark.asyncio
 async def test_elevenlabs_validate_key_success():
     """validate_api_key returns True for valid key."""
