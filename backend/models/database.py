@@ -1,10 +1,17 @@
 # models/database.py
 """Database configuration and session management."""
+import os
 from pathlib import Path
 from sqlalchemy import create_engine, text
 from sqlalchemy.orm import declarative_base, sessionmaker
 
-DATABASE_PATH = Path.home() / ".transcribeflow" / "transcribeflow.db"
+# The engine is bound at import time, so the location has to be settable from
+# the environment — by the time any fixture runs it is already too late to
+# redirect it. Without this the test suite writes into the real database.
+DEFAULT_DATABASE_PATH = Path.home() / ".transcribeflow" / "transcribeflow.db"
+DATABASE_PATH = Path(
+    os.environ.get("TRANSCRIBEFLOW_DB_PATH") or DEFAULT_DATABASE_PATH
+).expanduser()
 DATABASE_PATH.parent.mkdir(parents=True, exist_ok=True)
 
 DATABASE_URL = f"sqlite:///{DATABASE_PATH}"

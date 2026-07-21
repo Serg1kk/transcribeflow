@@ -1,13 +1,20 @@
 # config.py
 """Application configuration using pydantic-settings with config.json priority."""
 import json
+import os
 from functools import lru_cache
 from pathlib import Path
 from typing import Any, Dict, Optional, Tuple, Type
 from pydantic import Field
 from pydantic_settings import BaseSettings, PydanticBaseSettingsSource
 
-CONFIG_PATH = Path.home() / ".transcribeflow" / "config.json"
+# Overridable so tests can point at a throwaway config: config.json outranks
+# environment variables (see settings_customise_sources), so without this the
+# operator's real settings leak into every test that checks a default.
+DEFAULT_CONFIG_PATH = Path.home() / ".transcribeflow" / "config.json"
+CONFIG_PATH = Path(
+    os.environ.get("TRANSCRIBEFLOW_CONFIG_PATH") or DEFAULT_CONFIG_PATH
+).expanduser()
 
 
 class JsonConfigSettingsSource(PydanticBaseSettingsSource):
@@ -119,7 +126,9 @@ class Settings(BaseSettings):
     backend_port: int = 8000
 
     class Config:
-        env_file = ".env"
+        # Overridable for the same reason as CONFIG_PATH: the real .env holds
+        # the operator's API keys and engine choices, which must not reach tests.
+        env_file = os.environ.get("TRANSCRIBEFLOW_ENV_FILE") or ".env"
         env_prefix = "TRANSCRIBEFLOW_"
 
     @classmethod

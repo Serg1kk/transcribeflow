@@ -5,8 +5,12 @@ from pathlib import Path
 from config import Settings, get_settings
 
 
-def test_settings_default_paths():
+def test_settings_default_paths(monkeypatch):
     """Test default paths are set correctly."""
+    # conftest redirects base_path to a temp dir so the suite never writes to
+    # real data; drop that override here to observe the actual default.
+    monkeypatch.delenv("TRANSCRIBEFLOW_BASE_PATH", raising=False)
+
     settings = Settings()
     assert settings.base_path == Path.home() / "Transcriptions"
     assert settings.uploads_path == settings.base_path / "uploads"

@@ -3,7 +3,7 @@
 import pytest
 import json
 from pathlib import Path
-from services.template_service import TemplateService, Template
+from services.template_service import DEFAULT_TEMPLATES, TemplateService, Template
 
 
 def test_template_service_creates_default_templates(tmp_path):
@@ -11,11 +11,10 @@ def test_template_service_creates_default_templates(tmp_path):
     service = TemplateService(templates_path=tmp_path)
     templates = service.list_templates()
 
+    # Compare against DEFAULT_TEMPLATES rather than hardcoded ids: this test
+    # silently rotted once already when business-call became business-meeting.
+    assert {t.id for t in templates} == {t.id for t in DEFAULT_TEMPLATES}
     assert len(templates) >= 3
-    template_ids = [t.id for t in templates]
-    assert "it-meeting" in template_ids
-    assert "interview" in template_ids
-    assert "business-call" in template_ids
 
 
 def test_template_service_get_template(tmp_path):
