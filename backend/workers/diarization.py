@@ -7,6 +7,8 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Dict, List, Optional, Set, Any
 
+from workers.pyannote_compat import hf_token_kwarg
+
 # Workaround for PyTorch 2.6 weights_only=True default change
 # Pyannote models need weights_only=False to load properly
 try:
@@ -83,7 +85,7 @@ class DiarizationWorker:
 
             self._pipeline = Pipeline.from_pretrained(
                 "pyannote/speaker-diarization-3.1",
-                use_auth_token=self.hf_token
+                **hf_token_kwarg(Pipeline.from_pretrained, self.hf_token),
             )
 
             # Move to device (MPS or CPU)
