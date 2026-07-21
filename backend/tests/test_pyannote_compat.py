@@ -50,3 +50,57 @@ def test_matches_installed_pyannote():
     assert kwargs, "installed pyannote should accept some auth kwarg"
     for name in kwargs:
         assert name in params
+
+
+def test_falls_back_to_cache_when_hub_raises():
+    """A hub failure must not fail the load when weights are already cached."""
+    import huggingface_hub.constants as hf_constants
+
+    calls = []
+
+    def flaky_from_pretrained(checkpoint, token=None):
+        offline = hf_constants.HF_HUB_OFFLINE
+        calls.append(offline)
+        if not offline:
+            raise OSError("SSLEOFError: EOF occurred in violation of protocol")
+        return "cached-pipeline"
+
+    from workers.pyannote_compat import load_pretrained
+
+    assert load_pretrained(flaky_from_pretrained, "pyannote/x", "hf_abc") == "cached-pipeline"
+    assert calls == [False, True], "expected one online attempt then one cache-only retry"
+
+
+def test_offline_flag_is_restored_after_fallback():
+    """The forced-offline state must not leak into the rest of the process."""
+    import os
+
+    import huggingface_hub.constants as hf_constants
+
+    before_flag = hf_constants.HF_HUB_OFFLINE
+    before_env = os.environ.get("HF_HUB_OFFLINE")
+
+    def flaky_from_pretrained(checkpoint, token=None):
+        if not hf_constants.HF_HUB_OFFLINE:
+            raise OSError("network down")
+        return "cached-pipeline"
+
+    from workers.pyannote_compat import load_pretrained
+
+    load_pretrained(flaky_from_pretrained, "pyannote/x", None)
+
+    assert hf_constants.HF_HUB_OFFLINE == before_flag
+    assert os.environ.get("HF_HUB_OFFLINE") == before_env
+
+
+def test_original_error_is_raised_when_cache_also_misses():
+    """Don't mask a real problem behind a misleading cache-miss message."""
+    def always_fails(checkpoint, token=None):
+        if not __import__("huggingface_hub.constants", fromlist=["x"]).HF_HUB_OFFLINE:
+            raise OSError("401 Unauthorized: gated repo")
+        raise OSError("not found in local cache")
+
+    from workers.pyannote_compat import load_pretrained
+
+    with pytest.raises(OSError, match="gated repo"):
+        load_pretrained(always_fails, "pyannote/x", "hf_abc")

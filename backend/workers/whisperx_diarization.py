@@ -7,7 +7,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Set, Tuple
 
-from workers.pyannote_compat import hf_token_kwarg
+from workers.pyannote_compat import load_pretrained
 
 # Workaround for PyTorch 2.6 weights_only=True default change
 # Pyannote models need weights_only=False to load properly
@@ -100,9 +100,10 @@ class WhisperXDiarizationWorker:
         """Lazy load the diarization model."""
         if self._diarize_model is None:
             from pyannote.audio import Pipeline
-            self._diarize_model = Pipeline.from_pretrained(
+            self._diarize_model = load_pretrained(
+                Pipeline.from_pretrained,
                 "pyannote/speaker-diarization-3.1",
-                **hf_token_kwarg(Pipeline.from_pretrained, self.hf_token),
+                self.hf_token,
             )
             # Keep on CPU for accurate mode
         return self._diarize_model
