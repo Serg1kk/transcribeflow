@@ -1,11 +1,14 @@
 # engines/mlx_whisper.py
 """MLX Whisper transcription engine for Apple Silicon."""
+import logging
 import time
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Optional
 
 from engines.base import TranscriptionEngine, TranscriptionResult
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -39,6 +42,27 @@ class MLXWhisperEngine(TranscriptionEngine):
 
     def __init__(self):
         self._mlx_whisper = None
+
+    def _resolve_model_source(self, repo: str) -> str:
+        """Prefer a locally cached Hugging Face snapshot when available.
+
+        This avoids unnecessary network calls to Hugging Face for models that
+        are already present on disk, which makes local transcription resilient
+        to transient DNS/SSL/network issues.
+        """
+        try:
+            from huggingface_hub import snapshot_download
+
+            local_snapshot = snapshot_download(repo_id=repo, local_files_only=True)
+            logger.info("Using cached MLX Whisper model for %s from %s", repo, local_snapshot)
+            return local_snapshot
+        except Exception as exc:
+            logger.info(
+                "Cached MLX Whisper model for %s not available locally, falling back to Hugging Face lookup: %s",
+                repo,
+                exc,
+            )
+            return repo
 
     @property
     def name(self) -> str:
@@ -104,10 +128,12 @@ class MLXWhisperEngine(TranscriptionEngine):
             # Fallback to standard naming pattern
             repo = f"mlx-community/whisper-{model}-mlx"
 
+        model_source = self._resolve_model_source(repo)
+
         # Run transcription
         result = self._mlx_whisper.transcribe(
             str(audio_path),
-            path_or_hf_repo=repo,
+            path_or_hf_repo=model_source,
             **options
         )
 
