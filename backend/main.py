@@ -64,11 +64,18 @@ async def lifespan(app: FastAPI):
     from models import SessionLocal, Transcription, TranscriptionStatus
     db = SessionLocal()
     try:
+        # Both states are only ever set by the queue processor, so nothing can
+        # legitimately be in them at startup — any such row is a leftover from a
+        # run that died mid-flight (e.g. a native engine crash taking down the
+        # whole process). Left alone they are stuck forever: the processor only
+        # picks up QUEUED and /start only accepts DRAFT.
         stuck = db.query(Transcription).filter(
-            Transcription.status == TranscriptionStatus.PROCESSING
+            Transcription.status.in_(
+                [TranscriptionStatus.PROCESSING, TranscriptionStatus.DIARIZING]
+            )
         ).all()
         if stuck:
-            logging.info(f"Resetting {len(stuck)} stuck PROCESSING tasks to QUEUED")
+            logging.info(f"Resetting {len(stuck)} stuck in-flight tasks to QUEUED")
             for t in stuck:
                 t.status = TranscriptionStatus.QUEUED
                 t.progress = 0
@@ -95,8 +102,10 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000", "http://localhost:3001"],
-    allow_origin_regex=r"http://192\.168\.\d+\.\d+:\d+",
+    # Local-first app: the frontend may run on any free localhost port (the
+    # default 3000/3001 are often taken by other dev servers), so allow any
+    # loopback port instead of hardcoding a list. LAN access stays as before.
+    allow_origin_regex=r"http://(localhost|127\.0\.0\.1|\[::1\]|192\.168\.\d+\.\d+):\d+",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

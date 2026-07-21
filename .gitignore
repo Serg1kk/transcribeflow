@@ -23,7 +23,10 @@ out/
 session-history/
 
 # Local-only components (system monitoring widget)
-frontend/src/components/SystemMonitor.tsx
+# NOTE: frontend/src/components/SystemMonitor.tsx is intentionally NOT ignored —
+# webpack resolves the wrapper's dynamic import at build time, so the module must
+# exist in a fresh clone. A no-op stub is committed; override it locally with
+# `git update-index --skip-worktree` if you have a real monitor.
 backend/api/system.py
 frontend/.env.local
 
