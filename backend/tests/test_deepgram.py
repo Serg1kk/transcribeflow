@@ -1,5 +1,6 @@
 # tests/test_deepgram.py
 """Tests for Deepgram engine."""
+import asyncio
 import pytest
 from unittest.mock import patch, MagicMock, AsyncMock
 from engines.deepgram import DeepgramEngine
@@ -64,3 +65,41 @@ async def test_deepgram_validate_key_failure():
         result = await engine.validate_api_key()
         assert result["valid"] is False
         assert "error" in result
+
+
+@pytest.mark.parametrize(
+    ("model", "language", "expected_param", "expected_value"),
+    [
+        ("nova-3", None, "language", "multi"),
+        ("nova-3", "ru", "language", "ru"),
+        ("nova-2", None, "detect_language", "true"),
+    ],
+)
+def test_deepgram_language_routing(
+    tmp_path, model, language, expected_param, expected_value
+):
+    audio = tmp_path / "call.m4a"
+    audio.write_bytes(b"test audio")
+    response = MagicMock()
+    response.json.return_value = {
+        "metadata": {"duration": 10},
+        "results": {
+            "channels": [{"alternatives": [{"transcript": "Привет", "words": [], "languages": ["ru"]}]}],
+            "utterances": [],
+        },
+    }
+    client = AsyncMock()
+    client.post = AsyncMock(return_value=response)
+
+    with patch("httpx.AsyncClient") as mock_client:
+        mock_client.return_value.__aenter__ = AsyncMock(return_value=client)
+        mock_client.return_value.__aexit__ = AsyncMock(return_value=None)
+        result = asyncio.run(
+            DeepgramEngine(api_key="test-key")._transcribe_async(
+                audio, model=model, language=language
+            )
+        )
+
+    params = client.post.call_args.kwargs["params"]
+    assert params[expected_param] == expected_value
+    assert result.language == "ru"

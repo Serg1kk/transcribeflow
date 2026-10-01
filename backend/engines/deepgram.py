@@ -71,6 +71,14 @@ class DeepgramEngine(TranscriptionEngine):
             "diarize": str(diarization).lower(),
             "utterances": "true",
         }
+        if language:
+            params["language"] = language
+        elif model.startswith("nova-3"):
+            # Nova-3's multilingual model handles Russian/English code switching.
+            # Without a language option, Deepgram defaults to English.
+            params["language"] = "multi"
+        else:
+            params["detect_language"] = "true"
 
         headers = {
             "Authorization": f"Token {self.api_key}",
@@ -90,8 +98,12 @@ class DeepgramEngine(TranscriptionEngine):
             result = response.json()
 
         processing_time = time.time() - start_time
+        return self._parse_response(result, processing_time, language)
 
-        # Parse response
+    def _parse_response(
+        self, result: Dict[str, Any], processing_time: float, language: Optional[str] = None
+    ) -> TranscriptionResult:
+        """Convert a Deepgram response into the application's transcript format."""
         channel = result.get("results", {}).get("channels", [{}])[0]
         alternative = channel.get("alternatives", [{}])[0]
 
@@ -129,12 +141,19 @@ class DeepgramEngine(TranscriptionEngine):
             })
 
         metadata = result.get("metadata", {})
+        detected_languages = alternative.get("languages") or []
+        detected_language = (
+            channel.get("detected_language")
+            or (detected_languages[0] if detected_languages else None)
+            or language
+            or "unknown"
+        )
 
         return TranscriptionResult(
             text=alternative.get("transcript", ""),
             segments=segments,
             words=words,
-            language=metadata.get("detected_language", "unknown"),
+            language=detected_language,
             duration_seconds=metadata.get("duration", 0),
             processing_time_seconds=processing_time,
             raw_response=result,  # Original Deepgram response
