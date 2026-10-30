@@ -49,5 +49,7 @@ def test_list_llm_models():
     assert "gemini" in data
     assert "openrouter" in data
     assert "openai" in data
+    assert "anthropic" in data
+    assert any(m["id"] == "claude-sonnet-5-5" for m in data["anthropic"]["models"])
     assert any(m["id"] == "gpt-6.1-sol" for m in data["openai"]["models"])
     assert len(data["gemini"]["models"]) >= 3

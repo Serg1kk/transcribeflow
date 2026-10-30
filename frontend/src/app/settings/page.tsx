@@ -64,12 +64,14 @@ interface Settings {
   has_gemini_key: boolean;
   has_openrouter_key: boolean;
   has_openai_key: boolean;
+  has_anthropic_key: boolean;
 }
 
 const EMPTY_LLM_MODELS: LLMModelsConfig = {
   gemini: { models: [] },
   openrouter: { models: [] },
   openai: { models: [] },
+  anthropic: { models: [] },
 };
 
 export default function SettingsPage() {
@@ -116,12 +118,14 @@ export default function SettingsPage() {
   const [geminiKey, setGeminiKey] = useState("");
   const [openrouterKey, setOpenrouterKey] = useState("");
   const [openaiKey, setOpenaiKey] = useState("");
+  const [anthropicKey, setAnthropicKey] = useState("");
 
   // LLM Providers with translated labels
   const LLM_PROVIDERS = useMemo(() => [
     { value: "gemini", label: intl.formatMessage({ id: "settings.llm.provider.gemini" }) },
     { value: "openrouter", label: intl.formatMessage({ id: "settings.llm.provider.openrouter" }) },
     { value: "openai", label: intl.formatMessage({ id: "settings.llm.provider.openai" }) },
+    { value: "anthropic", label: intl.formatMessage({ id: "settings.llm.provider.anthropic" }) },
   ], [intl]);
 
   useEffect(() => {
@@ -271,6 +275,7 @@ export default function SettingsPage() {
     if (geminiKey) updates.gemini_api_key = geminiKey;
     if (openrouterKey) updates.openrouter_api_key = openrouterKey;
     if (openaiKey) updates.openai_api_key = openaiKey;
+    if (anthropicKey) updates.anthropic_api_key = anthropicKey;
 
     try {
       const res = await fetch(`${API_BASE}/api/settings`, {
@@ -292,6 +297,7 @@ export default function SettingsPage() {
         setGeminiKey("");
         setOpenrouterKey("");
         setOpenaiKey("");
+        setAnthropicKey("");
       } else {
         toast.error("Failed to save settings");
       }
@@ -714,7 +720,7 @@ export default function SettingsPage() {
               </div>
             </div>
 
-            {postprocessingProvider === "openai" && (
+            {(postprocessingProvider === "openai" || postprocessingProvider === "anthropic") && (
               <ReasoningSelect model={postprocessingModel} value={postprocessingReasoningEffort}
                 onValueChange={setPostprocessingReasoningEffort} />
             )}
@@ -760,6 +766,16 @@ export default function SettingsPage() {
             <p className="text-xs text-muted-foreground">
               {intl.formatMessage({ id: "settings.llm.openai.help" })}
             </p>
+            <ApiKeyInput
+              label={intl.formatMessage({ id: "settings.llm.provider.anthropic" })}
+              hasKey={settings.has_anthropic_key}
+              value={anthropicKey}
+              onChange={setAnthropicKey}
+              intl={intl}
+            />
+            <p className="text-xs text-muted-foreground">
+              {intl.formatMessage({ id: "settings.llm.anthropic.help" })}
+            </p>
           </CardContent>
         </Card>
 
@@ -804,7 +820,7 @@ export default function SettingsPage() {
                 </Select>
               </div>
             </div>
-            {insightsProvider === "openai" && (
+            {(insightsProvider === "openai" || insightsProvider === "anthropic") && (
               <ReasoningSelect model={insightsModel} value={insightsReasoningEffort}
                 onValueChange={setInsightsReasoningEffort} />
             )}
@@ -854,6 +870,7 @@ function ApiKeyInput({
 
 
 function supportsNoReasoning(model: string): boolean {
+  if (model.startsWith("claude-")) return model.startsWith("claude-haiku-5-5");
   return !model.startsWith("gpt-6-astra") && !model.startsWith("gpt-6.1-sol");
 }
 

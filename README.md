@@ -89,6 +89,7 @@ To use **LLM Post-Processing** (cleanup) and **AI Insights** features, you need 
 | **Google Gemini** (recommended) | [aistudio.google.com](https://aistudio.google.com) → Get API Key | Free tier available |
 | **OpenRouter** | [openrouter.ai](https://openrouter.ai) → Keys | Pay-per-use, many models |
 | **OpenAI** | [platform.openai.com/api-keys](https://platform.openai.com/api-keys) | Direct OpenAI API, billed to your API balance |
+| **Anthropic** | [platform.claude.com/settings/keys](https://platform.claude.com/settings/keys) | Direct Claude API |
 
 Add your key in **Settings** page after starting the app.
 
@@ -158,6 +159,7 @@ Add your key in **Settings** page after starting the app.
 | **Google Gemini** | gemini-2.5-flash, gemini-2.5-flash-lite, gemini-3-flash-preview |
 | **OpenRouter** | GPT-4o Mini, Claude 3.5 Haiku, DeepSeek R1, and more |
 | **OpenAI (direct)** | gpt-6.1-sol, gpt-6.1-terra, gpt-6-luna, gpt-6-astra |
+| **Anthropic (direct)** | claude-sonnet-5-5, claude-haiku-5-5, claude-opus-5-5, claude-fable-5-1 |
 
 ---
 
@@ -453,3 +455,32 @@ access depends on your OpenAI project. Existing settings and custom model lists
 are preserved; the new provider appears automatically.
 
 Each feature has a **Reasoning effort** setting: model default, none (where supported), low, medium, high, xhigh, max. Higher effort may improve quality at the cost of latency and paid reasoning tokens. None is hidden for GPT-6 Astra and GPT-6.1 Sol.
+
+
+### Direct Anthropic setup
+
+In **Settings → LLM**, enter an **Anthropic (Claude)** API key. Select Anthropic,
+a model, and reasoning effort separately for Cleanup and Insights.
+Start with `claude-sonnet-5-5`; `claude-haiku-5-5` is more economical, while
+`claude-opus-5-5` and `claude-fable-5-1` target more demanding work.
+Models and parameters checked against [Anthropic documentation](https://platform.claude.com/docs/en/models/overview) on 2026-10-30.
+
+```dotenv
+TRANSCRIBEFLOW_ANTHROPIC_API_KEY=your-anthropic-api-key
+TRANSCRIBEFLOW_POSTPROCESSING_PROVIDER=anthropic
+TRANSCRIBEFLOW_POSTPROCESSING_MODEL=claude-sonnet-5-5
+TRANSCRIBEFLOW_POSTPROCESSING_REASONING_EFFORT=default
+TRANSCRIBEFLOW_INSIGHTS_PROVIDER=anthropic
+TRANSCRIBEFLOW_INSIGHTS_MODEL=claude-sonnet-5-5
+TRANSCRIBEFLOW_INSIGHTS_REASONING_EFFORT=default
+```
+
+Requests go directly to `https://api.anthropic.com/v1/messages`. Structured Outputs
+uses task-specific JSON schemas for Cleanup, speaker identification, and Insights/Mindmap.
+Thinking blocks never become transcript text. Reasoning: `default`, `low`, `medium`,
+`high`, `xhigh`, `max`; `none` is offered here only for Haiku 5.5. Template temperature
+is omitted. Truncated (`max_tokens`) and refused responses are not saved as successes.
+The 128K output cap includes thinking. Cost is an estimate: Haiku 5.5 rates increase
+above 100K input tokens and caching also affects billing. Actual model availability
+depends on your Anthropic API project. The API exposes only `has_anthropic_key`,
+never the secret. Saved UI settings take priority over `.env`.

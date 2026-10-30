@@ -14,7 +14,7 @@ from config import get_settings
 from models import Transcription, LLMOperation, LLMOperationStatus, LLMOperationType
 from services.insight_template_service import InsightTemplateService, InsightTemplate
 from services.llm_models_service import LLMModelsService
-from services.llm_providers import GeminiClient, OpenRouterClient, OpenAIClient
+from services.llm_providers import GeminiClient, OpenRouterClient, OpenAIClient, AnthropicClient
 
 logger = logging.getLogger(__name__)
 
@@ -63,6 +63,11 @@ class InsightService:
             if not api_key:
                 raise ValueError("OpenAI API key not configured")
             return OpenAIClient(api_key=api_key)
+        elif provider == "anthropic":
+            api_key = self.settings.anthropic_api_key
+            if not api_key:
+                raise ValueError("Anthropic API key not configured")
+            return AnthropicClient(api_key=api_key)
         else:
             raise ValueError(f"Unknown provider: {provider}")
 
@@ -158,7 +163,8 @@ TRANSCRIPT:
             model=model,
             temperature=template.temperature,
             **({"reasoning_effort": self.settings.insights_reasoning_effort}
-               if provider == "openai" else {}),
+               if provider in ("openai", "anthropic") else {}),
+            **({"task": "insights"} if provider == "anthropic" else {}),
         )
 
         logger.info(f"LLM response: tokens_in={llm_response.input_tokens}, tokens_out={llm_response.output_tokens}")

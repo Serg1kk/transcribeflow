@@ -56,6 +56,7 @@ class SettingsResponse(BaseModel):
     has_gemini_key: bool
     has_openrouter_key: bool
     has_openai_key: bool
+    has_anthropic_key: bool
 
     # Feature availability status
     features: dict
@@ -105,6 +106,7 @@ class SettingsUpdateRequest(BaseModel):
     gemini_api_key: Optional[str] = None
     openrouter_api_key: Optional[str] = None
     openai_api_key: Optional[str] = None
+    anthropic_api_key: Optional[str] = None
 
 
 # Feature status: implemented or TBD
@@ -118,6 +120,7 @@ FEATURES = {
     "gemini_llm": {"status": "implemented", "description": "Google Gemini for post-processing"},
     "openrouter_llm": {"status": "implemented", "description": "OpenRouter for LLM access"},
     "openai_llm": {"status": "implemented", "description": "Direct OpenAI for Cleanup and Insights"},
+    "anthropic_llm": {"status": "implemented", "description": "Direct Anthropic for Cleanup and Insights"},
 }
 
 
@@ -154,6 +157,7 @@ async def get_current_settings(settings: Settings = Depends(get_settings)):
         has_gemini_key=bool(settings.gemini_api_key),
         has_openrouter_key=bool(settings.openrouter_api_key),
         has_openai_key=bool(settings.openai_api_key),
+        has_anthropic_key=bool(settings.anthropic_api_key),
         features=FEATURES,
     )
 
@@ -217,6 +221,7 @@ async def update_settings(update: SettingsUpdateRequest):
         has_gemini_key=bool(settings.gemini_api_key),
         has_openrouter_key=bool(settings.openrouter_api_key),
         has_openai_key=bool(settings.openai_api_key),
+        has_anthropic_key=bool(settings.anthropic_api_key),
         features=FEATURES,
     )
 

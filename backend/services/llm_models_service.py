@@ -36,6 +36,14 @@ DEFAULT_MODELS = {
         LLMModel("gpt-6-luna", "GPT-6 Luna (1M, economical)", 0.10, 0.50),
         LLMModel("gpt-6-astra", "GPT-6 Astra (1M, flagship)", 10.00, 50.00),
     ],
+    # Anthropic official catalog checked 2026-10-30. Haiku prices shown
+    # apply up to 100K input tokens; longer prompts and caching change billing.
+    "anthropic": [
+        LLMModel("claude-sonnet-5-5", "Claude Sonnet 5.5 (1M)", 2.00, 10.00),
+        LLMModel("claude-haiku-5-5", "Claude Haiku 5.5 (1M, economical)", 0.10, 0.50),
+        LLMModel("claude-opus-5-5", "Claude Opus 5.5 (1M)", 4.00, 20.00),
+        LLMModel("claude-fable-5-1", "Claude Fable 5.1 (1M, flagship)", 10.00, 50.00),
+    ],
     "gemini": [
         # Gemini 3.x
         LLMModel("gemini-3.1-pro-preview", "Gemini 3.1 Pro Preview (1M)", 2.00, 12.00),

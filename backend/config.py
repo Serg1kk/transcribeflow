@@ -110,15 +110,16 @@ class Settings(BaseSettings):
     openrouter_api_key: Optional[str] = None
     gemini_api_key: Optional[str] = None
     openai_api_key: Optional[str] = None
+    anthropic_api_key: Optional[str] = None
 
     # Post-processing settings
-    postprocessing_provider: str = "gemini"  # "gemini" | "openrouter" | "openai"
+    postprocessing_provider: str = "gemini"  # "gemini" | "openrouter" | "openai" | "anthropic"
     postprocessing_model: str = "gemini-2.5-flash"
     postprocessing_reasoning_effort: ReasoningEffort = "default"
     postprocessing_default_template: Optional[str] = None  # None = always ask
 
     # AI Insights (Level 2) settings
-    insights_provider: str = "gemini"  # "gemini" | "openrouter" | "openai"
+    insights_provider: str = "gemini"  # "gemini" | "openrouter" | "openai" | "anthropic"
     insights_model: str = "gemini-2.5-flash"
     insights_reasoning_effort: ReasoningEffort = "default"
     insights_default_template: Optional[str] = None  # None = always ask

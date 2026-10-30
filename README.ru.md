@@ -89,6 +89,7 @@ API документация:  http://localhost:8000/docs
 | **Google Gemini** (рекомендуется) | [aistudio.google.com](https://aistudio.google.com) → Get API Key | Есть бесплатный тариф |
 | **OpenRouter** | [openrouter.ai](https://openrouter.ai) → Keys | Оплата по использованию, много моделей |
 | **OpenAI** | [platform.openai.com/api-keys](https://platform.openai.com/api-keys) | Прямой OpenAI API, оплата с баланса API |
+| **Anthropic** | [platform.claude.com/settings/keys](https://platform.claude.com/settings/keys) | Direct Claude API |
 
 Добавьте ключ на странице **Настроек** после запуска приложения.
 
@@ -159,6 +160,7 @@ API документация:  http://localhost:8000/docs
 | **Google Gemini** | gemini-2.5-flash, gemini-2.5-flash-lite, gemini-3-flash-preview |
 | **OpenRouter** | GPT-4o Mini, Claude 3.5 Haiku, DeepSeek R1 и другие |
 | **OpenAI (direct)** | gpt-6.1-sol, gpt-6.1-terra, gpt-6-luna, gpt-6-astra |
+| **Anthropic (direct)** | claude-sonnet-5-5, claude-haiku-5-5, claude-opus-5-5, claude-fable-5-1 |
 
 ---
 
@@ -453,3 +455,32 @@ reasoning-моделям GPT-5/6. Стоимость - оценка по ста�
 сохраняются, новый провайдер появляется автоматически.
 
 В настройках каждой функции есть **Уровень reasoning**: по умолчанию модели, без reasoning (где поддерживается), низкий, средний, высокий, очень высокий, максимальный. Выше - потенциально качественнее, но медленнее и дороже. Для GPT-6 Astra и GPT-6.1 Sol вариант «Без reasoning» скрыт.
+
+
+### Direct Anthropic setup
+
+В **Настройках → LLM** введите ключ **Anthropic (Claude)**. Для Cleanup и
+Insights выберите провайдера Anthropic, модель и уровень reasoning отдельно.
+Начать можно с `claude-sonnet-5-5`; `claude-haiku-5-5` экономичнее, а
+`claude-opus-5-5` и `claude-fable-5-1` подходят для более сложных задач.
+Модели и параметры сверены с [документацией Anthropic](https://platform.claude.com/docs/en/models/overview) 2026-10-30.
+
+```dotenv
+TRANSCRIBEFLOW_ANTHROPIC_API_KEY=your-anthropic-api-key
+TRANSCRIBEFLOW_POSTPROCESSING_PROVIDER=anthropic
+TRANSCRIBEFLOW_POSTPROCESSING_MODEL=claude-sonnet-5-5
+TRANSCRIBEFLOW_POSTPROCESSING_REASONING_EFFORT=default
+TRANSCRIBEFLOW_INSIGHTS_PROVIDER=anthropic
+TRANSCRIBEFLOW_INSIGHTS_MODEL=claude-sonnet-5-5
+TRANSCRIBEFLOW_INSIGHTS_REASONING_EFFORT=default
+```
+
+Прямые запросы идут в `https://api.anthropic.com/v1/messages`. Structured Outputs
+задаёт JSON-схему для Cleanup, имён спикеров и Insights/Mindmap. Thinking-блоки
+не попадают в транскрипт. Reasoning: `default`, `low`, `medium`, `high`, `xhigh`,
+`max`; отключение (`none`) доступно здесь только для Haiku 5.5. Температура не
+передаётся. Усечённые ответы (`max_tokens`) и отказы не сохраняются как успешные.
+Лимит ответа 128K включает thinking. Стоимость - оценка; у Haiku 5.5 тариф выше
+при входе свыше 100K токенов, кеширование тоже влияет. Реальную доступность моделей
+проверяет Anthropic для вашего API-проекта. Ключ в ответах API заменён на
+`has_anthropic_key`; сохранённые UI-настройки имеют приоритет над `.env`.

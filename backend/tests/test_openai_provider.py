@@ -5,7 +5,7 @@ from unittest.mock import AsyncMock, patch
 import httpx
 import pytest
 
-from services.llm_providers import OpenAIClient
+from services.llm_providers import OpenAIClient, AnthropicClient
 from services.postprocessing_service import PostProcessingService
 from services.insight_service import InsightService
 
@@ -137,7 +137,8 @@ async def test_unsupported_none_reasoning_rejected_before_api_call(model):
 
 
 @pytest.mark.asyncio
-async def test_cleanup_then_insights_mindmap_with_direct_openai(tmp_path):
+@pytest.mark.parametrize("provider", ["openai", "anthropic"])
+async def test_cleanup_then_insights_mindmap_with_direct_provider(tmp_path, provider):
     from types import SimpleNamespace
 
     transcript = {"metadata": {}, "speakers": {}, "segments": [
@@ -148,23 +149,33 @@ async def test_cleanup_then_insights_mindmap_with_direct_openai(tmp_path):
                                     output_dir=str(tmp_path), initial_prompt=None)
     cleanup = PostProcessingService()
     insights = InsightService()
+    cleanup_model = "gpt-6-luna" if provider == "openai" else "claude-haiku-5-5"
+    insights_model = "gpt-6.1-sol" if provider == "openai" else "claude-sonnet-5-5"
     cleanup.settings = cleanup.settings.model_copy(update={
-        "openai_api_key": "test-key", "postprocessing_provider": "openai",
-        "postprocessing_model": "gpt-6-luna", "postprocessing_reasoning_effort": "low",
+        f"{provider}_api_key": "test-key", "postprocessing_provider": provider,
+        "postprocessing_model": cleanup_model, "postprocessing_reasoning_effort": "low",
     })
     insights.settings = insights.settings.model_copy(update={
-        "openai_api_key": "test-key", "insights_provider": "openai",
-        "insights_model": "gpt-6.1-sol", "insights_reasoning_effort": "high",
+        f"{provider}_api_key": "test-key", "insights_provider": provider,
+        "insights_model": insights_model, "insights_reasoning_effort": "high",
     })
     expected = [
-        (cleanup, "low", "gpt-6-luna", {"segments": transcript["segments"], "speaker_suggestions": []}),
-        (insights, "high", "gpt-6.1-sol", {"description": "Обсудили проект", "sections": [],
+        (cleanup, "low", cleanup_model, {"segments": transcript["segments"], "speaker_suggestions": []}),
+        (insights, "high", insights_model, {"description": "Обсудили проект", "sections": [],
             "mindmap": {"format": "markdown", "content": "# Проект\n## Следующие шаги"}}),
     ]
     for service, effort, model, result in expected:
         def handle(request):
             body = json.loads(request.content)
             assert body["model"] == model
+            if provider == "anthropic":
+                assert body["output_config"]["effort"] == effort
+                assert "Обсудим проект" in body["messages"][0]["content"]
+                required = body["output_config"]["format"]["schema"]["required"]
+                assert ("segments" if service is cleanup else "mindmap") in required
+                return httpx.Response(200, json={"stop_reason": "end_turn",
+                    "content": [{"type": "text", "text": json.dumps(result)}],
+                    "usage": {"input_tokens": 110, "output_tokens": 45}})
             assert body["reasoning"]["effort"] == effort
             assert "Обсудим проект" in body["input"]
             data = completed_response()
@@ -173,7 +184,7 @@ async def test_cleanup_then_insights_mindmap_with_direct_openai(tmp_path):
             ]}]
             return httpx.Response(200, json=data)
         http = httpx.AsyncClient(transport=httpx.MockTransport(handle))
-        with patch("services.llm_providers.openai.httpx.AsyncClient", return_value=http):
+        with patch(f"services.llm_providers.{provider}.httpx.AsyncClient", return_value=http):
             if service is cleanup:
                 await service.process_transcript(transcription, "it-meeting")
             else:
@@ -183,19 +194,20 @@ async def test_cleanup_then_insights_mindmap_with_direct_openai(tmp_path):
 
     cleaned = json.loads((tmp_path / "transcript_cleaned.json").read_text())
     analysis = json.loads((tmp_path / "insights_it-meeting.json").read_text())
-    assert cleaned["metadata"]["provider"] == "openai"
-    assert analysis["metadata"]["provider"] == "openai"
+    assert cleaned["metadata"]["provider"] == provider
+    assert analysis["metadata"]["provider"] == provider
     assert analysis["metadata"]["source"] == "cleaned"
     assert analysis["stats"]["output_tokens"] == 45
 
 
 @pytest.mark.parametrize("service_class", [PostProcessingService, InsightService])
-def test_both_ai_features_require_the_openai_key(service_class):
+@pytest.mark.parametrize("provider,client_class", [("openai", OpenAIClient), ("anthropic", AnthropicClient)])
+def test_both_ai_features_require_the_provider_key(service_class, provider, client_class):
     service = service_class()
-    service.settings = service.settings.model_copy(update={"openai_api_key": None})
-    with pytest.raises(ValueError, match="OpenAI API key not configured"):
-        service._get_client("openai")
-    service.settings = service.settings.model_copy(update={"openai_api_key": "test-key"})
-    client = service._get_client("openai")
-    assert isinstance(client, OpenAIClient)
+    service.settings = service.settings.model_copy(update={f"{provider}_api_key": None})
+    with pytest.raises(ValueError, match="API key not configured"):
+        service._get_client(provider)
+    service.settings = service.settings.model_copy(update={f"{provider}_api_key": "test-key"})
+    client = service._get_client(provider)
+    assert isinstance(client, client_class)
     assert client.api_key == "test-key"

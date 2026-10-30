@@ -18,6 +18,9 @@ def test_llm_models_service_default_models(tmp_path):
     assert {m.id for m in openai_models} == {
         "gpt-6.1-sol", "gpt-6.1-terra", "gpt-6-luna", "gpt-6-astra",
     }
+    assert {m.id for m in service.list_models("anthropic")} == {
+        "claude-sonnet-5-5", "claude-haiku-5-5", "claude-opus-5-5", "claude-fable-5-1",
+    }
 
 
 def test_existing_catalog_gets_openai_without_losing_custom_models(tmp_path):
@@ -31,6 +34,7 @@ def test_existing_catalog_gets_openai_without_losing_custom_models(tmp_path):
     assert config["gemini"] == original["gemini"]
     assert config["openrouter"] == original["openrouter"]
     assert service.get_model("openai", "gpt-6.1-sol") is not None
+    assert service.get_model("anthropic", "claude-sonnet-5-5") is not None
     assert json.loads(config_path.read_text()) == original
 
     config["openai"] = {"models": [{"id": "custom-openai", "name": "Custom"}]}

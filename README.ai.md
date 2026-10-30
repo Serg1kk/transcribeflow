@@ -49,6 +49,7 @@ Edit `backend/.env` and set these values:
 | `TRANSCRIBEFLOW_GEMINI_API_KEY` | Optional | For AI post-processing |
 | `TRANSCRIBEFLOW_OPENROUTER_API_KEY` | Optional | Alternative LLM provider |
 | `TRANSCRIBEFLOW_OPENAI_API_KEY` | Optional | Direct OpenAI for Cleanup and Insights/Mindmap (also configurable in Settings) |
+| `TRANSCRIBEFLOW_ANTHROPIC_API_KEY` | Optional | Direct Anthropic/Claude for the same AI features; configurable in Settings |
 
 **Important:** Set `TRANSCRIBEFLOW_BACKEND_HOST=0.0.0.0` so the service is accessible over the network, not just localhost.
 
