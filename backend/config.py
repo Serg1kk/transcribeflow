@@ -4,7 +4,7 @@ import json
 import os
 from functools import lru_cache
 from pathlib import Path
-from typing import Any, Dict, Optional, Tuple, Type
+from typing import Any, Dict, Literal, Optional, Tuple, Type
 from pydantic import Field
 from pydantic_settings import BaseSettings, PydanticBaseSettingsSource
 
@@ -47,6 +47,9 @@ class JsonConfigSettingsSource(PydanticBaseSettingsSource):
     def __call__(self) -> Dict[str, Any]:
         """Return all config values."""
         return self._load_config()
+
+
+ReasoningEffort = Literal["default", "none", "low", "medium", "high", "xhigh", "max"]
 
 
 class Settings(BaseSettings):
@@ -106,15 +109,18 @@ class Settings(BaseSettings):
     default_llm_provider: str = "gemini"
     openrouter_api_key: Optional[str] = None
     gemini_api_key: Optional[str] = None
+    openai_api_key: Optional[str] = None
 
     # Post-processing settings
-    postprocessing_provider: str = "gemini"  # "gemini" | "openrouter"
+    postprocessing_provider: str = "gemini"  # "gemini" | "openrouter" | "openai"
     postprocessing_model: str = "gemini-2.5-flash"
+    postprocessing_reasoning_effort: ReasoningEffort = "default"
     postprocessing_default_template: Optional[str] = None  # None = always ask
 
     # AI Insights (Level 2) settings
-    insights_provider: str = "gemini"  # "gemini" | "openrouter" | "anthropic"
+    insights_provider: str = "gemini"  # "gemini" | "openrouter" | "openai"
     insights_model: str = "gemini-2.5-flash"
+    insights_reasoning_effort: ReasoningEffort = "default"
     insights_default_template: Optional[str] = None  # None = always ask
 
     @property

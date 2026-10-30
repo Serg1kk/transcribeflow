@@ -6,7 +6,7 @@ from typing import Optional
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel
 
-from config import Settings, get_settings, clear_settings_cache, CONFIG_PATH
+from config import ReasoningEffort, Settings, get_settings, clear_settings_cache, CONFIG_PATH
 from workers.queue_processor import queue_processor
 
 router = APIRouter(prefix="/api/settings", tags=["settings"])
@@ -38,11 +38,13 @@ class SettingsResponse(BaseModel):
     # Post-processing
     postprocessing_provider: str
     postprocessing_model: str
+    postprocessing_reasoning_effort: ReasoningEffort
     postprocessing_default_template: Optional[str]
 
     # AI Insights (Level 2)
     insights_provider: str
     insights_model: str
+    insights_reasoning_effort: ReasoningEffort
     insights_default_template: Optional[str]
 
     # API key presence (not actual keys for security)
@@ -53,6 +55,7 @@ class SettingsResponse(BaseModel):
     has_yandex_key: bool
     has_gemini_key: bool
     has_openrouter_key: bool
+    has_openai_key: bool
 
     # Feature availability status
     features: dict
@@ -84,11 +87,13 @@ class SettingsUpdateRequest(BaseModel):
     # Post-processing
     postprocessing_provider: Optional[str] = None
     postprocessing_model: Optional[str] = None
+    postprocessing_reasoning_effort: Optional[ReasoningEffort] = None
     postprocessing_default_template: Optional[str] = None
 
     # AI Insights (Level 2)
     insights_provider: Optional[str] = None
     insights_model: Optional[str] = None
+    insights_reasoning_effort: Optional[ReasoningEffort] = None
     insights_default_template: Optional[str] = None
 
     # API keys (can be updated)
@@ -99,6 +104,7 @@ class SettingsUpdateRequest(BaseModel):
     yandex_api_key: Optional[str] = None
     gemini_api_key: Optional[str] = None
     openrouter_api_key: Optional[str] = None
+    openai_api_key: Optional[str] = None
 
 
 # Feature status: implemented or TBD
@@ -111,6 +117,7 @@ FEATURES = {
     "diarization": {"status": "implemented", "description": "Speaker identification (Pyannote)"},
     "gemini_llm": {"status": "implemented", "description": "Google Gemini for post-processing"},
     "openrouter_llm": {"status": "implemented", "description": "OpenRouter for LLM access"},
+    "openai_llm": {"status": "implemented", "description": "Direct OpenAI for Cleanup and Insights"},
 }
 
 
@@ -133,9 +140,11 @@ async def get_current_settings(settings: Settings = Depends(get_settings)):
         default_llm_provider=settings.default_llm_provider,
         postprocessing_provider=settings.postprocessing_provider,
         postprocessing_model=settings.postprocessing_model,
+        postprocessing_reasoning_effort=settings.postprocessing_reasoning_effort,
         postprocessing_default_template=settings.postprocessing_default_template,
         insights_provider=settings.insights_provider,
         insights_model=settings.insights_model,
+        insights_reasoning_effort=settings.insights_reasoning_effort,
         insights_default_template=settings.insights_default_template,
         has_hf_token=bool(settings.hf_token),
         has_assemblyai_key=bool(settings.assemblyai_api_key),
@@ -144,6 +153,7 @@ async def get_current_settings(settings: Settings = Depends(get_settings)):
         has_yandex_key=bool(settings.yandex_api_key),
         has_gemini_key=bool(settings.gemini_api_key),
         has_openrouter_key=bool(settings.openrouter_api_key),
+        has_openai_key=bool(settings.openai_api_key),
         features=FEATURES,
     )
 
@@ -193,9 +203,11 @@ async def update_settings(update: SettingsUpdateRequest):
         default_llm_provider=settings.default_llm_provider,
         postprocessing_provider=settings.postprocessing_provider,
         postprocessing_model=settings.postprocessing_model,
+        postprocessing_reasoning_effort=settings.postprocessing_reasoning_effort,
         postprocessing_default_template=settings.postprocessing_default_template,
         insights_provider=settings.insights_provider,
         insights_model=settings.insights_model,
+        insights_reasoning_effort=settings.insights_reasoning_effort,
         insights_default_template=settings.insights_default_template,
         has_hf_token=bool(settings.hf_token),
         has_assemblyai_key=bool(settings.assemblyai_api_key),
@@ -204,6 +216,7 @@ async def update_settings(update: SettingsUpdateRequest):
         has_yandex_key=bool(settings.yandex_api_key),
         has_gemini_key=bool(settings.gemini_api_key),
         has_openrouter_key=bool(settings.openrouter_api_key),
+        has_openai_key=bool(settings.openai_api_key),
         features=FEATURES,
     )
 

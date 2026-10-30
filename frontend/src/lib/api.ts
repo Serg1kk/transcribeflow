@@ -272,6 +272,7 @@ export interface LLMModel {
 export interface LLMModelsConfig {
   gemini: { models: LLMModel[] };
   openrouter: { models: LLMModel[] };
+  openai: { models: LLMModel[] };
 }
 
 export interface CleanedTranscript {

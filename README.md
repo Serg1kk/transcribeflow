@@ -88,6 +88,7 @@ To use **LLM Post-Processing** (cleanup) and **AI Insights** features, you need 
 |----------|------------|------|
 | **Google Gemini** (recommended) | [aistudio.google.com](https://aistudio.google.com) → Get API Key | Free tier available |
 | **OpenRouter** | [openrouter.ai](https://openrouter.ai) → Keys | Pay-per-use, many models |
+| **OpenAI** | [platform.openai.com/api-keys](https://platform.openai.com/api-keys) | Direct OpenAI API, billed to your API balance |
 
 Add your key in **Settings** page after starting the app.
 
@@ -156,6 +157,7 @@ Add your key in **Settings** page after starting the app.
 |----------|--------|
 | **Google Gemini** | gemini-2.5-flash, gemini-2.5-flash-lite, gemini-3-flash-preview |
 | **OpenRouter** | GPT-4o Mini, Claude 3.5 Haiku, DeepSeek R1, and more |
+| **OpenAI (direct)** | gpt-6.1-sol, gpt-6.1-terra, gpt-6-luna, gpt-6-astra |
 
 ---
 
@@ -420,3 +422,34 @@ MIT — Free to use, modify, and distribute. Just keep the copyright notice.
 
 1. Fork → 2. Branch → 3. Code → 4. Test (`pytest -v`) → 5. PR
 
+
+
+### Direct OpenAI setup
+
+In **Settings → LLM**, enter an **OpenAI** API key and save. Select **OpenAI**
+and a model separately for **Cleanup** and **AI Insights** (including Mindmap).
+Start with `gpt-6.1-sol`; choose `gpt-6-luna` for lower cost,
+`gpt-6.1-terra` for efficient text work, or `gpt-6-astra` for flagship quality.
+Catalog checked against [OpenAI Docs](https://developers.openai.com/api/docs/models) on 2026-10-30.
+
+```dotenv
+TRANSCRIBEFLOW_OPENAI_API_KEY=your-openai-api-key
+TRANSCRIBEFLOW_POSTPROCESSING_PROVIDER=openai
+TRANSCRIBEFLOW_POSTPROCESSING_MODEL=gpt-6.1-sol
+TRANSCRIBEFLOW_POSTPROCESSING_REASONING_EFFORT=default
+TRANSCRIBEFLOW_INSIGHTS_PROVIDER=openai
+TRANSCRIBEFLOW_INSIGHTS_MODEL=gpt-6.1-sol
+TRANSCRIBEFLOW_INSIGHTS_REASONING_EFFORT=default
+```
+
+Alternatively set these in `backend/.env`; UI settings saved in
+`~/.transcribeflow/config.json` take priority. The settings API returns only
+`has_openai_key`, never the key. Requests go directly to
+`https://api.openai.com/v1/responses` with `store=false`; JSON results and token
+usage (including reasoning) feed the existing operation history. GPT-5/6 reasoning
+models do not receive the template temperature. Cost is a Standard-rate estimate;
+caching, inputs above 272K and processing tiers can change billing. Actual model
+access depends on your OpenAI project. Existing settings and custom model lists
+are preserved; the new provider appears automatically.
+
+Each feature has a **Reasoning effort** setting: model default, none (where supported), low, medium, high, xhigh, max. Higher effort may improve quality at the cost of latency and paid reasoning tokens. None is hidden for GPT-6 Astra and GPT-6.1 Sol.

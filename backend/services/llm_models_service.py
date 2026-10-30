@@ -1,11 +1,13 @@
 # services/llm_models_service.py
 """LLM models configuration service."""
 import json
+import os
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Dict, List, Optional
 
-CONFIG_PATH = Path.home() / ".transcribeflow" / "llm_models.json"
+CONFIG_PATH = Path(os.environ.get("TRANSCRIBEFLOW_LLM_MODELS_PATH") or
+                   Path.home() / ".transcribeflow" / "llm_models.json").expanduser()
 
 
 @dataclass
@@ -26,6 +28,14 @@ class LLMModel:
 # Default models configuration
 # Prices in USD per 1M tokens (input, output)
 DEFAULT_MODELS = {
+    # Official OpenAI catalog, checked 2026-10-30. Standard short-context
+    # estimates; caching, >272K input tokens and processing tiers change prices.
+    "openai": [
+        LLMModel("gpt-6.1-sol", "GPT-6.1 Sol (1M)", 2.00, 10.00),
+        LLMModel("gpt-6.1-terra", "GPT-6.1 Terra (1M)", 1.00, 5.00),
+        LLMModel("gpt-6-luna", "GPT-6 Luna (1M, economical)", 0.10, 0.50),
+        LLMModel("gpt-6-astra", "GPT-6 Astra (1M, flagship)", 10.00, 50.00),
+    ],
     "gemini": [
         # Gemini 3.x
         LLMModel("gemini-3.1-pro-preview", "Gemini 3.1 Pro Preview (1M)", 2.00, 12.00),
@@ -100,7 +110,13 @@ class LLMModelsService:
         """Load config from file."""
         try:
             with open(self.config_path, "r", encoding="utf-8") as f:
-                return json.load(f)
+                config = json.load(f)
+            # Existing installations have a saved two-provider catalog. Add
+            # missing providers without overwriting custom lists (even empty
+            # ones) or rewriting the operator's file during a read.
+            for provider, defaults in self._models_to_dict(DEFAULT_MODELS).items():
+                config.setdefault(provider, defaults)
+            return config
         except (json.JSONDecodeError, IOError):
             return self._models_to_dict(DEFAULT_MODELS)
 

@@ -48,10 +48,12 @@ interface Settings {
   // Post-processing
   postprocessing_provider: string;
   postprocessing_model: string;
+  postprocessing_reasoning_effort: string;
   postprocessing_default_template: string | null;
   // AI Insights
   insights_provider: string;
   insights_model: string;
+  insights_reasoning_effort: string;
   insights_default_template: string | null;
   // API keys
   has_hf_token: boolean;
@@ -61,11 +63,13 @@ interface Settings {
   has_yandex_key: boolean;
   has_gemini_key: boolean;
   has_openrouter_key: boolean;
+  has_openai_key: boolean;
 }
 
 const EMPTY_LLM_MODELS: LLMModelsConfig = {
   gemini: { models: [] },
   openrouter: { models: [] },
+  openai: { models: [] },
 };
 
 export default function SettingsPage() {
@@ -88,9 +92,13 @@ export default function SettingsPage() {
   const [postprocessingProvider, setPostprocessingProvider] = useState("gemini");
   const [postprocessingModel, setPostprocessingModel] = useState("gemini-2.5-flash");
 
+  const [postprocessingReasoningEffort, setPostprocessingReasoningEffort] = useState("default");
+
   // AI Insights state
   const [insightsProvider, setInsightsProvider] = useState("gemini");
   const [insightsModel, setInsightsModel] = useState("gemini-2.5-flash");
+
+  const [insightsReasoningEffort, setInsightsReasoningEffort] = useState("default");
 
   // Whisper Anti-Hallucination state
   const [noSpeechThreshold, setNoSpeechThreshold] = useState(0.6);
@@ -107,11 +115,13 @@ export default function SettingsPage() {
   const [yandexKey, setYandexKey] = useState("");
   const [geminiKey, setGeminiKey] = useState("");
   const [openrouterKey, setOpenrouterKey] = useState("");
+  const [openaiKey, setOpenaiKey] = useState("");
 
   // LLM Providers with translated labels
   const LLM_PROVIDERS = useMemo(() => [
     { value: "gemini", label: intl.formatMessage({ id: "settings.llm.provider.gemini" }) },
     { value: "openrouter", label: intl.formatMessage({ id: "settings.llm.provider.openrouter" }) },
+    { value: "openai", label: intl.formatMessage({ id: "settings.llm.provider.openai" }) },
   ], [intl]);
 
   useEffect(() => {
@@ -136,9 +146,11 @@ export default function SettingsPage() {
       // Post-processing settings
       setPostprocessingProvider(data.postprocessing_provider);
       setPostprocessingModel(data.postprocessing_model);
+      setPostprocessingReasoningEffort(data.postprocessing_reasoning_effort || "default");
       // AI Insights settings
       setInsightsProvider(data.insights_provider || "gemini");
       setInsightsModel(data.insights_model || "gemini-2.5-flash");
+      setInsightsReasoningEffort(data.insights_reasoning_effort || "default");
       // Whisper settings
       setNoSpeechThreshold(data.whisper_no_speech_threshold);
       setLogprobThreshold(data.whisper_logprob_threshold);
@@ -186,15 +198,11 @@ export default function SettingsPage() {
   }, [defaultEngine, availableModels, defaultModel]);
 
   const postprocessingAvailableModels = useMemo<AvailableLLMModel[]>(() => {
-    return postprocessingProvider === "openrouter"
-      ? llmModels.openrouter.models
-      : llmModels.gemini.models;
+    return llmModels[postprocessingProvider as keyof LLMModelsConfig]?.models || [];
   }, [llmModels, postprocessingProvider]);
 
   const insightsAvailableModels = useMemo<AvailableLLMModel[]>(() => {
-    return insightsProvider === "openrouter"
-      ? llmModels.openrouter.models
-      : llmModels.gemini.models;
+    return llmModels[insightsProvider as keyof LLMModelsConfig]?.models || [];
   }, [llmModels, insightsProvider]);
 
   useEffect(() => {
@@ -215,6 +223,18 @@ export default function SettingsPage() {
     }
   }, [insightsAvailableModels, insightsModel]);
 
+  useEffect(() => {
+    if (postprocessingReasoningEffort === "none" && !supportsNoReasoning(postprocessingModel)) {
+      setPostprocessingReasoningEffort("default");
+    }
+  }, [postprocessingModel, postprocessingReasoningEffort]);
+
+  useEffect(() => {
+    if (insightsReasoningEffort === "none" && !supportsNoReasoning(insightsModel)) {
+      setInsightsReasoningEffort("default");
+    }
+  }, [insightsModel, insightsReasoningEffort]);
+
   async function saveSettings() {
     setIsSaving(true);
 
@@ -229,9 +249,11 @@ export default function SettingsPage() {
       // Post-processing settings
       postprocessing_provider: postprocessingProvider,
       postprocessing_model: postprocessingModel,
+      postprocessing_reasoning_effort: postprocessingReasoningEffort,
       // AI Insights settings
       insights_provider: insightsProvider,
       insights_model: insightsModel,
+      insights_reasoning_effort: insightsReasoningEffort,
       // Whisper Anti-Hallucination settings
       whisper_no_speech_threshold: noSpeechThreshold,
       whisper_logprob_threshold: logprobThreshold,
@@ -248,6 +270,7 @@ export default function SettingsPage() {
     if (yandexKey) updates.yandex_api_key = yandexKey;
     if (geminiKey) updates.gemini_api_key = geminiKey;
     if (openrouterKey) updates.openrouter_api_key = openrouterKey;
+    if (openaiKey) updates.openai_api_key = openaiKey;
 
     try {
       const res = await fetch(`${API_BASE}/api/settings`, {
@@ -268,6 +291,7 @@ export default function SettingsPage() {
         setYandexKey("");
         setGeminiKey("");
         setOpenrouterKey("");
+        setOpenaiKey("");
       } else {
         toast.error("Failed to save settings");
       }
@@ -690,6 +714,11 @@ export default function SettingsPage() {
               </div>
             </div>
 
+            {postprocessingProvider === "openai" && (
+              <ReasoningSelect model={postprocessingModel} value={postprocessingReasoningEffort}
+                onValueChange={setPostprocessingReasoningEffort} />
+            )}
+
             <div className="space-y-2">
               <Label>{intl.formatMessage({ id: "settings.llm.legacy.label" })}</Label>
               <Select value={defaultLlmProvider} onValueChange={setDefaultLlmProvider}>
@@ -721,6 +750,16 @@ export default function SettingsPage() {
               onChange={setOpenrouterKey}
               intl={intl}
             />
+            <ApiKeyInput
+              label={intl.formatMessage({ id: "settings.llm.provider.openai" })}
+              hasKey={settings.has_openai_key}
+              value={openaiKey}
+              onChange={setOpenaiKey}
+              intl={intl}
+            />
+            <p className="text-xs text-muted-foreground">
+              {intl.formatMessage({ id: "settings.llm.openai.help" })}
+            </p>
           </CardContent>
         </Card>
 
@@ -765,6 +804,10 @@ export default function SettingsPage() {
                 </Select>
               </div>
             </div>
+            {insightsProvider === "openai" && (
+              <ReasoningSelect model={insightsModel} value={insightsReasoningEffort}
+                onValueChange={setInsightsReasoningEffort} />
+            )}
             <p className="text-xs text-muted-foreground">
               {intl.formatMessage({ id: "settings.insights.help" })}
             </p>
@@ -805,6 +848,39 @@ function ApiKeyInput({
         value={value}
         onChange={(e) => onChange(e.target.value)}
       />
+    </div>
+  );
+}
+
+
+function supportsNoReasoning(model: string): boolean {
+  return !model.startsWith("gpt-6-astra") && !model.startsWith("gpt-6.1-sol");
+}
+
+function ReasoningSelect({ model, value, onValueChange }: {
+  model: string;
+  value: string;
+  onValueChange: (value: string) => void;
+}) {
+  const intl = useIntl();
+  const levels = ["default", "none", "low", "medium", "high", "xhigh", "max"]
+    .filter((level) => level !== "none" || supportsNoReasoning(model));
+  return (
+    <div className="space-y-2">
+      <Label>{intl.formatMessage({ id: "settings.llm.reasoning.label" })}</Label>
+      <Select value={value} onValueChange={onValueChange}>
+        <SelectTrigger><SelectValue /></SelectTrigger>
+        <SelectContent>
+          {levels.map((level) => (
+            <SelectItem key={level} value={level}>
+              {intl.formatMessage({ id: `settings.llm.reasoning.${level}` })}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+      <p className="text-xs text-muted-foreground">
+        {intl.formatMessage({ id: "settings.llm.reasoning.help" })}
+      </p>
     </div>
   );
 }

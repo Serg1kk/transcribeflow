@@ -3,10 +3,12 @@
 from services.llm_providers.base import BaseLLMClient, LLMResponse
 from services.llm_providers.gemini import GeminiClient
 from services.llm_providers.openrouter import OpenRouterClient
+from services.llm_providers.openai import OpenAIClient
 
 __all__ = [
     "BaseLLMClient",
     "LLMResponse",
     "GeminiClient",
     "OpenRouterClient",
+    "OpenAIClient",
 ]

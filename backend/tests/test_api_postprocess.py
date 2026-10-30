@@ -48,4 +48,6 @@ def test_list_llm_models():
     data = response.json()
     assert "gemini" in data
     assert "openrouter" in data
+    assert "openai" in data
+    assert any(m["id"] == "gpt-6.1-sol" for m in data["openai"]["models"])
     assert len(data["gemini"]["models"]) >= 3

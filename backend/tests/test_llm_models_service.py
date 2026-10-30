@@ -14,6 +14,29 @@ def test_llm_models_service_default_models(tmp_path):
     openrouter_models = service.list_models("openrouter")
     assert len(openrouter_models) >= 3
 
+    openai_models = service.list_models("openai")
+    assert {m.id for m in openai_models} == {
+        "gpt-6.1-sol", "gpt-6.1-terra", "gpt-6-luna", "gpt-6-astra",
+    }
+
+
+def test_existing_catalog_gets_openai_without_losing_custom_models(tmp_path):
+    import json
+    config_path = tmp_path / "llm_models.json"
+    original = {"gemini": {"models": [{"id": "custom", "name": "My model"}]},
+                "openrouter": {"models": []}}
+    config_path.write_text(json.dumps(original))
+    service = LLMModelsService(config_path=config_path)
+    config = service.get_all_config()
+    assert config["gemini"] == original["gemini"]
+    assert config["openrouter"] == original["openrouter"]
+    assert service.get_model("openai", "gpt-6.1-sol") is not None
+    assert json.loads(config_path.read_text()) == original
+
+    config["openai"] = {"models": [{"id": "custom-openai", "name": "Custom"}]}
+    service.update_config(config)
+    assert [m.id for m in service.list_models("openai")] == ["custom-openai"]
+
 
 def test_llm_models_service_get_model(tmp_path):
     """Test getting a specific model."""

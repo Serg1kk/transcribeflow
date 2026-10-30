@@ -88,6 +88,7 @@ API документация:  http://localhost:8000/docs
 |-----------|--------------|-----------|
 | **Google Gemini** (рекомендуется) | [aistudio.google.com](https://aistudio.google.com) → Get API Key | Есть бесплатный тариф |
 | **OpenRouter** | [openrouter.ai](https://openrouter.ai) → Keys | Оплата по использованию, много моделей |
+| **OpenAI** | [platform.openai.com/api-keys](https://platform.openai.com/api-keys) | Прямой OpenAI API, оплата с баланса API |
 
 Добавьте ключ на странице **Настроек** после запуска приложения.
 
@@ -157,6 +158,7 @@ API документация:  http://localhost:8000/docs
 |-----------|--------|
 | **Google Gemini** | gemini-2.5-flash, gemini-2.5-flash-lite, gemini-3-flash-preview |
 | **OpenRouter** | GPT-4o Mini, Claude 3.5 Haiku, DeepSeek R1 и другие |
+| **OpenAI (direct)** | gpt-6.1-sol, gpt-6.1-terra, gpt-6-luna, gpt-6-astra |
 
 ---
 
@@ -420,3 +422,34 @@ MIT — Свободно для использования, модификаци
 ## Участие в разработке
 
 1. Fork → 2. Branch → 3. Code → 4. Test (`pytest -v`) → 5. PR
+
+
+### Direct OpenAI setup
+
+В **Настройках → LLM** введите ключ **OpenAI** и сохраните. Затем выберите
+**OpenAI** и модель отдельно для **Cleanup** и **AI Insights** (включая Mindmap).
+Рекомендуемая отправная точка - `gpt-6.1-sol`; `gpt-6-luna` экономичнее,
+`gpt-6.1-terra` подходит для быстрой работы с текстом, `gpt-6-astra` - флагман.
+Список сверён с [OpenAI Docs](https://developers.openai.com/api/docs/models) 2026-10-30.
+
+```dotenv
+TRANSCRIBEFLOW_OPENAI_API_KEY=your-openai-api-key
+TRANSCRIBEFLOW_POSTPROCESSING_PROVIDER=openai
+TRANSCRIBEFLOW_POSTPROCESSING_MODEL=gpt-6.1-sol
+TRANSCRIBEFLOW_POSTPROCESSING_REASONING_EFFORT=default
+TRANSCRIBEFLOW_INSIGHTS_PROVIDER=openai
+TRANSCRIBEFLOW_INSIGHTS_MODEL=gpt-6.1-sol
+TRANSCRIBEFLOW_INSIGHTS_REASONING_EFFORT=default
+```
+
+Можно задать эти параметры в `backend/.env`; настройки, сохранённые в UI
+(`~/.transcribeflow/config.json`), имеют приоритет. Ключ не возвращается из API
+настроек: только `has_openai_key`. Провайдер отправляет запросы напрямую на
+`https://api.openai.com/v1/responses` с `store=false`, получает JSON и учитывает
+токены (включая reasoning) в истории операций. Температура шаблона не передаётся
+reasoning-моделям GPT-5/6. Стоимость - оценка по стандартным тарифам; кеширование,
+контекст свыше 272K и режим обработки могут её менять. Реальная доступность моделей
+зависит от проекта OpenAI. Существующие настройки и пользовательские списки моделей
+сохраняются, новый провайдер появляется автоматически.
+
+В настройках каждой функции есть **Уровень reasoning**: по умолчанию модели, без reasoning (где поддерживается), низкий, средний, высокий, очень высокий, максимальный. Выше - потенциально качественнее, но медленнее и дороже. Для GPT-6 Astra и GPT-6.1 Sol вариант «Без reasoning» скрыт.

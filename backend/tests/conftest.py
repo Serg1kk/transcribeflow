@@ -27,6 +27,7 @@ os.environ["TRANSCRIBEFLOW_DB_PATH"] = str(_TMP_ROOT / "transcribeflow.db")
 os.environ["TRANSCRIBEFLOW_CONFIG_PATH"] = str(_TMP_ROOT / "absent-config.json")
 os.environ["TRANSCRIBEFLOW_ENV_FILE"] = str(_TMP_ROOT / "absent.env")
 os.environ["TRANSCRIBEFLOW_BASE_PATH"] = str(_BASE_PATH)
+os.environ["TRANSCRIBEFLOW_LLM_MODELS_PATH"] = str(_TMP_ROOT / "llm_models.json")
 
 import pytest  # noqa: E402  (must follow the environment setup above)
 

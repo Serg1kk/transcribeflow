@@ -14,7 +14,7 @@ from config import get_settings
 from models import Transcription, LLMOperation, LLMOperationStatus
 from services.template_service import TemplateService, Template
 from services.llm_models_service import LLMModelsService
-from services.llm_providers import GeminiClient, OpenRouterClient, LLMResponse
+from services.llm_providers import GeminiClient, OpenRouterClient, OpenAIClient, LLMResponse
 
 logger = logging.getLogger(__name__)
 
@@ -136,6 +136,11 @@ class PostProcessingService:
             if not api_key:
                 raise ValueError("OpenRouter API key not configured")
             return OpenRouterClient(api_key=api_key)
+        elif provider == "openai":
+            api_key = self.settings.openai_api_key
+            if not api_key:
+                raise ValueError("OpenAI API key not configured")
+            return OpenAIClient(api_key=api_key)
         else:
             raise ValueError(f"Unknown provider: {provider}")
 
@@ -203,6 +208,8 @@ TRANSCRIPT:
             user_message=user_message,
             model=model,
             temperature=template.temperature,
+            **({"reasoning_effort": self.settings.postprocessing_reasoning_effort}
+               if provider == "openai" else {}),
         )
         logger.info(f"LLM response: tokens_in={llm_response.input_tokens}, tokens_out={llm_response.output_tokens}")
         logger.debug(f"LLM raw response:\n{llm_response.text[:2000]}")
@@ -337,6 +344,8 @@ TRANSCRIPT:
             user_message=user_message,
             model=model,
             temperature=0.2,
+            **({"reasoning_effort": self.settings.postprocessing_reasoning_effort}
+               if provider == "openai" else {}),
         )
         logger.info(f"LLM response: tokens_in={llm_response.input_tokens}, tokens_out={llm_response.output_tokens}")
 

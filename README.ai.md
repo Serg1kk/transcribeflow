@@ -48,8 +48,14 @@ Edit `backend/.env` and set these values:
 | `TRANSCRIBEFLOW_BACKEND_HOST` | Set to `0.0.0.0` | Allow LAN access |
 | `TRANSCRIBEFLOW_GEMINI_API_KEY` | Optional | For AI post-processing |
 | `TRANSCRIBEFLOW_OPENROUTER_API_KEY` | Optional | Alternative LLM provider |
+| `TRANSCRIBEFLOW_OPENAI_API_KEY` | Optional | Direct OpenAI for Cleanup and Insights/Mindmap (also configurable in Settings) |
 
 **Important:** Set `TRANSCRIBEFLOW_BACKEND_HOST=0.0.0.0` so the service is accessible over the network, not just localhost.
+
+For direct OpenAI, select `openai` separately for post-processing and insights,
+and use a bare model ID such as `gpt-6.1-sol` (not `openai/gpt-6.1-sol`).
+See the Direct OpenAI setup in README.md. Never overwrite existing saved providers
+or custom model catalogs when upgrading.
 
 ## Step 3: HuggingFace setup (requires human action)
 
