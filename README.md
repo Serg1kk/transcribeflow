@@ -447,7 +447,7 @@ TRANSCRIBEFLOW_INSIGHTS_REASONING_EFFORT=default
 Alternatively set these in `backend/.env`; UI settings saved in
 `~/.transcribeflow/config.json` take priority. The settings API returns only
 `has_openai_key`, never the key. Requests go directly to
-`https://api.openai.com/v1/responses` with `store=false`; JSON results and token
+`https://api.openai.com/v1/responses` with `store=false` and strict task-specific JSON schemas; results and token
 usage (including reasoning) feed the existing operation history. GPT-5/6 reasoning
 models do not receive the template temperature. Cost is a Standard-rate estimate;
 caching, inputs above 272K and processing tiers can change billing. Actual model

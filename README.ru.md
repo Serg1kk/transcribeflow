@@ -447,7 +447,7 @@ TRANSCRIBEFLOW_INSIGHTS_REASONING_EFFORT=default
 Можно задать эти параметры в `backend/.env`; настройки, сохранённые в UI
 (`~/.transcribeflow/config.json`), имеют приоритет. Ключ не возвращается из API
 настроек: только `has_openai_key`. Провайдер отправляет запросы напрямую на
-`https://api.openai.com/v1/responses` с `store=false`, получает JSON и учитывает
+`https://api.openai.com/v1/responses` с `store=false` и строгими JSON-схемами для каждой задачи и учитывает
 токены (включая reasoning) в истории операций. Температура шаблона не передаётся
 reasoning-моделям GPT-5/6. Стоимость - оценка по стандартным тарифам; кеширование,
 контекст свыше 272K и режим обработки могут её менять. Реальная доступность моделей

@@ -6,6 +6,7 @@ import httpx
 import pytest
 
 from services.llm_providers import OpenAIClient, AnthropicClient
+from services.llm_providers.response_schemas import RESPONSE_SCHEMAS
 from services.postprocessing_service import PostProcessingService
 from services.insight_service import InsightService
 
@@ -43,7 +44,11 @@ async def test_responses_request_and_reasoning_output(model):
         assert body["model"] == model
         assert body["input"] == "Meeting text"
         assert "Clean this transcript" in body["instructions"]
-        assert body["text"]["format"] == {"type": "json_object"}
+        assert "json" not in body["input"].lower()
+        assert body["text"]["format"] == {
+            "type": "json_schema", "name": "transcribeflow_cleanup", "strict": True,
+            "schema": RESPONSE_SCHEMAS["cleanup"],
+        }
         assert body["store"] is False
         assert "temperature" not in body
         return httpx.Response(200, json=completed_response())
@@ -59,6 +64,47 @@ async def test_custom_non_reasoning_model_keeps_temperature():
         assert json.loads(request.content)["temperature"] == 0.2
         return httpx.Response(200, json=completed_response())
     await complete_with_handler(handle, "gpt-4.1-mini")
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("task", ["cleanup", "speakers", "insights", "insights_no_mindmap"])
+async def test_strict_task_schema_accepts_ordinary_transcript_without_json_keyword(task):
+    """Emulate the real API check that the old mock transport missed."""
+    def handle(request):
+        body = json.loads(request.content)
+        assert "json" not in body["input"].lower()
+        output_format = body["text"]["format"]
+        if output_format["type"] == "json_object":
+            return httpx.Response(400, json={"error": {
+                "param": "input", "message": "Response input messages must contain the word 'json'",
+            }})
+        assert output_format["type"] == "json_schema"
+        assert output_format["strict"] is True
+        assert output_format["schema"] == RESPONSE_SCHEMAS[task]
+        return httpx.Response(200, json=completed_response())
+    http = httpx.AsyncClient(transport=httpx.MockTransport(handle))
+    with patch("services.llm_providers.openai.httpx.AsyncClient", return_value=http):
+        await OpenAIClient("test-key").complete(
+            "Return the requested object.", "Обсудим план проекта.", "gpt-6.1-sol", task=task,
+        )
+
+
+@pytest.mark.asyncio
+async def test_api_error_shows_cause_and_parameter_but_redacts_key():
+    def handle(request):
+        return httpx.Response(400, json={"error": {
+            "param": "input", "message": "Invalid input: test-openai-key and sk-partial-secret",
+        }})
+    with pytest.raises(ValueError, match=r"OpenAI API 400 \(input\): Invalid input") as error:
+        await complete_with_handler(handle)
+    assert "test-openai-key" not in str(error.value)
+    assert "sk-partial-secret" not in str(error.value)
+    assert "[REDACTED]" in str(error.value)
+
+
+def test_mindmap_schema_matches_template_requirement():
+    assert RESPONSE_SCHEMAS["insights"]["properties"]["mindmap"]["type"] == "object"
+    assert RESPONSE_SCHEMAS["insights_no_mindmap"]["properties"]["mindmap"] == {"type": "null"}
 
 
 @pytest.mark.asyncio
@@ -80,7 +126,7 @@ async def test_permanent_api_errors_are_not_retried(status):
     def handle(request):
         calls.append(request)
         return httpx.Response(status, json={"error": {"message": "Invalid request"}})
-    with pytest.raises(httpx.HTTPStatusError):
+    with pytest.raises(ValueError, match="OpenAI API"):
         await complete_with_handler(handle)
     assert len(calls) == 1
 
@@ -109,7 +155,7 @@ async def test_retry_budget_is_bounded():
         calls.append(request)
         return httpx.Response(503)
     with patch("services.llm_providers.openai.asyncio.sleep", new_callable=AsyncMock):
-        with pytest.raises(httpx.HTTPStatusError):
+        with pytest.raises(ValueError, match="OpenAI API"):
             await complete_with_handler(handle)
     assert len(calls) == 3
 
@@ -138,7 +184,8 @@ async def test_unsupported_none_reasoning_rejected_before_api_call(model):
 
 @pytest.mark.asyncio
 @pytest.mark.parametrize("provider", ["openai", "anthropic"])
-async def test_cleanup_then_insights_mindmap_with_direct_provider(tmp_path, provider):
+@pytest.mark.parametrize("include_mindmap", [True, False])
+async def test_cleanup_then_insights_mindmap_with_direct_provider(tmp_path, provider, include_mindmap):
     from types import SimpleNamespace
 
     transcript = {"metadata": {}, "speakers": {}, "segments": [
@@ -149,6 +196,9 @@ async def test_cleanup_then_insights_mindmap_with_direct_provider(tmp_path, prov
                                     output_dir=str(tmp_path), initial_prompt=None)
     cleanup = PostProcessingService()
     insights = InsightService()
+    from dataclasses import replace
+    insight_template = replace(insights.template_service.get_template("it-meeting"), include_mindmap=include_mindmap)
+    insights.template_service.get_template = lambda template_id: insight_template
     cleanup_model = "gpt-6-luna" if provider == "openai" else "claude-haiku-5-5"
     insights_model = "gpt-6.1-sol" if provider == "openai" else "claude-sonnet-5-5"
     cleanup.settings = cleanup.settings.model_copy(update={
@@ -162,12 +212,15 @@ async def test_cleanup_then_insights_mindmap_with_direct_provider(tmp_path, prov
     expected = [
         (cleanup, "low", cleanup_model, {"segments": transcript["segments"], "speaker_suggestions": []}),
         (insights, "high", insights_model, {"description": "Обсудили проект", "sections": [],
-            "mindmap": {"format": "markdown", "content": "# Проект\n## Следующие шаги"}}),
+            "mindmap": {"format": "markdown", "content": "# Проект\n## Следующие шаги"} if include_mindmap else None}),
     ]
     for service, effort, model, result in expected:
         def handle(request):
             body = json.loads(request.content)
             assert body["model"] == model
+            task = "cleanup" if service is cleanup else ("insights" if include_mindmap else "insights_no_mindmap")
+            schema = body["output_config"]["format"]["schema"] if provider == "anthropic" else body["text"]["format"]["schema"]
+            assert schema == RESPONSE_SCHEMAS[task]
             if provider == "anthropic":
                 assert body["output_config"]["effort"] == effort
                 assert "Обсудим проект" in body["messages"][0]["content"]
@@ -189,7 +242,10 @@ async def test_cleanup_then_insights_mindmap_with_direct_provider(tmp_path, prov
                 await service.process_transcript(transcription, "it-meeting")
             else:
                 output = await service.generate_insights(transcription, "it-meeting", source="cleaned")
-                assert output.mindmap["content"].startswith("# Проект")
+                if include_mindmap:
+                    assert output.mindmap["content"].startswith("# Проект")
+                else:
+                    assert output.mindmap is None
                 assert output.cost_usd == pytest.approx((110 * 2 + 45 * 10) / 1_000_000)
 
     cleaned = json.loads((tmp_path / "transcript_cleaned.json").read_text())

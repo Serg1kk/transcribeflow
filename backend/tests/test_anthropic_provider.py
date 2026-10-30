@@ -25,7 +25,7 @@ async def run_client(handler, **kwargs):
 
 
 @pytest.mark.asyncio
-@pytest.mark.parametrize("task", ["cleanup", "speakers", "insights"])
+@pytest.mark.parametrize("task", ["cleanup", "speakers", "insights", "insights_no_mindmap"])
 @pytest.mark.parametrize("effort", ["default", "none", "low", "medium", "high", "xhigh", "max"])
 async def test_messages_payload_schema_and_thinking(task, effort):
     def handle(request):

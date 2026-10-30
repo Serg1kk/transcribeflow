@@ -164,7 +164,8 @@ TRANSCRIPT:
             temperature=template.temperature,
             **({"reasoning_effort": self.settings.insights_reasoning_effort}
                if provider in ("openai", "anthropic") else {}),
-            **({"task": "insights"} if provider == "anthropic" else {}),
+            **({"task": "insights" if template.include_mindmap else "insights_no_mindmap"}
+               if provider in ("openai", "anthropic") else {}),
         )
 
         logger.info(f"LLM response: tokens_in={llm_response.input_tokens}, tokens_out={llm_response.output_tokens}")

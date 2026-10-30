@@ -1,11 +1,13 @@
 """Direct OpenAI Responses API client (no OpenRouter dependency)."""
 import asyncio
 import logging
+import re
 from typing import Optional
 
 import httpx
 
 from services.llm_providers.base import BaseLLMClient, LLMResponse
+from services.llm_providers.response_schemas import RESPONSE_SCHEMAS
 
 logger = logging.getLogger(__name__)
 
@@ -25,12 +27,21 @@ class OpenAIClient(BaseLLMClient):
         model: str,
         temperature: float = 0.2,
         reasoning_effort: Optional[str] = None,
+        task: str = "cleanup",
     ) -> LLMResponse:
+        if task not in RESPONSE_SCHEMAS:
+            raise ValueError(f"Unknown OpenAI task: {task}")
         payload = {
             "model": model,
             "instructions": system_prompt + "\nReturn only a JSON object.",
             "input": user_message,
-            "text": {"format": {"type": "json_object"}},
+            # JSON mode (json_object) rejects transcripts without the word
+            # "json" in input even when instructions already require JSON.
+            # Strict task schemas avoid that fragile input requirement.
+            "text": {"format": {
+                "type": "json_schema", "name": f"transcribeflow_{task}",
+                "strict": True, "schema": RESPONSE_SCHEMAS[task],
+            }},
             "store": False,
         }
         if reasoning_effort not in (None, "default"):
@@ -59,7 +70,7 @@ class OpenAIClient(BaseLLMClient):
                 except httpx.HTTPStatusError as exc:
                     if (exc.response.status_code not in self.RETRYABLE_STATUS_CODES
                             or attempt == self.MAX_RETRIES):
-                        raise
+                        raise ValueError(self._format_api_error(exc.response)) from None
                 except (httpx.TimeoutException, httpx.NetworkError):
                     if attempt == self.MAX_RETRIES:
                         raise
@@ -90,3 +101,17 @@ class OpenAIClient(BaseLLMClient):
             input_tokens=usage.get("input_tokens", 0),
             output_tokens=usage.get("output_tokens", 0),
         )
+
+    def _format_api_error(self, response: httpx.Response) -> str:
+        """Expose the provider's useful error without leaking the API key."""
+        try:
+            error = response.json().get("error") or {}
+            message = str(error.get("message") or response.reason_phrase)
+            param = error.get("param")
+        except (ValueError, AttributeError):
+            message, param = response.reason_phrase, None
+        if self.api_key:
+            message = message.replace(self.api_key, "[REDACTED]")
+        message = re.sub(r"sk-[A-Za-z0-9_*-]{6,}", "[REDACTED]", message)
+        location = f" ({param})" if param else ""
+        return f"OpenAI API {response.status_code}{location}: {message[:1000]}"

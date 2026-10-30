@@ -268,3 +268,18 @@ launchctl load ~/Library/LaunchAgents/com.transcribeflow.plist
 tail -f ~/services/transcribeflow/app/logs/backend.log
 tail -f ~/services/transcribeflow/app/logs/frontend.log
 ```
+
+
+## Direct-provider response contracts
+
+OpenAI Responses and Anthropic Messages use the shared task-specific schemas in
+`backend/services/llm_providers/response_schemas.py`. Dispatch `cleanup`, `speakers`,
+`insights`, or `insights_no_mindmap` according to the operation/template. Requested
+mindmaps use a non-null object schema; templates without mindmaps require null.
+
+Keep OpenAI on strict `json_schema` outputs. Its legacy `json_object` mode rejects
+input messages without the word `json`, even if the system instructions require
+JSON. Smoke tests must include ordinary transcript input without this keyword.
+Surface OpenAI's error message and offending parameter, but redact API-key strings.
+Use synthetic transcripts for authorized live checks and never overwrite a user's
+meeting artifacts just to test the integration.
